@@ -1,0 +1,806 @@
+{
+ "T": {
+  "es": {
+   "nav": [
+    "Mods",
+    "Showcase",
+    "Preguntas",
+    "Novedades",
+    "Docs"
+   ],
+   "tag": "Cargador de mods para Block Story",
+   "dl": "Descargar",
+   "dlsoon": "Descargar · pronto",
+   "meta": "v1.2.0-beta · probado en Linux y Windows 11 · Apache-2.0",
+   "play": "Jugar",
+   "playp": "Aether carga mods desde una carpeta. Se instala una vez y ahí sueltas los mods que quieras.",
+   "playb": "Cómo instalar",
+   "make": "Crear",
+   "makep": "Cada mod es un ensamblado con su propia configuración. Hay plantilla y guía en el repositorio.",
+   "makeb": "Crear un mod",
+   "expl": "Explorar",
+   "explp": "Cuatro mods propios sobre Aether Nano, que también funcionan solo con BepInEx.",
+   "explb": "Ver los mods",
+   "mods": "Los cuatro mods",
+   "showc": "Showcase",
+   "showp": "Capturas reales del juego con Aether.",
+   "inst": "Instalar en tres pasos",
+   "s1": "Descarga el zip de la versión.",
+   "s2": "Corre <code>./install.sh</code> (<code>install.ps1</code> en Windows, o la ventana <code>aether-installer</code>).",
+   "s3": "En Steam, opciones de lanzamiento: <code>./run_bepinex.sh %command%</code> (Linux).",
+   "est": "Estado y límites",
+   "estp": "Beta. Probado en Linux y Windows 11. Las APIs pueden cambiar.",
+   "nov": "Novedades",
+   "novp": "1.2.0-beta · Aether queda más ligero: solo lo suyo.",
+   "foot1": "Aether es un proyecto de terceros. No es un producto oficial de Block Story ni está afiliado a sus desarrolladores.",
+   "foot2": "Apache-2.0 · Un proyecto de Ultima Ibrahim",
+   "lens": "Tarjeta del bloque o criatura que apuntas: nombre, mod de origen, vida y la herramienta para romperlo.",
+   "way": "Minimapa y mapa completo por chunks de 32×32 bloques, capas de cueva, puntos de ruta y de muerte, exporta a PNG.",
+   "blue": "Catálogo de objetos y recetas dentro del inventario: búsqueda, receta, «se usa en» y favoritos.",
+   "dusk": "Terreno mate, cuevas más oscuras, antorcha en mano y preajustes.",
+   "keys": "Teclas",
+   "kh": [
+    "Tecla",
+    "Acción"
+   ],
+   "kr": [
+    [
+     "F10",
+     "Menú de mods: lista, activar o desactivar, ajustes"
+    ],
+    [
+     "F7",
+     "Gestor de teclas: reasigna cualquiera y marca choques"
+    ],
+    [
+     "F9",
+     "Editor de HUD (arrastrar)"
+    ],
+    [
+     "F4",
+     "Lens, activar o desactivar"
+    ],
+    [
+     "M / N",
+     "Wayfinder: mapa completo / minimapa"
+    ],
+    [
+     "L / B",
+     "Wayfinder: capa / punto rápido"
+    ],
+    [
+     "O",
+     "Blueprint: catálogo de objetos"
+    ]
+   ],
+   "faqh": "Preguntas frecuentes",
+   "faq": [
+    [
+     "¿Aether es oficial de Block Story?",
+     "No. Es un proyecto de terceros y no está afiliado a los desarrolladores del juego."
+    ],
+    [
+     "¿Funciona en Windows?",
+     "Sí: hay un instalador con ventana (aether-installer.exe). Está probado en Windows 11. Windows puede mostrar SmartScreen («Windows protegió su PC») porque los ejecutables aún no están firmados: pulsa «Más información» y «Ejecutar de todos modos», y comprueba antes el SHA-256 con SHA256SUMS.txt."
+    ],
+    [
+     "¿Cómo instalo un mod?",
+     "Con <code>./aether add Mod.zip</code>, que lo pone donde corresponde y avisa si faltan dependencias. También puedes copiar su .dll a Aether/Mods."
+    ],
+    [
+     "¿Puedo cambiar las teclas?",
+     "Sí. F7 abre el gestor, donde reasignas cualquiera y ves los choques entre mods."
+    ],
+    [
+     "¿Habrá mods de rendimiento?",
+     "Están en desarrollo. Se publicarán cuando se compruebe, con mediciones, que de verdad ayudan."
+    ],
+    [
+     "¿Dónde descargo Aether?",
+     "En la página Descargar: eliges Windows o Linux y el archivo se descarga directo. Los mods oficiales se descargan desde la misma página."
+    ],
+    [
+     "¿Cómo hago mi propio mod?",
+     "Con <code>aether new MiMod</code> creas un proyecto listo para compilar contra tu Aether instalado, y la sección Docs te guía paso a paso. Cada mod es un ensamblado con [assembly: AetherMod]."
+    ]
+   ],
+   "novh": "Novedades",
+   "novlist": [
+    [
+     "1.2.0-beta",
+     "Se retira la capa de compatibilidad con otro cargador (los ensamblados Aether.Compat.*) y lo que dependía de ella. Al actualizar se quitan sus archivos. Aether Nano pasa a 1.0.1 y muestra sus páginas en el menú de Aether o en su propio botón «Mods». Los cuatro mods pasan a 1.1.1 (recompilados sobre Nano 1.0.1)."
+    ],
+    [
+     "1.1.2-beta",
+     "Instalar desde la pestaña Catalog un mod que necesita Aether Nano ya no falla con «No installable .NET assemblies»: Aether trae su propio Nano y lo cuenta como instalado. Los mods y Nano no cambian."
+    ],
+    [
+     "1.1.1-beta",
+     "Aether verifica el catálogo de Lattice con su nueva llave de firma (la anterior se retiró). Si usas la pestaña Catalog de Aether Monitor, actualiza: la 1.1.0-beta ya no acepta el catálogo. Los cuatro mods y Aether Nano no cambian."
+    ],
+    [
+     "1.1.0-beta",
+     "Los cuatro mods (1.1.0) son plugins de BepInEx sobre Aether Nano y funcionan con Aether o solo con BepInEx: cada zip trae Aether Nano. Sus teclas aparecen en la ventana de teclas del propio juego. Aether se ve como Aether dentro del juego, y el menú F10 distingue los mods «por Aether» (firmados) de los hechos sobre Nano."
+    ],
+    [
+     "1.0.4-beta",
+     "En Linux, el instalador recuerda poner ./run_bepinex.sh %command% en Steam (con botón para copiarlo) y la página de descarga recomienda la versión completa."
+    ],
+    [
+     "1.0.3-beta",
+     "Aether Monitor deja de ofrecer la versión que ya tienes y avisa de actualizaciones también de los mods que añadiste a mano. «Añadir mod…» pone los plugins de BepInEx en Aether/Mods."
+    ],
+    [
+     "1.0.2-beta",
+     "Una DLL en Aether/Mods que no es un mod ni un plugin de BepInEx deja una nota en el informe del cargador."
+    ],
+    [
+     "1.0.1-beta",
+     "Los mods oficiales se descargan como un solo archivo .dll: arrástralo a Aether/Mods."
+    ],
+    [
+     "1.0.0-beta",
+     "Primera beta. El instalador es más ligero (versión ligera que usa .NET 9, y versión completa), con colores claros, identidad de Aether, registro paso a paso, acceso directo opcional para Aether Monitor y botón «Añadir mod…». Aviso de versiones nuevas de Aether y de los mods de Lattice. Términos de uso y aviso de privacidad. El comando aether pasa a ser una descarga aparte para quien hace mods. Los mods oficiales también están en 1.0.0-beta."
+    ],
+    [
+     "0.1.1-alpha",
+     "El instalador es más ligero (versión ligera que usa .NET 9, y versión completa), con identidad de Aether, registro paso a paso y botón «Añadir mod…» en Aether Monitor. Aviso de versiones nuevas de Aether y de los mods de Lattice. El comando aether pasa a ser una descarga aparte para quien hace mods."
+    ],
+    [
+     "0.1.0-alpha",
+     "Primera versión alpha: cargador, cuatro mods (Lens, Wayfinder, Blueprint, Dusk) y gestor de teclas."
+    ]
+   ],
+   "showh": "Showcase",
+   "showcap": "Capturas reales del juego, tomadas con 1920×1080.",
+   "cta": "Mods de la comunidad aparecerán aquí.",
+   "home": "Inicio"
+  },
+  "en": {
+   "nav": [
+    "Mods",
+    "Showcase",
+    "FAQ",
+    "News",
+    "Docs"
+   ],
+   "tag": "A mod loader for Block Story",
+   "dl": "Download",
+   "dlsoon": "Download · soon",
+   "meta": "v1.2.0-beta · tested on Linux and Windows 11 · Apache-2.0",
+   "play": "Play",
+   "playp": "Aether loads mods from a folder. Install it once and drop in any mods you like.",
+   "playb": "How to install",
+   "make": "Create",
+   "makep": "Every mod is an assembly with its own settings. A template and a guide are in the repository.",
+   "makeb": "Make a mod",
+   "expl": "Explore",
+   "explp": "Four mods of our own on Aether Nano, which also run with BepInEx alone.",
+   "explb": "See the mods",
+   "mods": "The four mods",
+   "showc": "Showcase",
+   "showp": "Real screenshots of the game with Aether.",
+   "inst": "Install in three steps",
+   "s1": "Download the release zip.",
+   "s2": "Run <code>./install.sh</code> (<code>install.ps1</code> on Windows, or the <code>aether-installer</code> window).",
+   "s3": "In Steam, launch options: <code>./run_bepinex.sh %command%</code> (Linux).",
+   "est": "Status and limits",
+   "estp": "Beta. Tested on Linux and Windows 11. APIs may change.",
+   "nov": "News",
+   "novp": "1.2.0-beta · A leaner Aether: only its own pieces.",
+   "foot1": "Aether is a third-party project. It is not an official Block Story product and is not affiliated with its developers.",
+   "foot2": "Apache-2.0 · A project by Ultima Ibrahim",
+   "lens": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
+   "way": "Corner and fullscreen map built from 32×32-block chunks, cave layers, waypoints and death points, PNG export.",
+   "blue": "Item catalog and recipe browser inside the inventory: search, recipe, “used in” and bookmarks.",
+   "dusk": "Matte terrain, darker caves, handheld torchlight and presets.",
+   "keys": "Keys",
+   "kh": [
+    "Key",
+    "Action"
+   ],
+   "kr": [
+    [
+     "F10",
+     "Mod menu: list, enable or disable, settings"
+    ],
+    [
+     "F7",
+     "Keybind manager: rebind any key, see clashes"
+    ],
+    [
+     "F9",
+     "HUD drag editor"
+    ],
+    [
+     "F4",
+     "Lens on or off"
+    ],
+    [
+     "M / N",
+     "Wayfinder: fullscreen map / corner map"
+    ],
+    [
+     "L / B",
+     "Wayfinder: layer / quick waypoint"
+    ],
+    [
+     "O",
+     "Blueprint: item catalog"
+    ]
+   ],
+   "faqh": "Frequently asked questions",
+   "faq": [
+    [
+     "Is Aether official for Block Story?",
+     "No. It is a third-party project and is not affiliated with the game’s developers."
+    ],
+    [
+     "Does it work on Windows?",
+     "Yes: there is a windowed installer (aether-installer.exe). It has been tested on Windows 11. Windows may show SmartScreen (“Windows protected your PC”) because the executables are not code-signed yet: click “More info” then “Run anyway”, and check the SHA-256 against SHA256SUMS.txt first."
+    ],
+    [
+     "How do I install a mod?",
+     "With <code>./aether add Mod.zip</code>, which puts it in the right place and warns about missing dependencies. You can also copy its .dll into Aether/Mods."
+    ],
+    [
+     "Can I change the keys?",
+     "Yes. F7 opens the manager, where you rebind any key and see clashes between mods."
+    ],
+    [
+     "Will there be performance mods?",
+     "They are in development. They will ship once measurements show they really help."
+    ],
+    [
+     "Where do I download Aether?",
+     "On the Download page: pick Windows or Linux and the file downloads directly. The official mods are on the same page."
+    ],
+    [
+     "How do I make my own mod?",
+     "With <code>aether new MyMod</code> you create a project ready to build against your installed Aether, and the Docs section walks you through it. Each mod is an assembly with [assembly: AetherMod]."
+    ]
+   ],
+   "novh": "News",
+   "novlist": [
+    [
+     "1.2.0-beta",
+     "The compatibility layer for another loader (the Aether.Compat.* assemblies) and everything that depended on it are retired. Updating removes its files. Aether Nano moves to 1.0.1 and shows its pages in Aether's menu or in its own \"Mods\" button. The four mods move to 1.1.1 (rebuilt on Nano 1.0.1)."
+    ],
+    [
+     "1.1.2-beta",
+     "Installing a mod that needs Aether Nano from the Catalog tab no longer fails with \"No installable .NET assemblies\": Aether ships its own Nano and counts it as installed. The mods and Nano do not change."
+    ],
+    [
+     "1.1.1-beta",
+     "Aether checks the Lattice catalog with its new signing key (the old one was retired). If you use the Catalog tab in Aether Monitor, update: 1.1.0-beta no longer accepts the catalog. The four mods and Aether Nano do not change."
+    ],
+    [
+     "1.1.0-beta",
+     "The four mods (1.1.0) are BepInEx plugins on Aether Nano and run with Aether or with BepInEx alone: each zip carries Aether Nano. Their keys show in the game's own keybinding window. Aether looks like Aether inside the game, and the F10 menu tells mods “by Aether” (signed) from mods built on Nano."
+    ],
+    [
+     "1.0.4-beta",
+     "On Linux the installer reminds you to set ./run_bepinex.sh %command% in Steam (with a copy button), and the download page recommends the full version."
+    ],
+    [
+     "1.0.3-beta",
+     "Aether Monitor no longer offers the version you already have, and shows updates for mods you added by hand too. “Add mod…” puts BepInEx plugins in Aether/Mods."
+    ],
+    [
+     "1.0.2-beta",
+     "A .dll in Aether/Mods that is neither a mod nor a BepInEx plugin now leaves a note in the loader report."
+    ],
+    [
+     "1.0.1-beta",
+     "The official mods are now a single .dll file: drag it into Aether/Mods."
+    ],
+    [
+     "1.0.0-beta",
+     "First beta. A lighter installer (a light version that uses .NET 9, and a full version) with light colors, Aether branding, a step-by-step log, an optional desktop shortcut for Aether Monitor and an “Add mod…” button. Update notices for Aether and for Lattice mods. Terms of use and a privacy notice. The aether command is now a separate download for mod makers. The official mods are also 1.0.0-beta."
+    ],
+    [
+     "0.1.1-alpha",
+     "A lighter installer (a light version that uses .NET 9, and a full version), with Aether branding, a step-by-step log and an “Add mod…” button in Aether Monitor. Update notices for Aether and for Lattice mods. The aether command is now a separate download for mod makers."
+    ],
+    [
+     "0.1.0-alpha",
+     "First alpha: loader, four mods (Lens, Wayfinder, Blueprint, Dusk) and keybind manager."
+    ]
+   ],
+   "showh": "Showcase",
+   "showcap": "Real in-game screenshots, taken at 1920×1080.",
+   "cta": "Community mods will appear here.",
+   "home": "Home"
+  }
+ },
+ "N": {
+  "es": {
+   "nav": [
+    "Showcase",
+    "Mods",
+    "Preguntas",
+    "Novedades",
+    "Docs"
+   ],
+   "dl": "Descargar",
+   "carga": "Aether carga. Tú eliges.",
+   "cargap": "El cargador instala solo lo que Aether necesita. Los mods los descargas tú, uno por uno.",
+   "opc": "opcional",
+   "mdl": "Descargar",
+   "mdlsoon": "Descargar · pronto",
+   "keys": "Teclas",
+   "i1": "Descarga Aether, el cargador.",
+   "i2": "Elige y descarga los mods que quieras.",
+   "i3": "Abre el juego. Aether carga lo que pusiste en <code>Aether/Mods</code>.",
+   "instp": "Instalar en tres pasos",
+   "showh": "Showcase",
+   "showp": "Los cuatro mods de Aether. Cada uno se descarga por separado.",
+   "modsh": "Mods",
+   "modsp": "Capturas reales del juego con Aether y, más adelante, los mods de la comunidad.",
+   "comm": "Los mods de la comunidad aparecerán aquí.",
+   "dlh": "Descargar",
+   "dl1": "1 · Aether (el cargador)",
+   "dl1p": "Instala solo lo que Aether necesita: el cargador, su API y la interfaz. No instala ningún mod.",
+   "dl1b": "Descargar Aether · pronto",
+   "dl2": "2 · Elige tus mods",
+   "dl2p": "Los mods oficiales se descargan uno por uno en Showcase.",
+   "dl2b": "Ir a Showcase",
+   "cmdh": "",
+   "nonesel": "",
+   "dl3": "3 · Abre el juego",
+   "dl3p": "En Steam, opciones de lanzamiento: <code>./run_bepinex.sh %command%</code> (Linux). En Windows no hace falta: Steam arranca el juego con BepInEx. Windows puede mostrar SmartScreen («Windows protegió su PC») porque los ejecutables aún no están firmados: pulsa «Más información» y «Ejecutar de todos modos», y comprueba antes el SHA-256 con SHA256SUMS.txt.",
+   "faqx": [
+    "¿Qué instala Aether por defecto?",
+    "Solo el cargador y lo que necesita para funcionar. Los mods los eliges tú y se descargan por separado."
+   ],
+   "fnote": "Proyecto de terceros. No es un producto oficial de Block Story ni está afiliado a sus desarrolladores.",
+   "fsign": "Apache-2.0 · Un proyecto de Ultima Ibrahim",
+   "fcols": [
+    [
+     "Explorar",
+     [
+      "Showcase",
+      "Preguntas",
+      "Novedades",
+      "Docs"
+     ]
+    ],
+    [
+     "Proyecto",
+     [
+      "Repositorio · pronto",
+      "Licencia Apache-2.0",
+      "Estado: beta"
+     ]
+    ]
+   ],
+   "fdesc": "Cargador de mods para Block Story, con cuatro mods propios.",
+   "how": "Cómo instalar un mod",
+   "h1": "Descarga el mod. Si es un mod de Aether Nano, su zip ya trae lo que necesita.",
+   "h2": "Instálalo con <code>./aether add Mod.zip</code>, o copia el <code>.dll</code> a <code>Aether/Mods</code>.",
+   "h3": "Abre el juego. Si algo falla, <code>./aether doctor</code> muestra qué dependencia falta o qué mod choca con otro.",
+   "warn": "Los mods de Aether y los plugins de BepInEx van en <code>Aether/Mods</code>. Si un mod pide otra cosa, sigue las instrucciones de su autor."
+  },
+  "en": {
+   "nav": [
+    "Showcase",
+    "Mods",
+    "FAQ",
+    "News",
+    "Docs"
+   ],
+   "dl": "Download",
+   "carga": "Aether loads. You choose.",
+   "cargap": "The loader installs only what Aether needs. You download the mods yourself, one by one.",
+   "opc": "optional",
+   "mdl": "Download",
+   "mdlsoon": "Download · soon",
+   "keys": "Keys",
+   "i1": "Download Aether, the loader.",
+   "i2": "Pick and download the mods you want.",
+   "i3": "Open the game. Aether loads what you put in <code>Aether/Mods</code>.",
+   "instp": "Install in three steps",
+   "showh": "Showcase",
+   "showp": "The four Aether mods. Each one downloads separately.",
+   "modsh": "Mods",
+   "modsp": "Real in-game screenshots with Aether and, later, community mods.",
+   "comm": "Community mods will appear here.",
+   "dlh": "Download",
+   "dl1": "1 · Aether (the loader)",
+   "dl1p": "Installs only what Aether needs: the loader, its API and the UI. It installs no mods.",
+   "dl1b": "Download Aether · soon",
+   "dl2": "2 · Pick your mods",
+   "dl2p": "The official mods download one by one in Showcase.",
+   "dl2b": "Go to Showcase",
+   "cmdh": "",
+   "nonesel": "",
+   "dl3": "3 · Open the game",
+   "dl3p": "In Steam, launch options: <code>./run_bepinex.sh %command%</code> (Linux). Not needed on Windows: Steam starts the game with BepInEx. Windows may show SmartScreen (“Windows protected your PC”) because the executables are not code-signed yet: click “More info” then “Run anyway”, and check the SHA-256 against SHA256SUMS.txt first.",
+   "faqx": [
+    "What does Aether install by default?",
+    "Only the loader and what it needs to run. You choose the mods and download them separately."
+   ],
+   "fnote": "A third-party project. Not an official Block Story product and not affiliated with its developers.",
+   "fsign": "Apache-2.0 · A project by Ultima Ibrahim",
+   "fcols": [
+    [
+     "Explore",
+     [
+      "Showcase",
+      "FAQ",
+      "News",
+      "Docs"
+     ]
+    ],
+    [
+     "Project",
+     [
+      "Repository · soon",
+      "Apache-2.0 license",
+      "Status: beta"
+     ]
+    ]
+   ],
+   "fdesc": "A mod loader for Block Story, with four mods of its own.",
+   "how": "How to install a mod",
+   "h1": "Download the mod. A Nano mod's zip already carries what it needs.",
+   "h2": "Install it with <code>./aether add Mod.zip</code>, or copy the <code>.dll</code> into <code>Aether/Mods</code>.",
+   "h3": "Open the game. If something fails, <code>./aether doctor</code> shows the missing dependency or which mod clashes.",
+   "warn": "Aether mods and BepInEx plugins go in <code>Aether/Mods</code>. If a mod asks for something else, follow its author's instructions."
+  }
+ },
+ "KM": {
+  "lens": [
+   [
+    "F4",
+    "Activar o desactivar"
+   ]
+  ],
+  "way": [
+   [
+    "M",
+    "Mapa completo"
+   ],
+   [
+    "N",
+    "Minimapa"
+   ],
+   [
+    "L",
+    "Cambiar de capa"
+   ],
+   [
+    "B",
+    "Punto rápido"
+   ]
+  ],
+  "blue": [
+   [
+    "O",
+    "Abrir el catálogo"
+   ],
+   [
+    "R",
+    "Receta (sobre un objeto)"
+   ],
+   [
+    "U",
+    "Usos (sobre un objeto)"
+   ],
+   [
+    "A",
+    "Favorito (sobre un objeto)"
+   ]
+  ],
+  "dusk": [
+   [
+    "F10",
+    "Ajustes, pestaña Mods"
+   ]
+  ]
+ },
+ "MN": [
+  [
+   "lens",
+   "Lens"
+  ],
+  [
+   "way",
+   "Wayfinder"
+  ],
+  [
+   "blue",
+   "Blueprint"
+  ],
+  [
+   "dusk",
+   "Dusk"
+  ]
+ ],
+ "DOCS": {
+  "es": {
+   "g": [
+    [
+     "Empezar",
+     [
+      [
+       "intro",
+       "Antes de empezar"
+      ],
+      [
+       "inst",
+       "Instalar Aether"
+      ],
+      [
+       "first",
+       "Tu primer mod, paso a paso"
+      ]
+     ]
+    ],
+    [
+     "Crear",
+     [
+      [
+       "anat",
+       "Cómo es un mod por dentro"
+      ],
+      [
+       "conf",
+       "Opciones del mod"
+      ],
+      [
+       "assets",
+       "Imágenes y dibujo"
+      ],
+      [
+       "harm",
+       "Harmony: cambiar lo que hace el juego"
+      ],
+      [
+       "deps",
+       "Dependencias y orden de carga"
+      ]
+     ]
+    ],
+    [
+     "Publicar",
+     [
+      [
+       "build",
+       "Compilar e instalar"
+      ],
+      [
+       "test",
+       "Probar tu mod"
+      ],
+      [
+       "pub",
+       "Compartir tu mod"
+      ]
+     ]
+    ],
+    [
+     "Referencia",
+     [
+      [
+       "cli",
+       "Comandos del CLI"
+      ],
+      [
+       "traps",
+       "Problemas conocidos"
+      ]
+     ]
+    ]
+   ],
+   "srcl": "Fuente: ",
+   "intro": [
+    "Antes de empezar",
+    "<p>Un <b>mod</b> es un archivo que agrega o cambia cosas de un juego. <b>Aether</b> es el programa que carga esos archivos al abrir Block Story. Tú escribes el mod; Aether se encarga de encontrarlo, ordenarlo y arrancarlo.</p><p>No necesitas saber cómo está hecho Block Story por dentro. Sí necesitas escribir un poco de código (en C#), pero se empieza copiando un ejemplo y cambiando textos y números.</p><h3>Lo que necesitas</h3><ul><li>Block Story de Steam, con Aether instalado.</li><li>El <b>SDK de .NET 9</b>, un programa gratuito que convierte tu código en un mod.</li><li>Un editor de texto cualquiera.</li><li>Ganas de probar y equivocarte. Todo se puede deshacer borrando un archivo.</li></ul><h3>Las palabras que vas a ver</h3><table><tr><th>Palabra</th><th>Qué significa</th></tr><tr><td>DLL</td><td>El archivo de tu mod. Es lo que se copia al juego.</td></tr><tr><td>Compilar</td><td>Convertir tu código en una DLL.</td></tr><tr><td>Punto de entrada</td><td>La parte de tu mod por donde Aether lo arranca.</td></tr><tr><td>Configuración</td><td>Un archivo con opciones que el jugador puede cambiar.</td></tr><tr><td>Registro</td><td>Una lista del juego donde agregas cosas nuevas, como bloques.</td></tr><tr><td>Harmony</td><td>Una herramienta para cambiar lo que hace el juego sin tocar sus archivos.</td></tr></table><h3>El camino</h3><p>Instalar Aether, crear tu primer mod, cambiar algo, probarlo y compartirlo. Cada paso tiene su página en el menú de la izquierda.</p>",
+    "Guía de mods §1"
+   ],
+   "inst": [
+    "Instalar Aether",
+    "<p>Necesitas Block Story de Steam. El instalador baja BepInEx 5.4.23.6 si falta y verifica su firma (SHA-256) antes de instalar nada.</p><p>Abre <code>aether-installer</code> (en Windows, <code>aether-installer.exe</code>), elige la carpeta de Block Story y pulsa «Install». Verás paso a paso lo que hace. Para terminal, existe una descarga aparte (<code>aether-cli</code>) con <code>./install.sh --dry-run</code> para previsualizar.</p><p>El instalador deja en tu juego <b>solo el cargador</b>, sin ningún mod. Los mods los eliges tú: se descargan por separado y se añaden desde Aether Monitor, con el botón «Añadir mod…».</p><p>Si usas Linux con Steam, ve a las propiedades del juego y en «Opciones de lanzamiento» escribe <code>./run_bepinex.sh %command%</code>.</p><p>Después del primer arranque, el archivo <code>BepInEx/config/aether_conflicts.txt</code> te dice si algún mod está duplicado, le falta algo o choca con otro.</p><div class=\"tip\">Beta: probado en Linux y Windows 11. En Windows, SmartScreen puede avisar porque los ejecutables aún no están firmados.</div>",
+    "README, paquete de release"
+   ],
+   "first": [
+    "Tu primer mod, paso a paso",
+    "<p><b>En resumen:</b> creas un proyecto, lo compilas y la DLL queda en la carpeta <code>Aether/Mods</code> del juego. Al abrir el juego, Aether lo encuentra solo. No hace falta ningún otro archivo de configuración.</p><h3>1 · Crea el proyecto</h3><p>Aether trae un comando que lo prepara todo:</p><pre class=\"code\">aether new MiMod</pre><p>Se crea una carpeta con tres archivos: <code>MiMod.csproj</code> (la receta para compilar), <code>Mod.cs</code> (tu mod) y un <code>README.md</code> corto. Si Aether encuentra tu juego, el proyecto ya sabe dónde están los archivos de Aether.</p><h3>2 · Lee tu mod</h3><p>El archivo <code>Mod.cs</code> ya hace tres cosas. Están numeradas en los comentarios (que vienen en inglés, igual que el código):</p><pre class=\"code\">using System;\nusing Aether.Core.Config;\nusing Aether.Loader.Discovery;\nusing Aether.Loader.Entrypoints;\nusing Aether.Registry;\n\n// This line is how Aether recognises your mod. It must stay at assembly level.\n[assembly: AetherMod(\"mi_mod\", \"1.0.0\",\n    Name = \"Mi Mod\",\n    Author = \"You\",\n    Description = \"A starter mod for Aether.\")]\n\nnamespace MiMod;\n\npublic sealed class ModEntry : IModInitializer, IClientModInitializer\n{\n    // 1. An option the player can change (BepInEx/config/aether/mi_mod.json).\n    public static readonly ConfigEntry&lt;bool&gt; EnableCustomBlock =\n        AetherConfig.Bind(\"mi_mod\", \"Features\", \"EnableCustomBlock\", true, \"Register the example block.\");\n\n    // 2. Runs when mods load: the place to register blocks, items and recipes.\n    public void OnInitialize()\n    {\n        if (!EnableCustomBlock.Value) return;\n\n        var definition = new BlockDefinition(new Identifier(\"mi_mod\", \"gem_block\"), \"Gem Block\")\n        {\n            Hardness = 3.0f,\n            IsSolid = true\n        };\n        DynamicBlockRegistry.Instance.Register(definition);\n    }\n\n    // 3. Runs on the first frame, with the game alive: UI, keys, sound and scene objects go here.\n    public void OnInitializeClient()\n    {\n        Console.WriteLine(\"[MiMod] ready\");\n    }\n}</pre><ol><li>Una <b>opción</b> que el jugador puede cambiar.</li><li>Registra un <b>bloque nuevo</b>, «Gem Block», cuando cargan los mods.</li><li>Aquí va lo que se ve y se toca (interfaz, teclas, sonido), cuando el juego ya está vivo.</li></ol><p>La línea <code>[assembly: AetherMod(…)]</code> es la que le dice a Aether que esto es un mod. Debe quedarse a nivel de ensamblado.</p><h3>3 · Cambia algo</h3><p>Prueba con lo más simple: cambia el nombre <code>\"Gem Block\"</code> por otro, o el número de <code>Hardness</code> (qué tan duro es el bloque). Guarda el archivo.</p><h3>4 · Revisa dónde está Aether</h3><p>El proyecto busca los archivos de Aether en <code>&lt;juego&gt;/BepInEx/plugins/Aether/</code>. Si <code>aether new</code> no encontró tu juego, abre <code>MiMod.csproj</code> y cambia <code>AetherDir</code>, o compila con <code>-p:AetherDir=&lt;ruta&gt;</code>. Si Aether no está instalado, la compilación se detiene con un mensaje que te lo dice.</p><h3>5 · Compila e instala</h3><pre class=\"code\">cd MiMod\ndotnet build MiMod.csproj -c Release -p:InstallToGame=true</pre><p>Con <code>-p:InstallToGame=true</code> la DLL se copia sola a <code>&lt;juego&gt;/Aether/Mods/</code>. Sin esa opción, copia tú <code>bin/Release/netstandard2.1/MiMod.dll</code> a esa carpeta.</p><h3>6 · Compruébalo</h3><p>Abre el juego. Tu mod debe aparecer en el menú <b>F10</b> y en el registro <code>BepInEx/LogOutput.log</code> con una línea como esta:</p><pre class=\"code\">[Aether] Resolved N mods in topological order:\n  -> Mi Mod (mi_mod v1.0.0)</pre><p>¿No aparece? Mira <b>Compilar e instalar</b>, que tiene la lista de qué revisar.</p>",
+    "Guía de mods §1, §3, §8"
+   ],
+   "anat": [
+    "Cómo es un mod por dentro",
+    "<div class=\"tip\"><b>Tu mod no tiene que ser exclusivo de Aether.</b> Un plugin normal de BepInEx también funciona en <code>Aether/Mods</code>: Aether lo arranca en el momento correcto. Aether no te obliga a nada.</div><p>Un mod tiene dos partes: una <b>etiqueta</b> que dice quién es, y uno o más <b>puntos de entrada</b> que dicen qué hace y cuándo.</p><h3>La etiqueta</h3><p>Va <b>siempre a nivel de ensamblado</b> (<code>[assembly: …]</code>): es el único lugar donde Aether la busca. Si la pones sobre una clase, el compilador te avisa en lugar de dejar que tu mod no cargue nunca.</p><pre class=\"code\">[assembly: AetherMod(\"my_mod\", \"1.0.0\",\n    Name = \"My Mod\",\n    Author = \"Your Name\",\n    Description = \"Short description.\",\n    Depends = \"aether_ui@0.1.0-alpha\")]</pre><table><tr><th>Campo</th><th>Para qué sirve</th></tr><tr><td>id (<code>\"my_mod\"</code>)</td><td>El nombre interno. Elige uno y no lo cambies nunca: lo usan las opciones, los registros y los reportes de fallos.</td></tr><tr><td>versión</td><td>Sube el número cuando publiques cambios.</td></tr><tr><td><code>Depends</code></td><td>Lo que tu mod necesita para funcionar. Si falta, tu mod no arranca y queda anotado en el registro.</td></tr><tr><td><code>Suggests</code></td><td>Mods que combinan bien con el tuyo. Solo informa; no bloquea.</td></tr><tr><td><code>LoadAfter</code></td><td>Pide cargar después de otro mod, si está instalado.</td></tr><tr><td><code>Breaks</code></td><td>Tu mod no arranca si alguno de estos está instalado.</td></tr></table><h3>Los puntos de entrada</h3><p>Son las puertas por donde Aether arranca tu mod. Elige según lo que necesites hacer:</p><table><tr><th>Interfaz</th><th>Cuándo corre</th><th>Úsala para</th></tr><tr><td><code>IPreLaunchEntrypoint</code></td><td>Lo más temprano posible</td><td>Cosas avanzadas de bajo nivel</td></tr><tr><td><code>IModInitializer</code></td><td>Cuando se cargan los mods</td><td>Registrar bloques, objetos y recetas</td></tr><tr><td><code>IClientModInitializer</code></td><td>En el primer fotograma, con el juego ya vivo</td><td>Interfaz, teclas, objetos en escena, Harmony</td></tr><tr><td><code>ISceneModInitializer</code></td><td>Cada vez que carga una escena</td><td>Preparar algo para una escena concreta</td></tr></table><p>Para un mod simple, con <code>IModInitializer</code> y <code>IClientModInitializer</code> basta, como en la plantilla.</p><h3>Dibujar en la interfaz de Aether</h3><p>Si quieres que tu mod se vea dentro del menú y los paneles de Aether, implementa <code>IAetherUiModule</code> y regístralo con <code>AetherUiModuleRegistry.Register(...)</code>. Aether le avisa cuándo iniciar, cuándo actualizarse en cada fotograma y cuándo cambia la escena. Es un paso para después de tu primer mod.</p>",
+    "Guía de mods §4"
+   ],
+   "conf": [
+    "Opciones del mod",
+    "<p>Una opción es un valor que el jugador puede cambiar sin tocar tu código: un sí/no, un número, un texto. Así tu mod se adapta a cada quien.</p><pre class=\"code\">private static ConfigEntry&lt;bool&gt; _enabled;\n\n_enabled = AetherConfig.Bind(\"my_mod\", \"General\", \"Enabled\", true,\n    \"Enable this mod.\");</pre><p>Cada parte significa: tu id, un grupo (para ordenar), el nombre de la opción, su valor por defecto y una explicación.</p><p>Aether crea el archivo <code>BepInEx/config/aether/my_mod.json</code> la primera vez. El jugador lo edita con cualquier editor de texto y sus cambios se respetan.</p><p>Para leer el valor en tu código usa <code>_enabled.Value</code>. Puedes registrar las opciones desde tu punto de entrada sin problema.</p><div class=\"tip\">Hay una segunda forma, la de BepInEx (<code>Config.Bind(...)</code>), que usan los mods incluidos con Aether. Para mods de terceros, usa la de Aether: es la recomendada.</div>",
+    "Guía de mods §5"
+   ],
+   "assets": [
+    "Imágenes y dibujo",
+    "<p>Si tu mod muestra imágenes, ponlas en una carpeta junto a tu DLL y cárgalas así:</p><pre class=\"code\">AetherResources.LoadTexture(\"my_mod\", \"textures/icon.png\");</pre><p>Para que la interfaz de tu mod se vea parte del juego, usa los <b>sprites originales</b> de Block Story (<code>UIAtlas</code>) en vez de dibujar cuadros planos.</p><h3>Reglas que evitan problemas</h3><ul><li><b>No crees cosas nuevas en cada fotograma</b> al dibujar la interfaz (texturas, estilos, fuentes): guárdalas una vez y reutilízalas. Si no, el juego se traba.</li><li><b>No leas bloques de zonas que no están cargadas.</b> Usa <code>SafeVoxels.GetBlockSafe</code> o <code>GetBlockFast</code>, que lo hacen con seguridad.</li><li>Si algo tiene que esperar, espera al primer fotograma (el punto de entrada de cliente), no al arranque del juego.</li></ul>",
+    "Guía de mods §6"
+   ],
+   "harm": [
+    "Harmony: cambiar lo que hace el juego",
+    "<p>A veces tu mod necesita que el juego haga algo distinto, no solo agregar cosas. <b>Harmony</b> sirve para eso: es como pegar una nota sobre una función del juego que dice «antes (o después) de ejecutarte, corre esto». El juego no se modifica; el cambio vive solo en tu mod.</p><pre class=\"code\">var harmony = new Harmony(\"my_mod\");</pre><h3>Cuatro reglas</h3><ul><li>Pon tus parches desde <code>IClientModInitializer</code> (primer fotograma), no antes.</li><li>Usa <b>una sola</b> instancia de Harmony por mod, con el id de tu mod como nombre.</li><li>Si el jugador apaga tu mod, quita tus parches limpiamente.</li><li>No parches la misma función desde dos copias de tu mod. Aether carga una sola copia por id.</li></ul><div class=\"tip\">Harmony es una herramienta avanzada. Si es tu primer mod, déjala para el segundo.</div>",
+    "Guía de mods §7"
+   ],
+   "deps": [
+    "Dependencias y orden de carga",
+    "<p>Si tu mod necesita a otro (o a una parte de Aether) para funcionar, lo dices en <code>Depends</code>. Aether lo revisa <b>antes</b> de arrancar tu mod y los ordena solo.</p><ul><li>Si usas la interfaz compartida de Aether, pon <code>Depends = \"aether_ui@0.1.0-alpha\"</code>.</li><li>Todo mod puede dar por hecho que el núcleo de Aether está cargado; no hace falta declararlo salvo que uses algo que no siempre esté.</li><li>Evita depender de las partes internas de otro mod de juego. Si dos mods deben cooperar, el contrato compartido va en <code>Aether.UI</code> o <code>Aether.Core</code>.</li><li>Declara siempre lo mínimo que tu mod necesita.</li></ul><p>Si hay una dependencia que falta o un ciclo (A necesita a B y B necesita a A), tu mod no arranca y queda explicado en el registro. Después de cada arranque, Aether escribe <code>BepInEx/config/aether_conflicts.txt</code> con ids duplicados, dependencias faltantes y choques. Para verlo fácil:</p><pre class=\"code\">./aether doctor</pre>",
+    "Guía de mods §9"
+   ],
+   "build": [
+    "Compilar e instalar",
+    "<p>Un comando compila y copia tu DLL al juego:</p><pre class=\"code\">dotnet build MiMod.csproj -c Release -p:InstallToGame=true</pre><p>Sin <code>-p:InstallToGame=true</code> solo compila, y copias tú la DLL de <code>bin/Release/netstandard2.1/</code> a <code>&lt;juego&gt;/Aether/Mods/</code>.</p><p>Copia solo tu DLL (y las bibliotecas que sean solo tuyas), nunca archivos del juego. Si no recuerdas dónde va un mod descargado, el botón «Añadir mod…» de Aether Monitor lo averigua y te pregunta antes de copiar.</p><h3>Si tu mod no aparece</h3><ol><li>¿Tu DLL es de .NET (no un programa nativo)?</li><li>¿Tiene la etiqueta <code>[assembly: AetherMod(...)]</code>?</li><li>¿Está en <code>Aether/Mods</code>?</li><li>Abre <code>BepInEx/LogOutput.log</code> y busca <code>Entrypoint … failed</code>, <code>MissingMethodException</code>, <code>TypeLoadException</code> o un error de dependencia.</li><li>¿Compilaste contra la misma versión mayor de Aether que tienes instalada?</li></ol>",
+    "Guía de mods §8"
+   ],
+   "test": [
+    "Probar tu mod",
+    "<ol><li><b>Respalda tu mundo y tu personaje</b> antes de probar cosas que puedan romperlos.</li><li>Abre el juego y mira el menú <b>F10</b>: tu mod debe estar en la lista.</li><li>Revisa <code>BepInEx/LogOutput.log</code>: sin errores en rojo.</li><li>Corre <code>./aether doctor</code>.</li><li>Prueba lo que hace tu mod dentro del juego, con las opciones en sus dos valores.</li></ol><p>Tu mod está listo cuando compila sin errores, el registro está limpio y comprobaste en el juego que funciona. Anota qué probaste.</p>",
+    "Guía de mods §11"
+   ],
+   "pub": [
+    "Compartir tu mod",
+    "<p>Antes de publicarlo, revisa esta lista:</p><ul><li>Publica el <b>código fuente completo y la documentación</b> de tu mod: la licencia de modding del juego lo exige para todo mod público. Después de publicarlo, avisa a Big Cube Interactive.</li><li>Nada de código malicioso ni de ventajas injustas en multijugador. Si tu mod cambia el multijugador, di con claridad qué incompatibilidades tiene.</li><li>No incluyas archivos del juego, código descompilado, claves ni recursos extraídos.</li><li>Explica en el README: dónde se instala, qué necesita, sus opciones, sus teclas y cómo quitarlo.</li><li>Pon la misma versión en la DLL y en <code>[AetherMod]</code>.</li><li>Da crédito a Aether, a Block Story y a las bibliotecas que uses.</li><li>Si usaste IA para escribirlo, dilo.</li><li>Entrega la DLL, no el juego.</li></ul>",
+    "Guía de mods §12"
+   ],
+   "cli": [
+    "Comandos del CLI",
+    "<p>El CLI es el programa <code>aether</code> que viene en el paquete. Se usa en una terminal.</p><table><tr><th>Comando</th><th>Qué hace</th></tr><tr><td><code>status</code></td><td>Revisa Block Story, BepInEx, Aether y los mods instalados</td></tr><tr><td><code>install</code></td><td>Instala el cargador (sin mods; para sumar alguno, <code>--mods lens,dusk</code>)</td></tr><tr><td><code>list</code></td><td>Lista los mods instalados y sus archivos de opciones</td></tr><tr><td><code>doctor</code></td><td>Diagnóstico del juego y de los reportes de fallos</td></tr><tr><td><code>add &lt;archivo&gt;</code></td><td>Instala un mod (.dll o .zip) en la carpeta correcta</td></tr><tr><td><code>new &lt;Nombre&gt;</code></td><td>Crea un proyecto de mod desde la plantilla</td></tr><tr><td><code>uninstall</code></td><td>Quita Aether; conserva mods de terceros y opciones</td></tr></table><p>Casi todos aceptan <code>--dry-run</code> (muestra qué haría sin cambiar nada) y <code>--game-dir &lt;ruta&gt;</code> (si tu juego no está en la carpeta de Steam por defecto).</p>",
+    "CLI: aether --help"
+   ],
+   "traps": [
+    "Problemas conocidos",
+    "<p>Cosas que ya han hecho perder tiempo. Revísalas si algo raro pasa.</p><ul><li><b>El juego se cierra al arrancar, sin mensaje.</b> Probablemente un mod está en <code>BepInEx/plugins</code>. Ahí, algunos mods hacen cosas demasiado pronto y el juego falla. Ponlos en <code>Aether/Mods</code>, donde Aether los arranca en el momento correcto.</li><li><b>Tu mod falla al empezar.</b> Si usas <code>Awake</code> o <code>Start</code> para tocar objetos del juego, hazlo mejor desde <code>OnInitializeClient</code>.</li><li><b>El juego se cierra sin avisar al dibujar tu interfaz.</b> Un error dentro de <code>OnGUI</code> puede cerrar el juego. Envuelve el dibujo en <code>try/catch</code> y registra solo el tipo y el mensaje del error.</li><li><b>Datos de bloques de zonas lejanas.</b> No leas bloques sin comprobar que el terreno está cargado (usa <code>SafeVoxels</code>).</li><li><b>Un fallo no es siempre culpa de tu mod.</b> Algunos cierres inesperados vienen del propio juego. Están anotados para no confundirlos.</li></ul>",
+    "Problemas conocidos (KNOWN_TRAPS)"
+   ]
+  },
+  "en": {
+   "g": [
+    [
+     "Start",
+     [
+      [
+       "intro",
+       "Before you start"
+      ],
+      [
+       "inst",
+       "Install Aether"
+      ],
+      [
+       "first",
+       "Your first mod, step by step"
+      ]
+     ]
+    ],
+    [
+     "Create",
+     [
+      [
+       "anat",
+       "What a mod looks like inside"
+      ],
+      [
+       "conf",
+       "Mod settings"
+      ],
+      [
+       "assets",
+       "Images and drawing"
+      ],
+      [
+       "harm",
+       "Harmony: changing what the game does"
+      ],
+      [
+       "deps",
+       "Dependencies and load order"
+      ]
+     ]
+    ],
+    [
+     "Publish",
+     [
+      [
+       "build",
+       "Build and install"
+      ],
+      [
+       "test",
+       "Test your mod"
+      ],
+      [
+       "pub",
+       "Share your mod"
+      ]
+     ]
+    ],
+    [
+     "Reference",
+     [
+      [
+       "cli",
+       "CLI commands"
+      ],
+      [
+       "traps",
+       "Known traps"
+      ]
+     ]
+    ]
+   ],
+   "srcl": "Source: ",
+   "intro": [
+    "Before you start",
+    "<p>A <b>mod</b> is a file that adds or changes things in a game. <b>Aether</b> is the program that loads those files when Block Story starts. You write the mod; Aether finds it, orders it and starts it.</p><p>You do not need to know how Block Story works inside. You do need to write a little code (C#), but you begin by copying an example and changing texts and numbers.</p><h3>What you need</h3><ul><li>Block Story from Steam, with Aether installed.</li><li>The <b>.NET 9 SDK</b>, a free program that turns your code into a mod.</li><li>Any text editor.</li><li>Willingness to try and get it wrong. Everything can be undone by deleting one file.</li></ul><h3>Words you will see</h3><table><tr><th>Word</th><th>What it means</th></tr><tr><td>DLL</td><td>Your mod’s file. It is what gets copied into the game.</td></tr><tr><td>Build</td><td>Turn your code into a DLL.</td></tr><tr><td>Entrypoint</td><td>The part of your mod where Aether starts it.</td></tr><tr><td>Config</td><td>A file with options the player can change.</td></tr><tr><td>Registry</td><td>A list in the game where you add new things, such as blocks.</td></tr><tr><td>Harmony</td><td>A tool to change what the game does without touching its files.</td></tr></table><h3>The path</h3><p>Install Aether, create your first mod, change something, test it and share it. Each step has its own page in the left menu.</p>",
+    "Modding Guide §1"
+   ],
+   "inst": [
+    "Install Aether",
+    "<p>You need Block Story from Steam. The installer fetches BepInEx 5.4.23.6 if it is missing and checks its signature (SHA-256) before installing anything.</p><p>Open <code>aether-installer</code> (<code>aether-installer.exe</code> on Windows), pick the Block Story folder and press “Install”. You will see each step as it happens. For a terminal there is a separate download (<code>aether-cli</code>) with <code>./install.sh --dry-run</code> to preview.</p><p>The installer puts <b>only the loader</b> in your game, with no mods. You choose the mods: they download separately and are added from Aether Monitor, with the “Add mod…” button.</p><p>On Linux with Steam, open the game’s properties and in “Launch options” type <code>./run_bepinex.sh %command%</code>.</p><p>After the first launch, <code>BepInEx/config/aether_conflicts.txt</code> tells you whether a mod is duplicated, missing something or clashes with another.</p><div class=\"tip\">Beta: tested on Linux and Windows 11. SmartScreen may warn on Windows because the executables are not code-signed yet.</div>",
+    "README, release package"
+   ],
+   "first": [
+    "Your first mod, step by step",
+    "<p><b>In short:</b> you create a project, build it, and the DLL ends up in the game’s <code>Aether/Mods</code> folder. When the game opens, Aether finds it by itself. No other file is needed.</p><h3>1 · Create the project</h3><p>Aether ships a command that sets everything up:</p><pre class=\"code\">aether new MyMod</pre><p>It creates a folder with three files: <code>MyMod.csproj</code> (the build recipe), <code>Mod.cs</code> (your mod) and a short <code>README.md</code>. If Aether finds your game, the project already knows where Aether’s files are.</p><h3>2 · Read your mod</h3><p><code>Mod.cs</code> already does three things. They are numbered in the comments:</p><pre class=\"code\">using System;\nusing Aether.Core.Config;\nusing Aether.Loader.Discovery;\nusing Aether.Loader.Entrypoints;\nusing Aether.Registry;\n\n// This line is how Aether recognises your mod. It must stay at assembly level.\n[assembly: AetherMod(\"my_mod\", \"1.0.0\",\n    Name = \"My Mod\",\n    Author = \"You\",\n    Description = \"A starter mod for Aether.\")]\n\nnamespace MyMod;\n\npublic sealed class ModEntry : IModInitializer, IClientModInitializer\n{\n    // 1. An option the player can change (BepInEx/config/aether/my_mod.json).\n    public static readonly ConfigEntry&lt;bool&gt; EnableCustomBlock =\n        AetherConfig.Bind(\"my_mod\", \"Features\", \"EnableCustomBlock\", true, \"Register the example block.\");\n\n    // 2. Runs when mods load: the place to register blocks, items and recipes.\n    public void OnInitialize()\n    {\n        if (!EnableCustomBlock.Value) return;\n\n        var definition = new BlockDefinition(new Identifier(\"my_mod\", \"gem_block\"), \"Gem Block\")\n        {\n            Hardness = 3.0f,\n            IsSolid = true\n        };\n        DynamicBlockRegistry.Instance.Register(definition);\n    }\n\n    // 3. Runs on the first frame, with the game alive: UI, keys, sound and scene objects go here.\n    public void OnInitializeClient()\n    {\n        Console.WriteLine(\"[MyMod] ready\");\n    }\n}</pre><ol><li>An <b>option</b> the player can change.</li><li>It registers a <b>new block</b>, “Gem Block”, when mods load.</li><li>What you see and touch goes here (UI, keys, sound), once the game is alive.</li></ol><p>The <code>[assembly: AetherMod(…)]</code> line is what tells Aether this is a mod. It must stay at assembly level.</p><h3>3 · Change something</h3><p>Start simple: change the name <code>\"Gem Block\"</code> to another, or the <code>Hardness</code> number (how hard the block is). Save the file.</p><h3>4 · Check where Aether is</h3><p>The project looks for Aether’s files in <code>&lt;game&gt;/BepInEx/plugins/Aether/</code>. If <code>aether new</code> did not find your game, open <code>MyMod.csproj</code> and change <code>AetherDir</code>, or build with <code>-p:AetherDir=&lt;path&gt;</code>. If Aether is not installed, the build stops with a message that says so.</p><h3>5 · Build and install</h3><pre class=\"code\">cd MyMod\ndotnet build MyMod.csproj -c Release -p:InstallToGame=true</pre><p>With <code>-p:InstallToGame=true</code> the DLL is copied to <code>&lt;game&gt;/Aether/Mods/</code> for you. Without it, copy <code>bin/Release/netstandard2.1/MyMod.dll</code> into that folder yourself.</p><h3>6 · Check it</h3><p>Open the game. Your mod should show in the <b>F10</b> menu and in <code>BepInEx/LogOutput.log</code> with a line like:</p><pre class=\"code\">[Aether] Resolved N mods in topological order:\n  -> My Mod (my_mod v1.0.0)</pre><p>Not there? See <b>Build and install</b>, which has a checklist.</p>",
+    "Modding Guide §1, §3, §8"
+   ],
+   "anat": [
+    "What a mod looks like inside",
+    "<div class=\"tip\"><b>Your mod does not have to be Aether-only.</b> A regular BepInEx plugin also works in <code>Aether/Mods</code>: Aether starts it at the right moment. Aether does not lock you in.</div><p>A mod has two parts: a <b>label</b> saying who it is, and one or more <b>entrypoints</b> saying what it does and when.</p><h3>The label</h3><p>It always goes <b>at assembly level</b> (<code>[assembly: …]</code>): that is the only place Aether looks. If you put it on a class, the compiler warns you instead of letting your mod silently never load.</p><pre class=\"code\">[assembly: AetherMod(\"my_mod\", \"1.0.0\",\n    Name = \"My Mod\",\n    Author = \"Your Name\",\n    Description = \"Short description.\",\n    Depends = \"aether_ui@0.1.0-alpha\")]</pre><table><tr><th>Field</th><th>What it is for</th></tr><tr><td>id (<code>\"my_mod\"</code>)</td><td>The internal name. Pick one and never change it: settings, registries and crash reports use it.</td></tr><tr><td>version</td><td>Raise it when you publish changes.</td></tr><tr><td><code>Depends</code></td><td>What your mod needs to work. If missing, your mod does not start and it is logged.</td></tr><tr><td><code>Suggests</code></td><td>Mods that go well with yours. Informational only.</td></tr><tr><td><code>LoadAfter</code></td><td>Asks to load after another mod, if installed.</td></tr><tr><td><code>Breaks</code></td><td>Your mod will not start if any of these is installed.</td></tr></table><h3>Entrypoints</h3><p>They are the doors through which Aether starts your mod. Pick by what you need to do:</p><table><tr><th>Interface</th><th>When it runs</th><th>Use it for</th></tr><tr><td><code>IPreLaunchEntrypoint</code></td><td>As early as possible</td><td>Advanced low-level things</td></tr><tr><td><code>IModInitializer</code></td><td>When mods load</td><td>Registering blocks, items and recipes</td></tr><tr><td><code>IClientModInitializer</code></td><td>On the first frame, game alive</td><td>UI, keys, scene objects, Harmony</td></tr><tr><td><code>ISceneModInitializer</code></td><td>Every scene load</td><td>Setting up for a specific scene</td></tr></table><p>A simple mod needs only <code>IModInitializer</code> and <code>IClientModInitializer</code>, as in the template.</p><h3>Drawing inside Aether’s UI</h3><p>To show your mod inside Aether’s menu and panels, implement <code>IAetherUiModule</code> and register it with <code>AetherUiModuleRegistry.Register(...)</code>. Aether tells it when to start, when to update each frame and when the scene changes. This is a step for after your first mod.</p>",
+    "Modding Guide §4"
+   ],
+   "conf": [
+    "Mod settings",
+    "<p>A setting is a value the player can change without touching your code: a yes/no, a number, a text. That way your mod adapts to everyone.</p><pre class=\"code\">private static ConfigEntry&lt;bool&gt; _enabled;\n\n_enabled = AetherConfig.Bind(\"my_mod\", \"General\", \"Enabled\", true,\n    \"Enable this mod.\");</pre><p>The parts are: your id, a group (for tidiness), the option name, its default value and an explanation.</p><p>Aether creates <code>BepInEx/config/aether/my_mod.json</code> the first time. The player edits it with any text editor and the changes are respected.</p><p>Read the value in your code with <code>_enabled.Value</code>. You can bind settings from your entrypoint safely.</p><div class=\"tip\">There is a second way, BepInEx’s (<code>Config.Bind(...)</code>), used by the mods that ship with Aether. For third-party mods, use Aether’s: it is the recommended one.</div>",
+    "Modding Guide §5"
+   ],
+   "assets": [
+    "Images and drawing",
+    "<p>If your mod shows images, put them in a folder next to your DLL and load them like this:</p><pre class=\"code\">AetherResources.LoadTexture(\"my_mod\", \"textures/icon.png\");</pre><p>To make your mod’s UI feel like part of the game, use Block Story’s <b>original sprites</b> (<code>UIAtlas</code>) instead of drawing flat boxes.</p><h3>Rules that avoid trouble</h3><ul><li><b>Do not create new things every frame</b> when drawing the UI (textures, styles, fonts): create once and reuse. Otherwise the game stutters.</li><li><b>Do not read blocks from areas that are not loaded.</b> Use <code>SafeVoxels.GetBlockSafe</code> or <code>GetBlockFast</code>, which do it safely.</li><li>If something has to wait, wait for the first frame (the client entrypoint), not for game boot.</li></ul>",
+    "Modding Guide §6"
+   ],
+   "harm": [
+    "Harmony: changing what the game does",
+    "<p>Sometimes your mod needs the game to do something different, not just add things. <b>Harmony</b> is for that: it is like sticking a note on one of the game’s functions that says “before (or after) you run, run this”. The game is not modified; the change lives only in your mod.</p><pre class=\"code\">var harmony = new Harmony(\"my_mod\");</pre><h3>Four rules</h3><ul><li>Apply your patches from <code>IClientModInitializer</code> (first frame), not earlier.</li><li>Use <b>one</b> Harmony instance per mod, named with your mod id.</li><li>If the player turns your mod off, remove your patches cleanly.</li><li>Do not patch the same function from two copies of your mod. Aether loads a single copy per id.</li></ul><div class=\"tip\">Harmony is an advanced tool. If this is your first mod, leave it for the second.</div>",
+    "Modding Guide §7"
+   ],
+   "deps": [
+    "Dependencies and load order",
+    "<p>If your mod needs another one (or a part of Aether) to work, say so in <code>Depends</code>. Aether checks it <b>before</b> starting your mod and orders them automatically.</p><ul><li>If you use Aether’s shared UI, add <code>Depends = \"aether_ui@0.1.0-alpha\"</code>.</li><li>Every mod can assume Aether’s core is loaded; no need to declare it unless you use something not always present.</li><li>Avoid depending on another gameplay mod’s internals. If two mods must cooperate, the shared contract goes in <code>Aether.UI</code> or <code>Aether.Core</code>.</li><li>Always declare the minimum your mod needs.</li></ul><p>If a dependency is missing or there is a cycle (A needs B and B needs A), your mod does not start and the log explains why. After each launch Aether writes <code>BepInEx/config/aether_conflicts.txt</code> with duplicate ids, missing dependencies and clashes. To see it easily:</p><pre class=\"code\">./aether doctor</pre>",
+    "Modding Guide §9"
+   ],
+   "build": [
+    "Build and install",
+    "<p>One command builds and copies your DLL into the game:</p><pre class=\"code\">dotnet build MyMod.csproj -c Release -p:InstallToGame=true</pre><p>Without <code>-p:InstallToGame=true</code> it only builds, and you copy the DLL from <code>bin/Release/netstandard2.1/</code> into <code>&lt;game&gt;/Aether/Mods/</code> yourself.</p><p>Copy only your DLL (and libraries that are yours alone), never game files. If you do not remember where a downloaded mod goes, the “Add mod…” button in Aether Monitor works it out and asks before copying.</p><h3>If your mod does not show up</h3><ol><li>Is your DLL a .NET assembly (not a native program)?</li><li>Does it have the <code>[assembly: AetherMod(...)]</code> label?</li><li>Is it in <code>Aether/Mods</code>?</li><li>Open <code>BepInEx/LogOutput.log</code> and look for <code>Entrypoint … failed</code>, <code>MissingMethodException</code>, <code>TypeLoadException</code> or a dependency error.</li><li>Did you build against the same major version of Aether you have installed?</li></ol>",
+    "Modding Guide §8"
+   ],
+   "test": [
+    "Test your mod",
+    "<ol><li><b>Back up your world and character</b> before testing things that could break them.</li><li>Open the game and check the <b>F10</b> menu: your mod must be in the list.</li><li>Check <code>BepInEx/LogOutput.log</code>: no red errors.</li><li>Run <code>./aether doctor</code>.</li><li>Try what your mod does in the game, with its options at both values.</li></ol><p>Your mod is ready when it builds without errors, the log is clean and you checked in the game that it works. Write down what you tested.</p>",
+    "Modding Guide §11"
+   ],
+   "pub": [
+    "Share your mod",
+    "<p>Before publishing, check this list:</p><ul><li>Publish your mod’s <b>complete source code and documentation</b>: the game’s modding license requires it for every public mod. After releasing it, tell Big Cube Interactive.</li><li>No malicious code and no unfair advantages in multiplayer. If your mod changes multiplayer, say clearly which incompatibilities it has.</li><li>Do not include game files, decompiled code, keys or extracted assets.</li><li>Explain in the README: where it installs, what it needs, its options, its keys and how to remove it.</li><li>Use the same version in the DLL and in <code>[AetherMod]</code>.</li><li>Credit Aether, Block Story and any libraries you use.</li><li>If you used AI to write it, say so.</li><li>Ship the DLL, not the game.</li></ul>",
+    "Modding Guide §12"
+   ],
+   "cli": [
+    "CLI commands",
+    "<p>The CLI is the <code>aether</code> program that comes in the package. You use it in a terminal.</p><table><tr><th>Command</th><th>What it does</th></tr><tr><td><code>status</code></td><td>Checks Block Story, BepInEx, Aether and installed mods</td></tr><tr><td><code>install</code></td><td>Installs the loader (no mods; to add some, <code>--mods lens,dusk</code>)</td></tr><tr><td><code>list</code></td><td>Lists installed mods and their config files</td></tr><tr><td><code>doctor</code></td><td>Diagnostics for the game and crash reports</td></tr><tr><td><code>add &lt;file&gt;</code></td><td>Installs a mod (.dll or .zip) in the right folder</td></tr><tr><td><code>new &lt;Name&gt;</code></td><td>Creates a mod project from the template</td></tr><tr><td><code>uninstall</code></td><td>Removes Aether; keeps third-party mods and settings</td></tr></table><p>Most accept <code>--dry-run</code> (shows what it would do without changing anything) and <code>--game-dir &lt;path&gt;</code> (if your game is not in the default Steam folder).</p>",
+    "CLI: aether --help"
+   ],
+   "traps": [
+    "Known traps",
+    "<p>Things that have already cost time. Check them if something odd happens.</p><ul><li><b>The game closes at startup with no message.</b> A mod is probably in <code>BepInEx/plugins</code>. There, some mods do things too early and the game fails. Put them in <code>Aether/Mods</code>, where Aether starts them at the right moment.</li><li><b>Your mod fails at start.</b> If you use <code>Awake</code> or <code>Start</code> to touch game objects, do it from <code>OnInitializeClient</code> instead.</li><li><b>The game closes silently while drawing your UI.</b> An error inside <code>OnGUI</code> can close the game. Wrap the drawing in <code>try/catch</code> and log only the error’s type and message.</li><li><b>Block data from faraway areas.</b> Do not read blocks without making sure the terrain is loaded (use <code>SafeVoxels</code>).</li><li><b>A failure is not always your mod’s fault.</b> Some unexpected closes come from the game itself. They are recorded so they are not mistaken for yours.</li></ul>",
+    "Known traps (KNOWN_TRAPS)"
+   ]
+  }
+ }
+}

@@ -1,0 +1,42 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Aether.Installer.App.App"
+             RequestedThemeVariant="Light">
+  <!-- Aether identity: warm light ground, ember accent (the same palette as the website in light mode). -->
+  <Application.Resources>
+    <Color x:Key="SystemAccentColor">#C2500A</Color>
+    <Color x:Key="SystemAccentColorDark1">#A84208</Color>
+    <Color x:Key="SystemAccentColorLight1">#D86A22</Color>
+    <SolidColorBrush x:Key="AetherInk">#1A1410</SolidColorBrush>
+    <SolidColorBrush x:Key="AetherGround">#FBFAF8</SolidColorBrush>
+    <FontFamily x:Key="AetherDisplay">avares://aether-installer/Assets/Fonts#Gloock</FontFamily>
+    <FontFamily x:Key="AetherBody">avares://aether-installer/Assets/Fonts#Schibsted Grotesk</FontFamily>
+    <FontFamily x:Key="AetherMono">avares://aether-installer/Assets/Fonts#JetBrains Mono</FontFamily>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Window">
+      <Setter Property="Background" Value="{StaticResource AetherGround}" />
+      <Setter Property="Foreground" Value="{StaticResource AetherInk}" />
+      <Setter Property="FontFamily" Value="{StaticResource AetherBody}" />
+    </Style>
+    <!-- Names and titles in Gloock, as on the website; code, paths and logs in JetBrains Mono. -->
+    <Style Selector="TextBlock.display">
+      <Setter Property="FontFamily" Value="{StaticResource AetherDisplay}" />
+      <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+    <Style Selector="TextBlock.mono">
+      <Setter Property="FontFamily" Value="{StaticResource AetherMono}" />
+    </Style>
+    <Style Selector="TextBox.mono">
+      <Setter Property="FontFamily" Value="{StaticResource AetherMono}" />
+    </Style>
+    <Style Selector="Button.accent">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+  </Application.Styles>
+</Application>

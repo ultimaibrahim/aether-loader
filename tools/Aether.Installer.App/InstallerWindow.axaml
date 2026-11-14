@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Aether.Installer.App.InstallerWindow"
+        Title="Aether Installer" Icon="/Assets/aether.png" Width="520" Height="520" CanResize="False"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="22" RowDefinitions="Auto,*,Auto">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
+      <Image Source="/Assets/aether-light.png" Width="46" Height="46" />
+      <StackPanel Spacing="0" VerticalAlignment="Center">
+        <TextBlock Text="aether" FontSize="30" Classes="display" />
+        <TextBlock Text="Mod loader for Block Story" Opacity="0.65" />
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Step 1: where to install -->
+    <StackPanel x:Name="PickPanel" Grid.Row="1" Spacing="8" VerticalAlignment="Center">
+      <TextBlock Text="Block Story folder" Opacity="0.8" />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox x:Name="GamePath" Grid.Column="0" />
+        <Button x:Name="BrowseButton" Grid.Column="1" Content="Browse…" Margin="8,0,0,0" />
+      </Grid>
+      <TextBlock x:Name="State" Opacity="0.7" TextWrapping="Wrap" />
+      <CheckBox x:Name="TermsCheck" Margin="0,6,0,0">
+        <TextBlock TextWrapping="Wrap" FontSize="12" Text="I accept the Terms of use and the privacy notice. Aether is free, unofficial software, provided as is." />
+      </CheckBox>
+      <StackPanel Orientation="Horizontal" Spacing="14" Margin="28,0,0,0">
+        <Button x:Name="TermsButton" Background="Transparent" Padding="0" BorderThickness="0" Foreground="{DynamicResource SystemAccentColor}"><TextBlock Text="Read the Terms of use" FontSize="12" TextDecorations="Underline" /></Button>
+        <Button x:Name="PrivacyButton" Background="Transparent" Padding="0" BorderThickness="0" Foreground="{DynamicResource SystemAccentColor}"><TextBlock Text="Read the privacy notice" FontSize="12" TextDecorations="Underline" /></Button>
+      </StackPanel>
+      <ProgressBar x:Name="Busy" IsIndeterminate="True" IsVisible="False" />
+      <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" IsVisible="False"
+               Height="170" Classes="mono" FontSize="12" />
+    </StackPanel>
+
+    <!-- Step 2: installed; offer the monitor -->
+    <StackPanel x:Name="DonePanel" Grid.Row="1" Spacing="8" VerticalAlignment="Center" IsVisible="False">
+      <TextBlock x:Name="DoneTitle" FontSize="16" FontWeight="SemiBold" Text="Aether is installed." />
+      <TextBlock x:Name="DoneText" TextWrapping="Wrap" Opacity="0.8" />
+      <!-- Linux only, when Steam does not run BepInEx yet: without this launch option the game starts with no mods. -->
+      <StackPanel x:Name="SteamHint" Spacing="6" IsVisible="False" Margin="0,4,0,0">
+        <TextBlock TextWrapping="Wrap" FontWeight="SemiBold"
+                   Text="One more step: in Steam, right-click Block Story → Properties → Launch options, and paste:" />
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox x:Name="SteamOption" Grid.Column="0" IsReadOnly="True" Classes="mono" />
+          <Button x:Name="CopySteamOption" Grid.Column="1" Content="Copy" Margin="8,0,0,0" />
+        </Grid>
+      </StackPanel>
+      <CheckBox x:Name="ShortcutCheck" Content="Create a desktop shortcut for Aether Monitor" IsChecked="True" Margin="0,4,0,0" />
+      <TextBlock x:Name="MonitorOffer" TextWrapping="Wrap" Margin="0,8,0,0"
+                 Text="Install Aether Monitor too? A small window to see crashes and logs, add mods and check for updates. You can skip it." />
+    </StackPanel>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="InstallButton" Content="Install" Classes="accent" MinWidth="110" />
+      <Button x:Name="OpenFolderButton" Content="Open folder" IsVisible="False" />
+      <Button x:Name="SkipButton" Content="No, thanks" IsVisible="False" />
+      <Button x:Name="MonitorButton" Content="Install Monitor" Classes="accent" IsVisible="False" />
+      <Button x:Name="CloseButton" Content="Close" IsVisible="False" />
+    </StackPanel>
+  </Grid>
+</Window>

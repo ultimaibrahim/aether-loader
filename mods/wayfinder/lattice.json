@@ -1,0 +1,20 @@
+{
+  "tagline": "Corner and fullscreen map built from 32×32-block chunks, cave layers, waypoints and death points, PNG export.",
+  "accent": "ember",
+  "hero": "compact",
+  "pattern": "cells",
+  "tags": [
+    "map",
+    "minimap"
+  ],
+  "links": [
+    {
+      "url": "https://github.com/ultimaibrahim/aether-loader/issues"
+    }
+  ],
+  "sections": [
+    "description",
+    "changelog",
+    "versions"
+  ]
+}

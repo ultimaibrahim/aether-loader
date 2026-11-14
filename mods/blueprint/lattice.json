@@ -1,0 +1,20 @@
+{
+  "tagline": "Item catalog and recipe browser inside the inventory: search, recipe, “used in” and bookmarks.",
+  "accent": "ember",
+  "hero": "compact",
+  "pattern": "cells",
+  "tags": [
+    "recipes",
+    "inventory"
+  ],
+  "links": [
+    {
+      "url": "https://github.com/ultimaibrahim/aether-loader/issues"
+    }
+  ],
+  "sections": [
+    "description",
+    "changelog",
+    "versions"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "tagline": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
+  "accent": "ember",
+  "hero": "compact",
+  "pattern": "cells",
+  "tags": [
+    "hud",
+    "info"
+  ],
+  "links": [
+    {
+      "url": "https://github.com/ultimaibrahim/aether-loader/issues"
+    }
+  ],
+  "sections": [
+    "description",
+    "changelog",
+    "versions"
+  ]
+}

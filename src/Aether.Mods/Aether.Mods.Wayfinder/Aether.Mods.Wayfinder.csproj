@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Aether Wayfinder: a plain BepInEx plugin built on Aether Nano. It runs with Aether or with BepInEx
+    alone; the only thing it needs next to it is Aether.Nano.dll. The map storage code (Aether.Core.Mapping,
+    plain .NET) is compiled in, so Aether.Core.dll is not needed either.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Aether.Mods.Wayfinder</AssemblyName>
+    <RootNamespace>Aether.Mods.Wayfinder</RootNamespace>
+    <Nullable>disable</Nullable>
+    <Version>1.1.1</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Aether.Nano\Aether.Nano.csproj" Private="false" />
+    <Compile Include="..\..\Aether.Core\Mapping\*.cs" Link="Mapping\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Aether.Core\Config\LegacyNames.cs" Link="Mapping\LegacyNames.cs" />
+  </ItemGroup>
+  <Import Project="..\..\GameReferences.props" />
+</Project>

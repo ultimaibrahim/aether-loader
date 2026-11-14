@@ -1,0 +1,40 @@
+<Project>
+  <PropertyGroup>
+    <!-- The one Aether version: the CLI, the installer window and Aether.Loader.dll (read by the Monitor's update check) all take it. -->
+    <AetherVersion>1.2.0-beta</AetherVersion>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Deterministic>true</Deterministic>
+    <NoWarn>$(NoWarn);CS8632;CS0169</NoWarn>
+    <Authors>Ibrahim García</Authors>
+    <Company>Atelier</Company>
+    <Product>Aether Modding Framework</Product>
+    <Copyright>Copyright © 2026 Ibrahim García</Copyright>
+    <GameManagedPath Condition="'$(GameManagedPath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/BlockStory/BlockStoryLinux_Data/Managed</GameManagedPath>
+    <BepInExCorePath Condition="'$(BepInExCorePath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/BlockStory/BepInEx/core</BepInExCorePath>
+  </PropertyGroup>
+
+  <!--
+    The four official mods are strong-named with Aether's key, so Aether's menu can tell them apart ("by Aether") from a
+    mod that only copies their name or GUID. The private key never enters this repo: builds without it are unsigned and
+    show as Nano mods. Point AETHER_MODS_KEY at the key file, or keep it at ~/aether/keys/aether-mods.snk.
+  -->
+  <PropertyGroup>
+    <AetherModsKey Condition="'$(AETHER_MODS_KEY)' != ''">$(AETHER_MODS_KEY)</AetherModsKey>
+    <AetherModsKey Condition="'$(AetherModsKey)' == ''">$(HOME)/aether/keys/aether-mods.snk</AetherModsKey>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('Aether.Mods.')) and Exists('$(AetherModsKey)')">
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(AetherModsKey)</AssemblyOriginatorKeyFile>
+    <!-- The game's assemblies have no strong name; Mono does not check it, so the warning says nothing here. -->
+    <NoWarn>$(NoWarn);CS8002</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1' and Exists('$(GameManagedPath)/Newtonsoft.Json.dll')">
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(GameManagedPath)/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

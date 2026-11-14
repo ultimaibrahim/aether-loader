@@ -1,0 +1,17 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    attributes: {label: What happened, description: "And what did you expect?"}
+    validations: {required: true}
+  - type: textarea
+    attributes: {label: Steps to reproduce}
+  - type: input
+    attributes: {label: Aether version, placeholder: 1.0.0-beta}
+    validations: {required: true}
+  - type: dropdown
+    attributes: {label: Platform, options: [Linux, Windows, macOS]}
+    validations: {required: true}
+  - type: textarea
+    attributes: {label: "Output of `aether doctor` (and BepInEx/LogOutput.log if it crashes)", render: text}

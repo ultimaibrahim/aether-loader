@@ -1,0 +1,27 @@
+<Project>
+  <!--
+    OBSOLETE since Aether Nano became a DLL (Aether.Nano.dll, src/Aether.Nano): new mods reference that instead.
+    Kept so mods written against the compiled-in Nano still build.
+
+    Aether Nano: a handful of source files compiled INTO each mod, so the mod stays a plain BepInEx plugin that needs no
+    Aether assembly to load. Import this file from a mod csproj:   <Import Project="..\..\src\Aether.Nano.Source\AetherNano.props" />
+    The mod then references only BepInEx and Unity. The types are `internal`, so two mods never clash over them.
+  -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)*.cs" LinkBase="AetherNano" />
+  </ItemGroup>
+
+  <!-- The "Modded" mark draws with IMGUI. -->
+  <ItemGroup Condition="Exists('$(GameManagedPath)/UnityEngine.IMGUIModule.dll')">
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(GameManagedPath)/UnityEngine.TextRenderingModule.dll')">
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

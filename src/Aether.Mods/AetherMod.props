@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    Shared build contract for a runtime Aether mod assembly.
+    A mod owns its gameplay code and binds its own configuration; it consumes shared UI/services
+    from Aether.UI and pure math/persistence from Aether.Core. Import this file from the mod csproj:
+
+      <Import Project="..\AetherMod.props" />
+  -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Aether.Core\Aether.Core.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Aether.API\Aether.API.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Aether.Loader\Aether.Loader.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Aether.Registry\Aether.Registry.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Aether.UI\Aether.UI.csproj" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\GameReferences.props" />
+</Project>

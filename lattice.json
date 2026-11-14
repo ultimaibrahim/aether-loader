@@ -1,0 +1,29 @@
+{
+  "mods": [
+    {
+      "id": "nano",
+      "asset": "Aether.Nano.dll",
+      "name": "Aether Nano"
+    },
+    {
+      "id": "lens",
+      "asset": "Aether.Mods.Lens.dll",
+      "name": "Aether Lens"
+    },
+    {
+      "id": "wayfinder",
+      "asset": "Aether.Mods.Wayfinder.dll",
+      "name": "Aether Wayfinder"
+    },
+    {
+      "id": "blueprint",
+      "asset": "Aether.Mods.Blueprint.dll",
+      "name": "Aether Blueprint"
+    },
+    {
+      "id": "dusk",
+      "asset": "Aether.Mods.Dusk.dll",
+      "name": "Aether Dusk"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Everything the installer does, with no console and no window: the CLI and the graphical installer are thin front ends over this. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Aether.Installer</RootNamespace>
+    <Description>Aether installer logic: game detection, install layout, mod inspection and routing, BepInEx setup, preflight.</Description>
+  </PropertyGroup>
+
+  <!-- SemVer and dependency parsing live in the loader; only these pure types are used (no BepInEx at runtime). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Aether.Loader\Aether.Loader.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+  </ItemGroup>
+
+</Project>

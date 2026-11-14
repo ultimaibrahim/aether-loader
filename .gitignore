@@ -1,0 +1,50 @@
+# ── Build output ───────────────────────────────────────────────
+bin/
+obj/
+publish/
+out/
+# release zips (scripts/package.sh) and the generated site (site/build.py)
+dist/
+TestResults/
+# ── Editors and OS ─────────────────────────────────────────────
+*.log
+.vs/
+.idea/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+.DS_Store
+# ── Never commit: game files, third-party binaries, decompiled code ──
+Thumbs.db
+# The build reads the game's assemblies from your own Steam folder; they are not redistributable.
+*.dll
+*.exe
+*.pdb
+*.so
+*.dylib
+*.zip
+*.unitypackage
+BlockStory*_Data/
+/BepInEx/
+/Aether/
+decompiled/
+ilspy/
+# ── Never commit: secrets and personal data ────────────────────
+Assembly-CSharp*
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+secrets.*
+*.save
+saves/
+# ── Local scratch ──────────────────────────────────────────────
+qa-save-*/
+/vendor/
+/scratch/
+*.local

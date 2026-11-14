@@ -1,0 +1,20 @@
+{
+  "tagline": "Matte terrain, darker caves, handheld torchlight and presets.",
+  "accent": "ember",
+  "hero": "compact",
+  "pattern": "cells",
+  "tags": [
+    "visuals",
+    "lighting"
+  ],
+  "links": [
+    {
+      "url": "https://github.com/ultimaibrahim/aether-loader/issues"
+    }
+  ],
+  "sections": [
+    "description",
+    "changelog",
+    "versions"
+  ]
+}

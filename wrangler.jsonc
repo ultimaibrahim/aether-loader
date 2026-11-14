@@ -1,0 +1,14 @@
+{
+  // Cloudflare: the project site (static files built by site/build.py into site/dist).
+  // Build command: python3 site/build.py      Deploy command: npx wrangler deploy
+  // "name" must match the project name in Cloudflare (Workers & Pages).
+  "name": "aether-loader",
+  "compatibility_date": "2025-11-01",
+  // Only the custom domain (aether.ultimaibrahim.dev) serves the site: no *.workers.dev or preview URLs.
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./site/dist",
+    "not_found_handling": "404-page"
+  }
+}

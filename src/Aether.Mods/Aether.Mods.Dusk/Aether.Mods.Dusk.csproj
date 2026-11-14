@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Aether Dusk: a plain BepInEx plugin built on Aether Nano. It runs with Aether or with BepInEx
+    alone; the only thing it needs next to it is Aether.Nano.dll.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Aether.Mods.Dusk</AssemblyName>
+    <RootNamespace>Aether.Mods.Dusk</RootNamespace>
+    <Nullable>disable</Nullable>
+    <Version>1.1.1</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Aether.Nano\Aether.Nano.csproj" Private="false" />
+  </ItemGroup>
+  <Import Project="..\..\GameReferences.props" />
+</Project>

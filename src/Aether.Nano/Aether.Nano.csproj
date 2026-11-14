@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Aether Nano: the shared library the official mods are built on. A plain BepInEx plugin with no Aether dependency,
+    so a Nano mod runs with Aether or with BepInEx alone. Aether.UI builds on it too.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Aether.Nano</AssemblyName>
+    <RootNamespace>Aether.Nano</RootNamespace>
+    <Nullable>disable</Nullable>
+    <Version>1.0.1</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Brand assets for the in-game UI (NanoBrand): Latin-subset OFL fonts and the open cube. Loaded on first use. -->
+    <EmbeddedResource Include="Brand\*.ttf;Brand\*.png" LogicalName="Aether.Nano.Brand.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Import Project="..\GameReferences.props" />
+</Project>

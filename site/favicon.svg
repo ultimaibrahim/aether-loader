@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 112">
+<style>
+.k{stroke:#1A1410;stroke-width:5;stroke-linejoin:round}
+.f{fill:#F3EEE8}.r{fill:#E4DCD1}.l{fill:#1A1410}
+@media (prefers-color-scheme:dark){.k{stroke:#EADFC6}.f{fill:#17110C}.r{fill:#241810}.l{fill:#EADFC6}}
+</style>
+<defs><radialGradient id="g" cx="50%" cy="60%" r="70%"><stop offset="0" stop-color="#FFD27A"/><stop offset=".55" stop-color="#FF7A1A"/><stop offset="1" stop-color="#B53A06"/></radialGradient></defs>
+<polygon points="50,24 86,44 50,62 14,44" fill="url(#g)"/>
+<polygon points="14,44 50,62 50,102 14,82" class="f k"/>
+<polygon points="50,62 86,44 86,82 50,102" class="r k"/>
+<polygon points="50,8 86,28 50,46 14,28" class="l k"/>
+</svg>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>aether</AssemblyName>
+    <ApplicationIcon>..\Aether.Installer.App\Assets\aether.ico</ApplicationIcon>
+    <RootNamespace>Aether.CLI</RootNamespace>
+    <Version>$(AetherVersion)</Version>
+    <Description>Aether Modding Framework — Cross-Platform Installer, Mod Manager &amp; Developer CLI</Description>
+  </PropertyGroup>
+
+  <!-- Release publish (-r <rid>): trim the .NET runtime (partial: only the framework is trimmed, never Aether's own code) to keep the download small. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- SemVer and dependency parsing live in the loader; only these pure types are used (no BepInEx at runtime). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Aether.Installer\Aether.Installer.csproj" />
+    <ProjectReference Include="..\..\src\Aether.Loader\Aether.Loader.csproj" />
+  </ItemGroup>
+
+</Project>
