@@ -4,6 +4,14 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+## 1.2.3-beta
+
+- **A new Monitor.** Sections for Status, My mods, Catalog and Problems & logs, drawn in Aether's own signs: each mod shows its icon (or its cube in its own colour, the same as on Lattice), the verification level as three hexagons and its state as rhombi. Spanish and English, with a switch in the title bar; the choice is remembered.
+- **One click to install or update** from the Catalog. It asks first only when other mods come with it (its dependencies). "Update all" updates everything at once, and installing shows each step (download, SHA-256, copy) as the cube builds itself. Cards or a list, as you prefer.
+- **Switch mods off and on with one click** in My mods. Nothing is deleted: the file is kept as `name.dll.disabled`, which BepInEx skips, and comes back with another click. If other mods need the one you switch off, the Monitor tells you first. `aether list` shows them as `[OFF]`.
+- **Drop a .zip or .dll** on the Monitor (or click the drop area) to install it.
+- Installing a mod no longer leaves an older copy of it in the other mods folder (older releases put mods in `Aether/Mods`; now they go to `BepInEx/plugins`): the old one is backed up to `Aether/backup` and removed, so the mod does not load twice.
+
 ## 1.2.2-beta
 
 - **Send report.** The crash screen and F10 → Mod Health have a "Send report" button: one click sends the error, your mod list and the end of the BepInEx log to Lattice, and you get a short code (AE-XXXXX) to quote when you ask for help. Personal paths, your user name, Steam id, e-mail and IP addresses are removed before it leaves your PC. The first crash asks whether to send them by itself from now on; you can change it at any time in Mod Health. Reports are deleted after 90 days.

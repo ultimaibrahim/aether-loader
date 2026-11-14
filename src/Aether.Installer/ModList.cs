@@ -2,7 +2,11 @@ namespace Aether.Installer;
 
 public enum AssemblyRole { Core, OfficialMod, External }
 
-public sealed record InstalledAssembly(string Name, string Path, double SizeKb, AssemblyRole Role);
+public sealed record InstalledAssembly(string Name, string Path, double SizeKb, AssemblyRole Role)
+{
+    /// <summary>False when the player switched it off (the file is kept as name.dll.disabled, which BepInEx skips).</summary>
+    public bool Enabled { get; init; } = true;
+}
 
 public sealed class InstalledList
 {
@@ -19,15 +23,20 @@ public static class ModList
         var list = new InstalledList();
         var dlls = new List<string>();
         foreach (string root in new[] { Path.Combine(gameDir, "Aether", "Mods"), Path.Combine(gameDir, "BepInEx", "plugins") })
-            if (Directory.Exists(root)) dlls.AddRange(Directory.GetFiles(root, "*.dll", SearchOption.AllDirectories));
+            if (Directory.Exists(root))
+            {
+                dlls.AddRange(Directory.GetFiles(root, "*.dll", SearchOption.AllDirectories));
+                dlls.AddRange(Directory.GetFiles(root, "*" + ModSwitch.DisabledSuffix, SearchOption.AllDirectories));
+            }
 
-        foreach (string dll in dlls.OrderBy(p => Path.GetFileName(p)))
+        foreach (string dll in dlls.OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase))
         {
-            string name = Path.GetFileName(dll);
+            bool enabled = !ModSwitch.IsDisabled(dll);
+            string name = Path.GetFileName(enabled ? dll : ModSwitch.EnabledPath(dll));
             AssemblyRole role = AetherAssemblies.All.Contains(name, StringComparer.OrdinalIgnoreCase) ? AssemblyRole.Core
                 : AetherAssemblies.OfficialMods.Contains(name, StringComparer.OrdinalIgnoreCase) ? AssemblyRole.OfficialMod
                 : AssemblyRole.External;
-            list.Assemblies.Add(new InstalledAssembly(name, dll, new FileInfo(dll).Length / 1024.0, role));
+            list.Assemblies.Add(new InstalledAssembly(name, dll, new FileInfo(dll).Length / 1024.0, role) { Enabled = enabled });
         }
 
         string configDir = Path.Combine(gameDir, "BepInEx", "config", "aether");

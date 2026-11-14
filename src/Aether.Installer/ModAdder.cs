@@ -102,8 +102,38 @@ public static class ModAdder
             string dest = Path.Combine(gameDir, r.DestDirRelative, r.Info.FileName);
             if (File.Exists(dest) && !FileOps.SameContent(r.Info.FilePath, dest)) ops.Backup(dest, backupRoot);
             ops.Copy(r.Info.FilePath, dest);
+            // Installing or updating a mod the player had switched off turns it back on: no stale ".disabled" twin is left behind.
+            if (File.Exists(dest + ModSwitch.DisabledSuffix)) ops.Delete(dest + ModSwitch.DisabledSuffix);
+            // The same file in the other mods folder (an older release put mods in Aether/Mods, now they go to BepInEx/plugins)
+            // would load twice: back it up and take it out. Aether's own folder (BepInEx/plugins/Aether) is never touched.
+            foreach (string twin in Twins(gameDir, r.Info.FileName, dest))
+            {
+                ops.Backup(twin, backupRoot);
+                ops.Delete(twin);
+                report(new Check(CheckLevel.Info, dryRun ? "DRY" : "MOVE", $"{(dryRun ? "Would replace" : "Replaced")} the older copy in {Path.GetRelativePath(gameDir, Path.GetDirectoryName(twin)!).Replace('\\', '/')}"));
+            }
             report(new Check(CheckLevel.Ok, dryRun ? "DRY" : "COPY",
                 $"{(dryRun ? "Would install" : "Installed")} {r.Info.FileName} -> {r.DestDirRelative.Replace('\\', '/')}"));
+        }
+    }
+
+    /// <summary>Copies of a mod file (on or switched off) in Aether/Mods or BepInEx/plugins other than <paramref name="dest"/>, outside Aether's own folder.</summary>
+    public static IEnumerable<string> Twins(string gameDir, string fileName, string dest)
+    {
+        string own = Path.GetFullPath(Path.Combine(gameDir, InstallLayout.PluginsDir, "Aether")) + Path.DirectorySeparatorChar;
+        string full = Path.GetFullPath(dest);
+        foreach (string root in new[] { Path.Combine(gameDir, InstallLayout.ModsDir), Path.Combine(gameDir, InstallLayout.PluginsDir) })
+        {
+            if (!Directory.Exists(root)) continue;
+            foreach (string f in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                string name = Path.GetFileName(f);
+                if (!name.Equals(fileName, StringComparison.OrdinalIgnoreCase) && !name.Equals(fileName + ModSwitch.DisabledSuffix, StringComparison.OrdinalIgnoreCase)) continue;
+                string ff = Path.GetFullPath(f);
+                if (ff.Equals(full, StringComparison.OrdinalIgnoreCase) || ff.Equals(full + ModSwitch.DisabledSuffix, StringComparison.OrdinalIgnoreCase)) continue;
+                if (ff.StartsWith(own, StringComparison.OrdinalIgnoreCase)) continue;
+                yield return f;
+            }
         }
     }
 

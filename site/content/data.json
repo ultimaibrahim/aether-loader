@@ -11,7 +11,7 @@
    "tag": "Cargador de mods para Block Story",
    "dl": "Descargar",
    "dlsoon": "Descargar · pronto",
-   "meta": "v1.2.2-beta · probado en Linux y Windows 11 · Apache-2.0",
+   "meta": "v1.2.3-beta · probado en Linux y Windows 11 · Apache-2.0",
    "play": "Jugar",
    "playp": "Aether carga mods desde una carpeta. Se instala una vez y ahí sueltas los mods que quieras.",
    "playb": "Cómo instalar",
@@ -31,7 +31,7 @@
    "est": "Estado y límites",
    "estp": "Beta. Probado en Linux y Windows 11. Las APIs pueden cambiar.",
    "nov": "Novedades",
-   "novp": "1.2.2-beta · Botón «Enviar reporte» y la interfaz del juego vuelve a su sitio al quitar mods.",
+   "novp": "1.2.3-beta · Monitor nuevo: instalar con un clic, apagar mods sin borrarlos y español.",
    "foot1": "Aether es un proyecto de terceros. No es un producto oficial de Block Story ni está afiliado a sus desarrolladores.",
    "foot2": "Apache-2.0 · Un proyecto de Ultima Ibrahim",
    "lens": "Tarjeta del bloque o criatura que apuntas: nombre, mod de origen, vida y la herramienta para romperlo.",
@@ -107,6 +107,10 @@
    "novh": "Novedades",
    "novlist": [
     [
+     "1.2.3-beta",
+     "Monitor nuevo, en español e inglés: cada mod con su ícono o su cubo de color, nivel de verificación en hexágonos. Instalar o actualizar con un clic (pregunta solo si vienen dependencias), «Actualizar todo», tarjetas o lista. Apagar y encender mods con un clic sin borrarlos. Suelta un .zip o .dll para instalarlo. Al instalar ya no queda una copia vieja del mod en la otra carpeta."
+    ],
+    [
      "1.2.2-beta",
      "Botón «Enviar reporte» en la pantalla de error y en F10 → Mod Health: con un clic manda el error, tu lista de mods y el final del log, y te da un código corto (AE-XXXXX) para pedir ayuda. Antes de salir de tu PC se quitan rutas personales, tu usuario, Steam id, correos e IP. El primer fallo pregunta si quieres que se envíen solos; lo cambias cuando quieras. La interfaz del juego ya no se reacomoda para mods que no están. Por defecto, los diamantes solo se mueven si Lens ocupa el centro de arriba y los botones solo si el minimapa de Wayfinder está arriba a la derecha. Al quitar o apagar un mod, su espacio vuelve exacto a como lo tenía el juego. Los mods y Nano no cambian."
     ],
@@ -175,7 +179,7 @@
    "tag": "A mod loader for Block Story",
    "dl": "Download",
    "dlsoon": "Download · soon",
-   "meta": "v1.2.2-beta · tested on Linux and Windows 11 · Apache-2.0",
+   "meta": "v1.2.3-beta · tested on Linux and Windows 11 · Apache-2.0",
    "play": "Play",
    "playp": "Aether loads mods from a folder. Install it once and drop in any mods you like.",
    "playb": "How to install",
@@ -195,7 +199,7 @@
    "est": "Status and limits",
    "estp": "Beta. Tested on Linux and Windows 11. APIs may change.",
    "nov": "News",
-   "novp": "1.2.2-beta · A “Send report” button, and removing a mod no longer leaves the game's interface moved.",
+   "novp": "1.2.3-beta · A new Monitor: one-click installs, switch mods off without deleting them, and Spanish.",
    "foot1": "Aether is a third-party project. It is not an official Block Story product and is not affiliated with its developers.",
    "foot2": "Apache-2.0 · A project by Ultima Ibrahim",
    "lens": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
@@ -270,6 +274,10 @@
    ],
    "novh": "News",
    "novlist": [
+    [
+     "1.2.3-beta",
+     "A new Monitor, in Spanish and English: each mod with its icon or its coloured cube, verification level as hexagons. Install or update with one click (it asks only when dependencies come along), “Update all”, cards or list. Switch mods off and on with one click without deleting them. Drop a .zip or .dll to install it. Installing no longer leaves an older copy of the mod in the other folder."
+    ],
     [
      "1.2.2-beta",
      "A “Send report” button on the error screen and in F10 → Mod Health: one click sends the error, your mod list and the end of the log, and gives you a short code (AE-XXXXX) to ask for help. Personal paths, your user name, Steam id, e-mail and IP are removed before it leaves your PC. The first failure asks whether to send them by itself; change it any time. The game's interface is no longer rearranged for mods that are not there. By default, the diamonds only move when Lens uses the top centre, and the buttons only when Wayfinder's minimap is at the top right. When a mod is removed or turned off, its space goes back to exactly where the game had it. The mods and Nano do not change."

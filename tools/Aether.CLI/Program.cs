@@ -186,6 +186,7 @@ public static partial class Program
                 AssemblyRole.OfficialMod => ("[MOD] ", ConsoleColor.Magenta),
                 _ => ("[EXT] ", ConsoleColor.Gray)
             };
+            if (!a.Enabled) (tag, color) = ("[OFF] ", ConsoleColor.DarkGray);
             Console.ForegroundColor = color;
             Console.Write($"  {tag} ");
             Console.ResetColor();
