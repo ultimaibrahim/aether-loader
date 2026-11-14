@@ -640,7 +640,7 @@ namespace BlockStoryLens
                 Log.LogWarning($"[Aether] Native mod catalog could not read LoadedMods: {ex.Message}");
             }
 
-            // Third-party mods Aether does not load through [AetherMod]: hosted BepInEx plugins.
+            // Third-party mods Aether does not load through [AetherMod]: BepInEx plugins, hosted or started by BepInEx.
             try
             {
                 int order = registeredMods.Count;

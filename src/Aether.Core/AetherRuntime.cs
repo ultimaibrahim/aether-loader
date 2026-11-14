@@ -8,7 +8,7 @@ namespace Aether.Core
     /// </summary>
     public static class AetherRuntime
     {
-        public const string Version = "1.2.0-beta";
+        public const string Version = "1.2.1-beta";
         public const string Codename = "Ethereal Crystal";
 
         public static bool IsInitialized { get; private set; }

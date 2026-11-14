@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- The one Aether version: the CLI, the installer window and Aether.Loader.dll (read by the Monitor's update check) all take it. -->
-    <AetherVersion>1.2.0-beta</AetherVersion>
+    <AetherVersion>1.2.1-beta</AetherVersion>
     <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

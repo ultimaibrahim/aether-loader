@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BepInEx.Bootstrap;
 
 namespace Aether.Loader.Hosting
 {
@@ -12,7 +13,7 @@ namespace Aether.Loader.Hosting
         public string Version = string.Empty;
         public string Author = string.Empty;
         public string Description = string.Empty;
-        /// <summary>Where the mod comes from; today always "BepInEx (hosted)".</summary>
+        /// <summary>"BepInEx (hosted)" when Aether started it from Aether/Mods, "BepInEx" when BepInEx did (BepInEx/plugins).</summary>
         public string Source = string.Empty;
         public string AssemblyName = string.Empty;
         public string Location = string.Empty;
@@ -23,7 +24,8 @@ namespace Aether.Loader.Hosting
 
     /// <summary>
     /// One place that answers "which third-party mods are running and what do they own?": the BepInEx
-    /// plugins hosted from Aether/Mods and the item→mod origin map used by tooltips.
+    /// plugins hosted from Aether/Mods, the ones BepInEx started itself (BepInEx/plugins, where the Lattice
+    /// Catalog installs), and the item→mod origin map used by tooltips.
     /// </summary>
     public static class ExternalModCatalog
     {
@@ -65,10 +67,47 @@ namespace Aether.Loader.Hosting
             lock (Gate) Hosted.RemoveAll(m => string.Equals(m.Id, guid, StringComparison.OrdinalIgnoreCase));
         }
 
-        /// <summary>The hosted plugins (one row per mod).</summary>
+        /// <summary>Hosted plugins plus the plugins BepInEx started itself, one row per mod.</summary>
         public static IReadOnlyList<ExternalMod> Snapshot()
         {
-            lock (Gate) return Hosted.Select(Clone).ToList();
+            List<ExternalMod> list;
+            lock (Gate) list = Hosted.Select(Clone).ToList();
+            try { AddLoaded(list, LoadedByBepInEx()); }
+            catch { /* the menu must open even if BepInEx's table cannot be read */ }
+            return list;
+        }
+
+        /// <summary>Aether's own plugins are not third-party rows: the loader and Aether Nano.</summary>
+        public static bool IsAetherItself(string? guid) =>
+            string.Equals(guid, "dev.ultimaibrahim.aether", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(guid, "dev.ultimaibrahim.aether.nano", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Adds the plugins BepInEx started that are not already listed (hosted ones are in both). Pure, for tests.</summary>
+        public static void AddLoaded(List<ExternalMod> list, IEnumerable<ExternalMod> loaded)
+        {
+            foreach (ExternalMod m in loaded)
+            {
+                if (string.IsNullOrEmpty(m.Id) || IsAetherItself(m.Id)) continue;
+                if (list.Any(h => string.Equals(h.Id, m.Id, StringComparison.OrdinalIgnoreCase))) continue;
+                list.Add(m);
+            }
+        }
+
+        private static IEnumerable<ExternalMod> LoadedByBepInEx()
+        {
+            foreach (var info in Chainloader.PluginInfos.Values.ToList())
+            {
+                if (info?.Metadata == null) continue;
+                string location = info.Location ?? string.Empty;
+                string asm = info.Instance != null
+                    ? info.Instance.GetType().Assembly.GetName().Name ?? string.Empty
+                    : System.IO.Path.GetFileNameWithoutExtension(location);
+                yield return new ExternalMod
+                {
+                    Id = info.Metadata.GUID, Name = info.Metadata.Name, Version = info.Metadata.Version?.ToString() ?? string.Empty,
+                    AssemblyName = asm, Location = location, Source = "BepInEx"
+                };
+            }
         }
 
         // ------------------------------------------------------------------ item / block origin

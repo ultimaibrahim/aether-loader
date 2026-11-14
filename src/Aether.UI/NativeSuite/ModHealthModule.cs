@@ -116,7 +116,7 @@ namespace BlockStoryLens
                 });
             }
 
-            // Third-party mods Aether does not load through [AetherMod]: hosted BepInEx plugins.
+            // Third-party mods Aether does not load through [AetherMod]: hosted BepInEx plugins and the ones BepInEx started.
             int order = healthRows.Count;
             foreach (var ext in Aether.Loader.Hosting.ExternalModCatalog.Snapshot())
             {
@@ -140,7 +140,7 @@ namespace BlockStoryLens
                     Modules = 0,
                     PathExists = pathExists,
                     MetadataOk = true,
-                    StatusText = "HOSTED"
+                    StatusText = ext.Source == "BepInEx" ? "BEPINEX" : "HOSTED"
                 });
             }
         }

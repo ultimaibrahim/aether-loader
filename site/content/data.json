@@ -11,7 +11,7 @@
    "tag": "Cargador de mods para Block Story",
    "dl": "Descargar",
    "dlsoon": "Descargar · pronto",
-   "meta": "v1.2.0-beta · probado en Linux y Windows 11 · Apache-2.0",
+   "meta": "v1.2.1-beta · probado en Linux y Windows 11 · Apache-2.0",
    "play": "Jugar",
    "playp": "Aether carga mods desde una carpeta. Se instala una vez y ahí sueltas los mods que quieras.",
    "playb": "Cómo instalar",
@@ -31,7 +31,7 @@
    "est": "Estado y límites",
    "estp": "Beta. Probado en Linux y Windows 11. Las APIs pueden cambiar.",
    "nov": "Novedades",
-   "novp": "1.2.0-beta · Aether queda más ligero: solo lo suyo.",
+   "novp": "1.2.1-beta · El menú F10 lista también los mods instalados desde el Catalog.",
    "foot1": "Aether es un proyecto de terceros. No es un producto oficial de Block Story ni está afiliado a sus desarrolladores.",
    "foot2": "Apache-2.0 · Un proyecto de Ultima Ibrahim",
    "lens": "Tarjeta del bloque o criatura que apuntas: nombre, mod de origen, vida y la herramienta para romperlo.",
@@ -107,6 +107,10 @@
    "novh": "Novedades",
    "novlist": [
     [
+     "1.2.1-beta",
+     "El menú F10 lista también los mods que carga BepInEx desde BepInEx/plugins, que es donde instala el Catalog. Antes solo mostraba los de Aether/Mods. Los mods y Nano no cambian."
+    ],
+    [
      "1.2.0-beta",
      "Se retira la capa de compatibilidad con otro cargador (los ensamblados Aether.Compat.*) y lo que dependía de ella. Al actualizar se quitan sus archivos. Aether Nano pasa a 1.0.1 y muestra sus páginas en el menú de Aether o en su propio botón «Mods». Los cuatro mods pasan a 1.1.1 (recompilados sobre Nano 1.0.1)."
     ],
@@ -167,7 +171,7 @@
    "tag": "A mod loader for Block Story",
    "dl": "Download",
    "dlsoon": "Download · soon",
-   "meta": "v1.2.0-beta · tested on Linux and Windows 11 · Apache-2.0",
+   "meta": "v1.2.1-beta · tested on Linux and Windows 11 · Apache-2.0",
    "play": "Play",
    "playp": "Aether loads mods from a folder. Install it once and drop in any mods you like.",
    "playb": "How to install",
@@ -187,7 +191,7 @@
    "est": "Status and limits",
    "estp": "Beta. Tested on Linux and Windows 11. APIs may change.",
    "nov": "News",
-   "novp": "1.2.0-beta · A leaner Aether: only its own pieces.",
+   "novp": "1.2.1-beta · The F10 menu also lists mods installed from the Catalog.",
    "foot1": "Aether is a third-party project. It is not an official Block Story product and is not affiliated with its developers.",
    "foot2": "Apache-2.0 · A project by Ultima Ibrahim",
    "lens": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
@@ -262,6 +266,10 @@
    ],
    "novh": "News",
    "novlist": [
+    [
+     "1.2.1-beta",
+     "The F10 menu also lists the mods BepInEx loads from BepInEx/plugins, where the Catalog installs them. Before, it only showed the ones in Aether/Mods. The mods and Nano do not change."
+    ],
     [
      "1.2.0-beta",
      "The compatibility layer for another loader (the Aether.Compat.* assemblies) and everything that depended on it are retired. Updating removes its files. Aether Nano moves to 1.0.1 and shows its pages in Aether's menu or in its own \"Mods\" button. The four mods move to 1.1.1 (rebuilt on Nano 1.0.1)."

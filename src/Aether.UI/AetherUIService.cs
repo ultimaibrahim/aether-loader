@@ -8,7 +8,7 @@ using Aether.UI.Overlays;
 using BlockStoryLens;
 using UnityEngine;
 
-[assembly: AetherMod("aether_ui", "1.2.0-beta",
+[assembly: AetherMod("aether_ui", "1.2.1-beta",
     Name = "Aether UI & Native Suite",
     Author = "Ibrahim García",
     Description = "Shared native Block Story UI shell: theme, widgets, HUD editor, keybind manager and Mod Health. The official mods are separate assemblies.")]

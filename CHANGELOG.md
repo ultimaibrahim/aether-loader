@@ -4,6 +4,11 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+## 1.2.1-beta
+
+- The F10 menu (and Mod Health) also lists the mods BepInEx loads from `BepInEx/plugins`, which is where the Catalog installs them. Before, only mods in `Aether/Mods` were listed, so mods installed from the Catalog worked but did not show up.
+- All components move to 1.2.1-beta. The four official mods (1.1.1) and Aether Nano (1.0.1) do not change.
+
 ## 1.2.0-beta
 
 - The compatibility layer for another mod loader (the `Aether.Compat.*` assemblies) is removed, together with everything built around it: the related CLI commands, Monitor tab and config, and the list Aether used to download. Updating removes its files.

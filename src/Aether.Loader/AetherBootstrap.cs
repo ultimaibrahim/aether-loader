@@ -23,9 +23,9 @@ namespace Aether.Loader
         public const string PluginGuid = "dev.ultimaibrahim.aether";
         public const string PluginName = "Aether";
         /// <summary>Aether's public version. Pre-release until the API and mod contracts settle.</summary>
-        public const string PluginVersion = "1.2.0-beta";
+        public const string PluginVersion = "1.2.1-beta";
         /// <summary>BepInEx parses plugin versions with System.Version, which rejects "-beta".</summary>
-        public const string PluginVersionNumeric = "1.2.0";
+        public const string PluginVersionNumeric = "1.2.1";
 
         public static AetherBootstrap Instance { get; private set; } = null!;
         public static IReadOnlyList<AetherModMetadata> LoadedMods { get; private set; } = Array.Empty<AetherModMetadata>();
