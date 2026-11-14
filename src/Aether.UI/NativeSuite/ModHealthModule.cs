@@ -250,8 +250,47 @@ namespace BlockStoryLens
             {
                 DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 16), lastHealthReportPath, sourceStyle,
                     new Color(0.55f, 0.90f, 1.0f), Color.black);
+                sy += 20f;
+            }
+
+            // Send report: what happened (optional) and one click. The code that comes back is what the player quotes.
+            sy += 8f;
+            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 16), Tr("Something wrong? Tell us in a line (optional) and send it:", "¿Algo falla? Cuéntalo en una línea (opcional) y envíalo:"), sourceStyle,
+                new Color(0.86f, 0.90f, 0.96f), Color.black);
+            sy += 20f;
+            healthNote = GUI.TextField(new Rect(10, sy, Mathf.Max(200f, rightRect.width - 230f), 28), healthNote ?? string.Empty, 300);
+            bool busy = Aether.UI.Diagnostics.ProblemReports.Status == Aether.UI.Diagnostics.ProblemReports.State.Sending;
+            if (DrawNativeWoodButton(new Rect(Mathf.Max(220f, rightRect.width - 210f), sy - 1, 190, 30), busy ? Tr("Sending…", "Enviando…") : Tr("📤 Send report", "📤 Enviar reporte"), true) && !busy)
+            {
+                Aether.UI.Diagnostics.ProblemReports.SendHealth(healthNote);
+                healthNote = string.Empty;
+            }
+            sy += 34f;
+            string status = Aether.UI.Diagnostics.ProblemReports.StatusText(Tr);
+            if (!string.IsNullOrEmpty(status))
+            {
+                DrawShadowLabel(new Rect(10, sy, rightRect.width - 160, 16), status, sourceStyle, new Color(0.55f, 0.90f, 1.0f), Color.black);
+                if (Aether.UI.Diagnostics.ProblemReports.Status == Aether.UI.Diagnostics.ProblemReports.State.Sent &&
+                    DrawNativeWoodButton(new Rect(rightRect.width - 150, sy - 6, 130, 26), Tr("Copy code", "Copiar código"), false))
+                    GUIUtility.systemCopyBuffer = Aether.UI.Diagnostics.ProblemReports.LastCode;
+                sy += 22f;
+            }
+
+            // Automatic sending: the player's choice, changeable at any time (the privacy notice points here).
+            var auto = Aether.UI.Diagnostics.ProblemReports.AutoSend;
+            if (auto != null)
+            {
+                string modeText = auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Always ? Tr("Always", "Siempre")
+                    : auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Never ? Tr("Only with the button", "Solo con el botón")
+                    : Tr("Ask me", "Preguntarme");
+                if (DrawNativeWoodButton(new Rect(10, sy, 330, 28), Tr("Send by itself when something fails: ", "Enviar solo cuando algo falle: ") + modeText, false))
+                    auto.Value = auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Ask ? Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Always
+                        : auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Always ? Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Never
+                        : Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Ask;
             }
         }
+
+        private string? healthNote;
 
         private void DrawHealthCard(Rect rect, string title, string value, string subtitle)
         {

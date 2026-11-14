@@ -217,6 +217,7 @@ namespace BlockStoryLens
 
             // Config General
             MenuKey = Config.Bind("General", "MenuKey", KeyCode.F10, "Hotkey that opens the Block Story QoL suite menu.");
+            Aether.UI.Diagnostics.ProblemReports.Bind(Config);
 
             // Config Lens
             // Lens owns its [Lens] section (Aether.Mods.Lens).
@@ -2031,6 +2032,12 @@ namespace BlockStoryLens
 
         private float lastCatalogRefresh;
 
+        // Hidden motto: seven clicks on the F10 header within a few seconds show it for a moment.
+        private int mottoClicks;
+        private float mottoLastClick, mottoUntil;
+        private const string MottoEn = "Everything is open, everything is for everyone, and we all rely on each other.";
+        private const string MottoEs = "Todo es libre, todo es para todos y todos dependemos de todos.";
+
         private void DrawModMenuGUI()
         {
             // Hosted plugins start on frame 0 and can come and go; keep the list current while the menu is open.
@@ -2052,8 +2059,17 @@ namespace BlockStoryLens
             DrawWoodPanel(winRect, 1.0f);
 
             // Header
-            DrawAetherHeader(new Rect(winX + 24, winY + 10, winWidth - 230, 36), Tr("Mods", "Mods"),
-                Tr($"{RealModCount()} loaded  ·  aether {AetherBootstrap.PluginVersion}", $"{RealModCount()} cargados  ·  aether {AetherBootstrap.PluginVersion}"));
+            Rect headerRect = new Rect(winX + 24, winY + 10, winWidth - 230, 36);
+            bool showMotto = Time.unscaledTime < mottoUntil;
+            DrawAetherHeader(headerRect, Tr("Mods", "Mods"), showMotto
+                ? Tr(MottoEn, MottoEs)
+                : Tr($"{RealModCount()} loaded  ·  aether {AetherBootstrap.PluginVersion}", $"{RealModCount()} cargados  ·  aether {AetherBootstrap.PluginVersion}"));
+            if (GUI.Button(headerRect, GUIContent.none, GUIStyle.none))
+            {
+                mottoClicks = Time.unscaledTime - mottoLastClick < 1.5f ? mottoClicks + 1 : 1;
+                mottoLastClick = Time.unscaledTime;
+                if (mottoClicks >= 7) { mottoClicks = 0; mottoUntil = Time.unscaledTime + 6f; }
+            }
 
             Rect dragHudBtnRect = new Rect(winX + winWidth - 190f, winY + 12f, 130f, 32f);
             if (DrawNativeWoodButton(dragHudBtnRect, Tr("✥ Drag HUD", "✥ Arrastrar HUD"), false, new Color(0.40f, 0.85f, 1.0f, 1.0f)))

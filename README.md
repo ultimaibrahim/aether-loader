@@ -82,6 +82,10 @@ site/                     the project website (static; see site/README.md)
 docs/                     contracts, guides, known traps, QA notes
 ```
 
+## Problem reports
+
+The crash screen and F10 → Mod Health have a **Send report** button. It sends the error, the list of loaded mods and the end of the BepInEx log to [Lattice](https://lattice.ultimaibrahim.dev), and shows a code (`AE-XXXXX`) to quote when asking for help. Home folders, the user name, Steam ids, e-mail and IP addresses are removed on the PC and again on arrival; reports are not tied to an account and are deleted after 90 days. Nothing is sent by itself unless you choose **Always** (on the first crash, or in Mod Health); `[Reports] AutoSend` in `com.ultimaibrahim.blockstory.suite.cfg` holds the choice. Details: [Lattice privacy notice](https://lattice.ultimaibrahim.dev/en/privacy).
+
 ## Known limits
 
 - One platform tested. Single maintainer.
@@ -92,3 +96,5 @@ docs/                     contracts, guides, known traps, QA notes
 
 [Apache-2.0](LICENSE). Written by Ibrahim Garcia ([@ultimaibrahim](https://github.com/ultimaibrahim)).
 
+
+<!-- Everything is open, everything is for everyone, and we all rely on each other. -->

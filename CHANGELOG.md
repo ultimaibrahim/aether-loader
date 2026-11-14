@@ -4,6 +4,11 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+## 1.2.2-beta
+
+- **Send report.** The crash screen and F10 → Mod Health have a "Send report" button: one click sends the error, your mod list and the end of the BepInEx log to Lattice, and you get a short code (AE-XXXXX) to quote when you ask for help. Personal paths, your user name, Steam id, e-mail and IP addresses are removed before it leaves your PC. The first crash asks whether to send them by itself from now on; you can change it at any time in Mod Health. Reports are deleted after 90 days.
+- The game's HUD is no longer rearranged for mods that are not there. With the default layout, the diamond counter only moves when Lens uses the top centre, and the menu buttons only move when Wayfinder's minimap is at the top right; everything else stays where the game draws it. When a mod is removed or turned off, its space goes back to the game, to the exact position the game had (it used to be reset to zero). "Vanilla Classic" leaves the game's HUD alone, and the other presets and your own dragged layout work as before.
+
 ## 1.2.1-beta
 
 - The F10 menu (and Mod Health) also lists the mods BepInEx loads from `BepInEx/plugins`, which is where the Catalog installs them. Before, only mods in `Aether/Mods` were listed, so mods installed from the Catalog worked but did not show up.

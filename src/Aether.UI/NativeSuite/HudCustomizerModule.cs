@@ -95,6 +95,81 @@ namespace BlockStoryLens
 
         private static float lastHudSearchTime = 0f;
 
+        /// <summary>How a vanilla HUD element looked before Aether first moved it, so it can be put back exactly.</summary>
+        private sealed class VanillaState
+        {
+            public UIAnchor Anchor;
+            public bool HadAnchor, AnchorEnabled;
+            public UIAnchor.Side Side;
+            public Vector2 Offset;
+            public Vector3 Scale, LocalPosition;
+            public TweenPosition Tween;
+            public bool TweenEnabled;
+            public bool Moved;
+        }
+
+        /// <summary>Keyed by the element; the HUD is rebuilt on every scene load, so <see cref="ClearCache"/> empties it.</summary>
+        private static readonly Dictionary<GameObject, VanillaState> Vanilla = new Dictionary<GameObject, VanillaState>();
+
+        /// <summary>Call right before changing <paramref name="go"/>: the first call records its vanilla state.</summary>
+        private static void Remember(GameObject go, UIAnchor anchor)
+        {
+            if (go == null) return;
+            if (!Vanilla.TryGetValue(go, out VanillaState st))
+            {
+                TweenPosition tween = go.GetComponent<TweenPosition>();
+                st = new VanillaState
+                {
+                    Anchor = anchor, HadAnchor = anchor != null, AnchorEnabled = anchor != null && anchor.enabled,
+                    Side = anchor != null ? anchor.side : UIAnchor.Side.Center,
+                    Offset = anchor != null ? anchor.relativeOffset : Vector2.zero,
+                    Scale = go.transform.localScale, LocalPosition = go.transform.localPosition,
+                    Tween = tween, TweenEnabled = tween != null && tween.enabled
+                };
+                Vanilla[go] = st;
+            }
+            st.Moved = true;
+        }
+
+        /// <summary>Puts <paramref name="go"/> back as the game had it, if Aether moved it. Cheap when there is nothing to undo.</summary>
+        private static void PutBack(GameObject go)
+        {
+            if (go == null || !Vanilla.TryGetValue(go, out VanillaState st) || !st.Moved) return;
+            st.Moved = false;
+            try
+            {
+                UIAnchor anchor = go.GetComponent<UIAnchor>();
+                if (anchor != null)
+                {
+                    if (st.HadAnchor)
+                    {
+                        anchor.side = st.Side;
+                        anchor.relativeOffset = st.Offset;
+                        anchor.enabled = st.AnchorEnabled;
+                    }
+                    else anchor.enabled = false; // Aether added it
+                }
+                go.transform.localScale = st.Scale;
+                go.transform.localPosition = st.LocalPosition;
+                if (st.Tween != null) st.Tween.enabled = st.TweenEnabled;
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogWarning("[Aether.Suite] Could not restore " + go.name + ": " + ex.Message);
+            }
+        }
+
+        /// <summary>Lens draws its card at the top centre, where the game keeps its diamond counter.</summary>
+        private static bool LensNeedsTopCenter() =>
+            SuitePlugin.LensAnchor != null && SuitePlugin.LensAnchor.Value == "TopCenter" &&
+            SuitePlugin.MoveDiamondsUnderXP != null && SuitePlugin.MoveDiamondsUnderXP.Value;
+
+        /// <summary>Wayfinder's minimap sits at the top right, where the game keeps its menu buttons.</summary>
+        private static bool MapNeedsTopRight() =>
+            SuitePlugin.MinimapAnchor != null && SuitePlugin.MinimapAnchor.Value == "TopRight" &&
+            (SuitePlugin.MinimapEnabled == null || SuitePlugin.MinimapEnabled.Value) &&
+            SuitePlugin.MoveTopRightButtonsToBottomRight != null && SuitePlugin.MoveTopRightButtonsToBottomRight.Value;
+
         // Styles
         private static GUIStyle handleStyle;
         private static GUIStyle bannerTitleStyle;
@@ -183,6 +258,7 @@ namespace BlockStoryLens
             cachedActionsObj = null;
             cachedActionsAnchor = null;
             lastHudSearchTime = 0f;
+            Vanilla.Clear();
         }
 
         // =====================================================================
@@ -248,51 +324,17 @@ namespace BlockStoryLens
         //                 VANILLA HUD POSITIONING & LOCKING
         // =====================================================================
         /// <summary>
-        /// Undoes every mutation this module applies to the vanilla HUD: re-enables the UIAnchor and
-        /// TweenPosition components it disables and clears the offsets/scales it forced. Without this
-        /// the "VanillaClassic" preset could never actually restore vanilla (M16).
+        /// Undoes every change this module made to the vanilla HUD, back to the exact values the game had (recorded before the
+        /// first change). Used by the "VanillaClassic" preset and whenever no installed mod needs the space (M16).
         /// </summary>
         public static void RestoreVanillaHud()
         {
             if (SceneManager.GetActiveScene().name != "PlayingMobile") return;
-
-            try
-            {
-                if (cachedBarsAnchorObj != null)
-                {
-                    UIAnchor barsAnchor = cachedBarsAnchorObj.GetComponent<UIAnchor>();
-                    if (barsAnchor != null) barsAnchor.enabled = true;
-                    cachedBarsAnchorObj.transform.localPosition = Vector3.zero;
-                    cachedBarsAnchorObj.transform.localScale = Vector3.one;
-                }
-
-                if (cachedButtonsObj != null)
-                {
-                    TweenPosition tween = cachedButtonsObj.GetComponent<TweenPosition>();
-                    if (tween != null) tween.enabled = true;
-                }
-
-                RestoreAnchorOffset(cachedStatsAnchor, cachedStatsObj);
-                RestoreAnchorOffset(cachedDiamondAnchor, cachedDiamondObj);
-                RestoreAnchorOffset(cachedButtonsAnchor, cachedButtonsObj);
-                RestoreAnchorOffset(cachedActionsAnchor, cachedActionsObj);
-            }
-            catch (Exception ex)
-            {
-                UnityEngine.Debug.LogWarning("[Aether.Suite] RestoreVanillaHud warning: " + ex.Message);
-            }
-        }
-
-        private static void RestoreAnchorOffset(UIAnchor anchor, GameObject target)
-        {
-            if (target == null) return;
-
-            if (anchor != null)
-            {
-                anchor.relativeOffset = Vector2.zero;
-                anchor.enabled = true;
-            }
-            target.transform.localScale = Vector3.one;
+            PutBack(cachedBarsAnchorObj);
+            PutBack(cachedStatsObj);
+            PutBack(cachedDiamondObj);
+            PutBack(cachedButtonsObj);
+            PutBack(cachedActionsObj);
         }
 
         public static void ApplyVanillaHudLayout(bool force = false)
@@ -305,13 +347,22 @@ namespace BlockStoryLens
                 lastHudSearchTime = Time.unscaledTime;
             }
 
-            ApplyStatsPosition();
-            ApplyDiamondPosition();
-            ApplyButtonsPosition();
-            ApplyActionsPosition();
+            // "ModernModpack" (the default) only makes room for the mods that are running: the diamond counter leaves the top
+            // centre when Lens is there, the menu buttons leave the top right when Wayfinder's minimap is there. Everything
+            // else stays as the game draws it. The other presets (and "Custom", set by dragging) are the player's own layout.
+            string preset = SuitePlugin.HudLayoutPreset != null ? SuitePlugin.HudLayoutPreset.Value : "ModernModpack";
+            bool vanilla = preset == "VanillaClassic";
+            bool chosen = !vanilla && preset != "ModernModpack";
+            bool lens = !vanilla && LensNeedsTopCenter();
+            bool map = !vanilla && MapNeedsTopRight();
+
+            ApplyStatsPosition(chosen || lens);
+            ApplyDiamondPosition(chosen || lens);
+            ApplyButtonsPosition(chosen || map);
+            ApplyActionsPosition(chosen || map);
         }
 
-        public static void ApplyStatsPosition()
+        public static void ApplyStatsPosition(bool move = true)
         {
             if (cachedStatsObj == null)
             {
@@ -319,10 +370,12 @@ namespace BlockStoryLens
                 if (cachedStatsObj != null)
                     cachedStatsAnchor = cachedStatsObj.GetComponent<UIAnchor>();
             }
+            if (!move) { PutBack(cachedBarsAnchorObj); PutBack(cachedStatsObj); return; }
+            Remember(cachedStatsObj, cachedStatsAnchor);
 
             if (cachedStatsAnchor != null)
             {
-                if (cachedStatsAnchor.side != UIAnchor.Side.TopLeft || cachedStatsAnchor.relativeOffset != new Vector2(StatsOffsetX.Value, StatsOffsetY.Value))
+                if (!cachedStatsAnchor.enabled || cachedStatsAnchor.side != UIAnchor.Side.TopLeft || cachedStatsAnchor.relativeOffset != new Vector2(StatsOffsetX.Value, StatsOffsetY.Value))
                 {
                     cachedStatsAnchor.side = UIAnchor.Side.TopLeft;
                     cachedStatsAnchor.relativeOffset = new Vector2(StatsOffsetX.Value, StatsOffsetY.Value);
@@ -347,6 +400,7 @@ namespace BlockStoryLens
                 if (cachedBarsAnchorObj != null)
                 {
                     UIAnchor ba = cachedBarsAnchorObj.GetComponent<UIAnchor>();
+                    Remember(cachedBarsAnchorObj, ba);
                     if (ba != null && ba.enabled)
                     {
                         ba.enabled = false;
@@ -357,7 +411,7 @@ namespace BlockStoryLens
             }
         }
 
-        public static void ApplyDiamondPosition()
+        public static void ApplyDiamondPosition(bool move = true)
         {
             if (cachedDiamondObj == null)
             {
@@ -365,10 +419,12 @@ namespace BlockStoryLens
                 if (cachedDiamondObj != null)
                     cachedDiamondAnchor = cachedDiamondObj.GetComponent<UIAnchor>();
             }
+            if (!move) { PutBack(cachedDiamondObj); return; }
+            Remember(cachedDiamondObj, cachedDiamondAnchor);
 
             if (cachedDiamondAnchor != null)
             {
-                if (cachedDiamondAnchor.side != UIAnchor.Side.TopLeft || cachedDiamondAnchor.relativeOffset != new Vector2(DiamondsOffsetX.Value, DiamondsOffsetY.Value))
+                if (!cachedDiamondAnchor.enabled || cachedDiamondAnchor.side != UIAnchor.Side.TopLeft || cachedDiamondAnchor.relativeOffset != new Vector2(DiamondsOffsetX.Value, DiamondsOffsetY.Value))
                 {
                     cachedDiamondAnchor.side = UIAnchor.Side.TopLeft;
                     cachedDiamondAnchor.relativeOffset = new Vector2(DiamondsOffsetX.Value, DiamondsOffsetY.Value);
@@ -384,7 +440,7 @@ namespace BlockStoryLens
             }
         }
 
-        public static void ApplyButtonsPosition()
+        public static void ApplyButtonsPosition(bool move = true)
         {
             if (cachedButtonsObj == null)
             {
@@ -392,10 +448,12 @@ namespace BlockStoryLens
                 if (cachedButtonsObj != null)
                     cachedButtonsAnchor = cachedButtonsObj.GetComponent<UIAnchor>();
             }
+            if (!move) { PutBack(cachedButtonsObj); return; }
+            Remember(cachedButtonsObj, cachedButtonsAnchor);
 
             if (cachedButtonsAnchor != null)
             {
-                if (cachedButtonsAnchor.side != UIAnchor.Side.TopLeft || cachedButtonsAnchor.relativeOffset != new Vector2(MenuButtonsOffsetX.Value, MenuButtonsOffsetY.Value))
+                if (!cachedButtonsAnchor.enabled || cachedButtonsAnchor.side != UIAnchor.Side.TopLeft || cachedButtonsAnchor.relativeOffset != new Vector2(MenuButtonsOffsetX.Value, MenuButtonsOffsetY.Value))
                 {
                     cachedButtonsAnchor.side = UIAnchor.Side.TopLeft;
                     cachedButtonsAnchor.relativeOffset = new Vector2(MenuButtonsOffsetX.Value, MenuButtonsOffsetY.Value);
@@ -418,7 +476,7 @@ namespace BlockStoryLens
             }
         }
 
-        public static void ApplyActionsPosition()
+        public static void ApplyActionsPosition(bool move = true)
         {
             if (cachedActionsObj == null)
             {
@@ -426,6 +484,9 @@ namespace BlockStoryLens
                 if (cachedActionsObj != null)
                     cachedActionsAnchor = cachedActionsObj.GetComponent<UIAnchor>();
             }
+            if (!move) { PutBack(cachedActionsObj); return; }
+            // Recorded before an anchor is added: the game's HUD/Actions has none, and restoring disables Aether's.
+            Remember(cachedActionsObj, cachedActionsObj != null ? cachedActionsObj.GetComponent<UIAnchor>() : null);
 
             if (cachedActionsObj != null && cachedActionsAnchor == null)
             {
@@ -438,7 +499,7 @@ namespace BlockStoryLens
 
             if (cachedActionsAnchor != null)
             {
-                if (cachedActionsAnchor.side != UIAnchor.Side.TopLeft || cachedActionsAnchor.relativeOffset != new Vector2(ActionsOffsetX.Value, ActionsOffsetY.Value))
+                if (!cachedActionsAnchor.enabled || cachedActionsAnchor.side != UIAnchor.Side.TopLeft || cachedActionsAnchor.relativeOffset != new Vector2(ActionsOffsetX.Value, ActionsOffsetY.Value))
                 {
                     cachedActionsAnchor.side = UIAnchor.Side.TopLeft;
                     cachedActionsAnchor.relativeOffset = new Vector2(ActionsOffsetX.Value, ActionsOffsetY.Value);

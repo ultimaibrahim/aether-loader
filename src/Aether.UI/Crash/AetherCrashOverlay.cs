@@ -1,7 +1,9 @@
 using System;
 using Aether.Core.Diagnostics;
+using Aether.UI.Diagnostics;
 using Aether.UI.Theme;
 using UnityEngine;
+using CrashReport = Aether.Core.Diagnostics.CrashReport;
 
 namespace Aether.UI.Crash
 {
@@ -108,6 +110,10 @@ namespace Aether.UI.Crash
 
             GUILayout.Space(8);
 
+            // Send report: one click; the first time it also asks whether to send them by itself from now on.
+            DrawReportRow(report);
+            GUILayout.Space(6);
+
             // Status notice (e.g. "¡Ruta copiada al portapapeles!")
             if (Time.unscaledTime - _statusNoticeTime < 3.0f && !string.IsNullOrEmpty(_statusNotice))
             {
@@ -156,6 +162,48 @@ namespace Aether.UI.Crash
 
             GUI.color = prevColor;
             GUI.depth = prevDepth;
+        }
+
+        private static string Tr(string en, string es) => BlockStoryLens.BlockStorySuitePlugin.Tr(en, es);
+
+        private static void DrawReportRow(CrashReport report)
+        {
+            var mode = ProblemReports.AutoSend?.Value ?? ProblemReports.AutoSendMode.Ask;
+            GUILayout.BeginHorizontal();
+            bool busy = ProblemReports.Status == ProblemReports.State.Sending;
+            bool sent = ProblemReports.Status == ProblemReports.State.Sent && ProblemReports.AlreadySent(report);
+            GUI.enabled = !busy && !sent;
+            if (GUILayout.Button(sent ? Tr("✓ Report sent", "✓ Reporte enviado") : Tr("📤 Send report", "📤 Enviar reporte"), _buttonPrimaryStyle!, GUILayout.Height(32), GUILayout.Width(190)))
+                ProblemReports.SendCrash(report);
+            GUI.enabled = true;
+            GUILayout.Space(10);
+            string line = ProblemReports.StatusText(Tr);
+            if (string.IsNullOrEmpty(line))
+                line = Tr("Sends the error, your mod list and the end of the log to the mod's author. No personal paths, user names or IP.",
+                          "Manda el error, tu lista de mods y el final del log al autor del mod. Sin rutas personales, nombres de usuario ni IP.");
+            GUILayout.Label(line, _subtextStyle!, GUILayout.ExpandWidth(true));
+            if (sent && GUILayout.Button(Tr("Copy code", "Copiar código"), _buttonSecondaryStyle!, GUILayout.Height(32), GUILayout.Width(130)))
+            {
+                GUIUtility.systemCopyBuffer = ProblemReports.LastCode;
+                _statusNotice = Tr("✓ Code copied", "✓ Código copiado");
+                _statusNoticeTime = Time.unscaledTime;
+            }
+            GUILayout.EndHorizontal();
+
+            if (mode == ProblemReports.AutoSendMode.Ask && ProblemReports.AutoSend != null)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(Tr("Send them by itself when something fails?", "¿Enviarlos solos cuando algo falle?"), _subtextStyle!);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(Tr("Always", "Siempre"), _buttonSecondaryStyle!, GUILayout.Height(26), GUILayout.Width(110)))
+                {
+                    ProblemReports.AutoSend.Value = ProblemReports.AutoSendMode.Always;
+                    if (!ProblemReports.AlreadySent(report)) ProblemReports.SendCrash(report, auto: true);
+                }
+                if (GUILayout.Button(Tr("Only with the button", "Solo con el botón"), _buttonSecondaryStyle!, GUILayout.Height(26), GUILayout.Width(170)))
+                    ProblemReports.AutoSend.Value = ProblemReports.AutoSendMode.Never;
+                GUILayout.EndHorizontal();
+            }
         }
 
         private static void InitStyles()
