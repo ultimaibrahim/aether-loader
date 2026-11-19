@@ -23,9 +23,9 @@ namespace Aether.Loader
         public const string PluginGuid = "dev.ultimaibrahim.aether";
         public const string PluginName = "Aether";
         /// <summary>Aether's public version. Pre-release until the API and mod contracts settle.</summary>
-        public const string PluginVersion = "1.2.3-beta";
+        public const string PluginVersion = "1.2.4-beta";
         /// <summary>BepInEx parses plugin versions with System.Version, which rejects "-beta".</summary>
-        public const string PluginVersionNumeric = "1.2.3";
+        public const string PluginVersionNumeric = "1.2.4";
 
         public static AetherBootstrap Instance { get; private set; } = null!;
         public static IReadOnlyList<AetherModMetadata> LoadedMods { get; private set; } = Array.Empty<AetherModMetadata>();
@@ -382,6 +382,7 @@ namespace Aether.Loader
                                 Version = SemVer.SemanticVersion.Parse(attr.Version),
                                 Author = attr.Author ?? "Unknown",
                                 Description = attr.Description ?? string.Empty,
+                                Icon = attr.Icon ?? string.Empty,
                                 SourcePath = dllPath
                             };
                             ModDependencyParser.ParseInto(attr.Depends, meta.Depends);

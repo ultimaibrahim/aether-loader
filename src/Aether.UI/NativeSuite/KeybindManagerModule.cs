@@ -67,14 +67,18 @@ namespace BlockStoryLens
                 {
                     switch (Category)
                     {
-                        case "Vanilla": return new Color(0.42f, 0.55f, 0.70f, 1.0f);
-                        case "Wayfinder": return new Color(0.25f, 0.80f, 0.40f, 1.0f);
-                        case "Blueprint": return new Color(0.95f, 0.45f, 0.20f, 1.0f);
-                        case "HUD Layout": return new Color(0.30f, 0.75f, 0.95f, 1.0f);
-                        case "Lens WAILA": return new Color(0.60f, 0.88f, 0.25f, 1.0f);
-                        case "Sodium": return new Color(0.20f, 0.85f, 0.80f, 1.0f);
-                        case "Hotkeys": return new Color(0.95f, 0.80f, 0.25f, 1.0f);
-                        default: return new Color(0.70f, 0.70f, 0.70f, 1.0f);
+                        case "Vanilla": return new Color(0.68f, 0.76f, 0.86f, 1.0f);
+                        case "Wayfinder": return new Color(0.45f, 0.82f, 0.60f, 1.0f);
+                        case "Blueprint": return new Color(0.95f, 0.56f, 0.34f, 1.0f);
+                        case "HUD Layout":
+                        case "Canvas": return new Color(0.48f, 0.78f, 0.94f, 1.0f);
+                        case "Lens":
+                        case "Lens WAILA": return new Color(0.70f, 0.86f, 0.44f, 1.0f);
+                        case "Dusk": return new Color(0.84f, 0.66f, 0.92f, 1.0f);
+                        case "Sodium":
+                        case "FerriteCore": return new Color(0.42f, 0.84f, 0.80f, 1.0f);
+                        case "Hotkeys": return new Color(0.94f, 0.76f, 0.42f, 1.0f);
+                        default: return new Color(0.76f, 0.72f, 0.66f, 1.0f);
                     }
                 }
             }
@@ -90,10 +94,11 @@ namespace BlockStoryLens
             InitKeybindRegistry();
         }
 
-        public void DrawKeybindManagerGUI()
+        public void DrawKeybindManagerGUI(float anim = 1f)
         {
-            SyncBepInExKeybinds();
-            DrawKeybindsManagerGUI();
+            if (isKeybindsManagerOpen)
+                SyncBepInExKeybinds();
+            DrawKeybindsManagerGUI(anim);
         }
 
         // ---- Keys of other BepInEx plugins (PotatoMode and the like) ------------------------
@@ -786,276 +791,544 @@ namespace BlockStoryLens
         // =====================================================================
         //                    UNIFIED GUI MODAL RENDERING
         // =====================================================================
-        private void DrawKeybindsManagerGUI()
+        private static GUIStyle _kbTitleStyle, _kbMetaStyle, _kbColHeaderStyle, _kbColHeaderCenterStyle;
+        private static GUIStyle _kbRowTitleStyle, _kbBadgeStyle, _kbConflictStyle, _kbKeycapStyle;
+        private static GUIStyle _kbFilterStyle, _kbSearchPlaceholderStyle, _kbStatusStyle, _kbTipStyle;
+        private static GUIStyle _kbEmptyTitleStyle, _kbEmptySubStyle;
+        private static readonly GUIContent _kbMeasure = new GUIContent();
+
+        private void EnsureKeybindStyles()
         {
-            ProcessInteractiveRebindingEvent();
-
-            // Background Dimmer
-            Rect fullScreen = new Rect(0, 0, Screen.width, Screen.height);
-            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0f, 0f, 0f, 0.75f)));
-
-            // Window Dimensions
-            float winWidth = Mathf.Min(1020f, Screen.width - 24f);
-            float winHeight = Mathf.Min(650f, Screen.height - 24f);
-            float winX = (Screen.width - winWidth) * 0.5f;
-            float winY = (Screen.height - winHeight) * 0.5f;
-            Rect winRect = new Rect(winX, winY, winWidth, winHeight);
-
-            // Native Wood Styled Panel
-            DrawWoodPanel(winRect, 1.0f);
-
-            // Header Title
-            DrawAetherHeader(new Rect(winX + 22, winY + 10, winWidth - 250, 36), Tr("Keys & controls", "Teclas y controles"),
-                Tr("game and mods", "juego y mods"));
-
-            // Reset All Button
-            Rect resetAllRect = new Rect(winX + winWidth - 215, winY + 12, 155, 32);
-            if (DrawNativeWoodButton(resetAllRect, Tr("↺ Reset All Defaults", "↺ Restablecer Todo"), false, new Color(1.0f, 0.80f, 0.40f, 1.0f)))
+            if (_kbTitleStyle == null)
             {
-                ResetAllKeybindsToDefault();
+                _kbTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 21, Aether.Nano.NanoBrand.Paper);
+                _kbMetaStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 11, Aether.Nano.NanoBrand.Mute);
+                _kbColHeaderStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute);
+                _kbColHeaderCenterStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleCenter);
+                _kbRowTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 13, Aether.Nano.NanoBrand.Paper);
+                _kbBadgeStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+                _kbConflictStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Warn);
+                _kbKeycapStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 11, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+                _kbFilterStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 12, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+                _kbSearchPlaceholderStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Body, 12, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleLeft);
+                _kbStatusStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+                _kbTipStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleLeft);
+                _kbEmptyTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 18, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+                _kbEmptySubStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Body, 12, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleCenter);
             }
-
-            // Close Button
-            Rect closeBtnRect = new Rect(winX + winWidth - 52, winY + 12, 36, 32);
-            if (DrawNativeWoodButton(closeBtnRect, "X", false, new Color(1.0f, 0.55f, 0.55f, 1.0f)))
-            {
-                SetKeybindsManagerOpen(false);
-                return;
-            }
-
-            // -----------------------------------------------------------------
-            //                     TOOLBAR: FILTERS & SEARCH BAR
-            // -----------------------------------------------------------------
-            float tbY = winY + 52f;
-            float btnH = 32f;
-            float curX = winX + 18f;
-
-            int allCount = allKeybinds.Count;
-            int vanillaCount = allKeybinds.Count(k => k.IsVanilla);
-            int modsCount = allKeybinds.Count(k => !k.IsVanilla);
-
-            // Filter: All
-            string allTxt = Tr($"All ({allCount})", $"Todo ({allCount})");
-            float allW = 100f;
-            if (DrawNativeWoodButton(new Rect(curX, tbY, allW, btnH), allTxt, activeFilter == KeybindFilter.All))
-            {
-                activeFilter = KeybindFilter.All;
-                ApplyFilterAndSearch();
-            }
-            curX += allW + 6f;
-
-            // Filter: Vanilla
-            string vanTxt = Tr($"Vanilla ({vanillaCount})", $"Vanilla ({vanillaCount})");
-            float vanW = 120f;
-            if (DrawNativeWoodButton(new Rect(curX, tbY, vanW, btnH), vanTxt, activeFilter == KeybindFilter.Vanilla))
-            {
-                activeFilter = KeybindFilter.Vanilla;
-                ApplyFilterAndSearch();
-            }
-            curX += vanW + 6f;
-
-            // Filter: Mods
-            string modTxt = Tr($"Mods ({modsCount})", $"Mods ({modsCount})");
-            float modW = 110f;
-            if (DrawNativeWoodButton(new Rect(curX, tbY, modW, btnH), modTxt, activeFilter == KeybindFilter.Mods))
-            {
-                activeFilter = KeybindFilter.Mods;
-                ApplyFilterAndSearch();
-            }
-            curX += modW + 6f;
-
-            // Filter: Overlaps Only
-            Color? overlapColor = totalOverlapCount > 0 ? new Color(1.0f, 0.45f, 0.20f, 1.0f) : (Color?)null;
-            string ovlTxt = Tr($"⚠ Overlaps ({totalOverlapEntries})", $"⚠ Conflictos ({totalOverlapEntries})");
-            float ovlW = 155f;
-            if (DrawNativeWoodButton(new Rect(curX, tbY, ovlW, btnH), ovlTxt, activeFilter == KeybindFilter.OverlapsOnly, overlapColor))
-            {
-                activeFilter = KeybindFilter.OverlapsOnly;
-                ApplyFilterAndSearch();
-            }
-            curX += ovlW + 16f;
-
-            // Search Bar & Clear Button
-            float searchRemainingW = (winX + winWidth - 18f) - curX;
-            float searchInputW = Mathf.Max(120f, searchRemainingW - 42f);
 
             if (searchInputStyle == null)
             {
                 searchInputStyle = new GUIStyle(GUI.skin.textField)
                 {
-                    fontSize = 14,
-                    alignment = TextAnchor.MiddleLeft
+                    font = Aether.Nano.NanoBrand.Body,
+                    fontSize = 12,
+                    alignment = TextAnchor.MiddleLeft,
+                    border = new RectOffset(0, 0, 0, 0),
+                    padding = new RectOffset(10, 28, 4, 4)
                 };
+                searchInputStyle.normal.background = null;
+                searchInputStyle.hover.background = null;
+                searchInputStyle.focused.background = null;
+                searchInputStyle.active.background = null;
+                searchInputStyle.normal.textColor = Aether.Nano.NanoBrand.PaperLight;
+                searchInputStyle.hover.textColor = Aether.Nano.NanoBrand.PaperLight;
+                searchInputStyle.focused.textColor = Aether.Nano.NanoBrand.PaperLight;
+                searchInputStyle.active.textColor = Aether.Nano.NanoBrand.PaperLight;
             }
+        }
 
-            Rect searchRect = new Rect(curX, tbY + 2f, searchInputW, 28f);
-            GUI.DrawTexture(new Rect(searchRect.x - 1, searchRect.y - 1, searchRect.width + 2, searchRect.height + 2), GetColorTexture(new Color(0.35f, 0.25f, 0.15f, 0.85f)));
-            string newSearch = GUI.TextField(searchRect, searchQuery ?? "", searchInputStyle);
-            if (newSearch != searchQuery)
-            {
-                searchQuery = newSearch;
-                ApplyFilterAndSearch();
-            }
+        private bool DrawKeybindFilterPill(Rect rect, string label, bool selected, bool alertTint = false)
+        {
+            bool hover = rect.Contains(Event.current.mousePosition);
+            bool clicked = GUI.Button(rect, GUIContent.none, GUIStyle.none);
 
-            // Placeholder hint if search empty
-            if (string.IsNullOrEmpty(searchQuery))
+            if (Event.current.type == EventType.Repaint)
             {
-                GUI.color = new Color(1f, 1f, 1f, 0.40f);
-                GUI.Label(new Rect(searchRect.x + 8, searchRect.y + 4, searchRect.width - 16, 20), Tr("Search hotkeys...", "Buscar teclas..."), smallStyle);
-                GUI.color = Color.white;
-            }
-
-            // Clear search button [X]
-            Rect clearSearchRect = new Rect(curX + searchInputW + 4f, tbY + 2f, 32f, 28f);
-            if (!string.IsNullOrEmpty(searchQuery))
-            {
-                if (DrawNativeWoodButton(clearSearchRect, "X", false, new Color(1f, 0.6f, 0.6f, 1f)))
+                if (selected)
                 {
-                    searchQuery = "";
+                    Color top = alertTint ? new Color(0.55f, 0.22f, 0.14f, 0.96f) : new Color(0.24f, 0.17f, 0.12f, 0.96f);
+                    Color bot = alertTint ? new Color(0.38f, 0.14f, 0.09f, 0.96f) : new Color(0.16f, 0.12f, 0.08f, 0.96f);
+                    Color border = alertTint ? Aether.Nano.NanoBrand.Warn : Aether.Nano.NanoBrand.Ember;
+                    Color text = alertTint ? new Color(1f, 0.90f, 0.72f, 1f) : Aether.Nano.NanoBrand.EmberSoft;
+                    Aether.Nano.NanoSurface.FillRoundedGradient(rect, top, bot, 7f);
+                    Aether.Nano.NanoSurface.StrokeRounded(rect, border, 1f, 7f);
+                    Aether.Nano.NanoSurface.DrawCrispLabel(rect, label, _kbFilterStyle, text, 0.35f);
+                }
+                else
+                {
+                    if (hover)
+                    {
+                        Aether.Nano.NanoSurface.FillRounded(rect, new Color(0.14f, 0.11f, 0.085f, 0.85f), 7f);
+                    }
+                    else if (alertTint)
+                    {
+                        Aether.Nano.NanoSurface.FillRounded(rect, new Color(0.24f, 0.10f, 0.07f, 0.55f), 7f);
+                    }
+                    Color text = alertTint
+                        ? (hover ? new Color(1f, 0.86f, 0.58f, 1f) : Aether.Nano.NanoBrand.Warn)
+                        : (hover ? Aether.Nano.NanoBrand.PaperLight : Aether.Nano.NanoBrand.Mute);
+                    Aether.Nano.NanoSurface.DrawCrispLabel(rect, label, _kbFilterStyle, text, 0.25f);
+                }
+            }
+
+            return clicked;
+        }
+
+        private bool DrawKeycapButton(Rect rect, string label, bool isRebinding, bool isConflict, bool isModified, bool interactive)
+        {
+            bool hover = interactive && rect.Contains(Event.current.mousePosition);
+            bool clicked = interactive && GUI.Button(rect, GUIContent.none, GUIStyle.none);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                if (!interactive)
+                {
+                    Aether.Nano.NanoSurface.FillRounded(rect, new Color(0.055f, 0.045f, 0.036f, 0.55f), 7f);
+                    Aether.Nano.NanoSurface.StrokeRounded(rect, new Color(Aether.Nano.NanoBrand.Line.r, Aether.Nano.NanoBrand.Line.g, Aether.Nano.NanoBrand.Line.b, 0.45f), 1f, 7f);
+                    Aether.Nano.NanoSurface.DrawCrispLabel(rect, label, _kbKeycapStyle, new Color(Aether.Nano.NanoBrand.Mute.r, Aether.Nano.NanoBrand.Mute.g, Aether.Nano.NanoBrand.Mute.b, 0.55f), 0f);
+                }
+                else if (isRebinding)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f);
+                    Color top = Color.Lerp(new Color(0.32f, 0.17f, 0.08f, 0.96f), new Color(0.46f, 0.24f, 0.10f, 0.98f), pulse);
+                    Color bot = new Color(0.18f, 0.10f, 0.05f, 0.96f);
+                    Color border = Color.Lerp(Aether.Nano.NanoBrand.Ember, Aether.Nano.NanoBrand.PaperLight, pulse * 0.45f);
+                    Aether.Nano.NanoSurface.FillRoundedGradient(rect, top, bot, 7f);
+                    Aether.Nano.NanoSurface.StrokeRounded(rect, border, 1.4f, 7f);
+                    Aether.Nano.NanoSurface.DrawCrispLabel(rect, label, _kbKeycapStyle, Aether.Nano.NanoBrand.PaperLight, 0.35f);
+                }
+                else
+                {
+                    bool unbound = label == "-";
+                    Color top = isConflict
+                        ? (hover ? new Color(0.34f, 0.14f, 0.10f, 0.96f) : new Color(0.25f, 0.11f, 0.08f, 0.94f))
+                        : (hover ? new Color(0.20f, 0.155f, 0.118f, 0.96f) : new Color(0.135f, 0.108f, 0.084f, 0.94f));
+                    Color bot = isConflict
+                        ? new Color(0.17f, 0.07f, 0.05f, 0.96f)
+                        : (hover ? new Color(0.13f, 0.10f, 0.078f, 0.96f) : new Color(0.085f, 0.068f, 0.054f, 0.96f));
+                    Color border = hover
+                        ? Aether.Nano.NanoBrand.Ember
+                        : (isConflict
+                            ? new Color(Aether.Nano.NanoBrand.Warn.r, Aether.Nano.NanoBrand.Warn.g, Aether.Nano.NanoBrand.Warn.b, 0.80f)
+                            : (isModified
+                                ? new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.55f)
+                                : Aether.Nano.NanoBrand.Line));
+
+                    Aether.Nano.NanoSurface.FillRoundedGradient(rect, top, bot, 7f);
+                    // Tactile keycap bottom lip & subtle top bevel
+                    Aether.Nano.NanoSurface.FillRounded(new Rect(rect.x + 5f, rect.y + 1f, rect.width - 10f, 1f),
+                        new Color(1f, 0.96f, 0.90f, hover ? 0.16f : 0.08f), 0.5f);
+                    Aether.Nano.NanoSurface.FillRounded(new Rect(rect.x + 4f, rect.yMax - 2.5f, rect.width - 8f, 1.5f),
+                        new Color(0f, 0f, 0f, 0.35f), 0.75f);
+                    Aether.Nano.NanoSurface.StrokeRounded(rect, border, 1f, 7f);
+
+                    Color textCol = isConflict
+                        ? new Color(1f, 0.86f, 0.54f, 1f)
+                        : (unbound
+                            ? Aether.Nano.NanoBrand.Mute
+                            : (hover ? Aether.Nano.NanoBrand.PaperLight : (isModified ? Aether.Nano.NanoBrand.EmberSoft : Aether.Nano.NanoBrand.Paper)));
+                    Aether.Nano.NanoSurface.DrawCrispLabel(rect, label, _kbKeycapStyle, textCol, 0.35f);
+                }
+            }
+
+            return clicked;
+        }
+
+        private void DrawKeybindsManagerGUI(float anim = 1f)
+        {
+            EnsureKeybindStyles();
+            if (isKeybindsManagerOpen)
+                ProcessInteractiveRebindingEvent();
+
+            // Warm Aether Ink backdrop dimmer
+            Rect fullScreen = new Rect(0, 0, Screen.width, Screen.height);
+            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0.02f, 0.015f, 0.012f, 0.74f * anim)));
+
+            // Window Dimensions (matches F10 ModMenu shell geometry)
+            float winWidth = Mathf.Min(1020f, Screen.width - 40f);
+            float winHeight = Mathf.Min(650f, Screen.height - 40f);
+            float winX = (Screen.width - winWidth) * 0.5f;
+            float winY = (Screen.height - winHeight) * 0.5f;
+            Rect winRect = new Rect(winX, winY, winWidth, winHeight);
+
+            using (Aether.Nano.NanoMotion.BeginModal(winRect, anim))
+            {
+                DrawModMenuShell(winRect);
+
+                // -----------------------------------------------------------------
+                //                       INTEGRATED TOP BAR
+                // -----------------------------------------------------------------
+                float topBarH = 54f;
+                float hx = winX + 18f;
+                const float cubeH = 22f;
+                if (Aether.Nano.NanoBrand.Cube != null)
+                    hx += Aether.Nano.NanoBrand.DrawCube(hx, winY + (topBarH - cubeH) * 0.5f, cubeH) + 10f;
+
+                string titleWord = Tr("Keys & controls", "Teclas y controles");
+                _kbMeasure.text = titleWord;
+                float wordW = _kbTitleStyle.CalcSize(_kbMeasure).x;
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hx, winY + 9f, wordW + 4f, 36f),
+                    titleWord, _kbTitleStyle, Aether.Nano.NanoBrand.Paper, 0.4f);
+                hx += wordW + 12f;
+
+                Aether.Nano.NanoSurface.FillRounded(new Rect(hx, winY + 19f, 1f, 16f), Aether.Nano.NanoBrand.Line, 0.5f);
+                hx += 12f;
+
+                string subtitle = Tr($"{allKeybinds.Count} bindings  ·  game & mods", $"{allKeybinds.Count} atajos  ·  juego y mods");
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hx, winY + 10f, Mathf.Max(80f, winX + winWidth - 230f - hx), 36f),
+                    subtitle, _kbMetaStyle, Aether.Nano.NanoBrand.Mute, 0.3f);
+
+                // Reset All Button
+                Rect resetAllRect = new Rect(winX + winWidth - 204f, winY + 12f, 150f, 30f);
+                if (Aether.Nano.NanoSurface.DrawActionButton(resetAllRect, Tr("↺ Reset all", "↺ Restablecer todo"), false))
+                {
+                    ResetAllKeybindsToDefault();
+                }
+
+                // Close Button
+                Rect closeBtnRect = new Rect(winX + winWidth - 46f, winY + 12f, 32f, 30f);
+                if (Aether.Nano.NanoSurface.DrawActionButton(closeBtnRect, "×", false))
+                {
+                    SetKeybindsManagerOpen(false);
+                    return;
+                }
+
+                // Clean 1px hairline under header
+                Aether.Nano.NanoSurface.FillRounded(new Rect(winX + 14f, winY + topBarH, winWidth - 28f, 1f), Aether.Nano.NanoBrand.Line, 0.5f);
+
+                // -----------------------------------------------------------------
+                //                  TOOLBAR: SEGMENTED FILTERS & SEARCH
+                // -----------------------------------------------------------------
+                float tbY = winY + topBarH + 10f;
+                float tbH = 34f;
+                float leftPad = winX + 16f;
+
+                int allCount = allKeybinds.Count;
+                int vanillaCount = allKeybinds.Count(k => k.IsVanilla);
+                int modsCount = allKeybinds.Count(k => !k.IsVanilla);
+
+                float segTrackW = Mathf.Min(504f, winWidth * 0.54f);
+                Rect segTrack = new Rect(leftPad, tbY, segTrackW, tbH);
+                Aether.Nano.NanoSurface.DrawDebossedSlot(segTrack, new Color(0.042f, 0.034f, 0.027f, 0.94f), Aether.Nano.NanoBrand.Line, 9f);
+
+                float padIn = 3f;
+                float segH = tbH - padIn * 2f;
+                float innerTrackW = segTrackW - padIn * 2f;
+                float wAll = innerTrackW * 0.21f;
+                float wVan = innerTrackW * 0.25f;
+                float wMod = innerTrackW * 0.22f;
+                float wOvl = innerTrackW - wAll - wVan - wMod - 9f;
+
+                float sx = segTrack.x + padIn;
+                if (DrawKeybindFilterPill(new Rect(sx, segTrack.y + padIn, wAll, segH), Tr($"All ({allCount})", $"Todo ({allCount})"), activeFilter == KeybindFilter.All))
+                {
+                    activeFilter = KeybindFilter.All;
                     ApplyFilterAndSearch();
                 }
-            }
+                sx += wAll + 3f;
 
-            // -----------------------------------------------------------------
-            //                     KEYBINDS SCROLLABLE LIST
-            // -----------------------------------------------------------------
-            float listY = tbY + 42f;
-            float listH = winHeight - 146f;
-            Rect listOuterRect = new Rect(winX + 16f, listY, winWidth - 32f, listH);
-
-            // Dark inner background for contrast
-            GUI.DrawTexture(listOuterRect, GetColorTexture(new Color(0.06f, 0.04f, 0.02f, 0.88f)));
-
-            float rowH = 56f;
-            float totalContentH = filteredKeybinds.Count * rowH + 12f;
-            Rect viewRect = new Rect(0, 0, listOuterRect.width - 20f, Mathf.Max(listH, totalContentH));
-
-            scrollKeybindsPos = GUI.BeginScrollView(listOuterRect, scrollKeybindsPos, viewRect);
-
-            float rowY = 6f;
-            for (int i = 0; i < filteredKeybinds.Count; i++)
-            {
-                var entry = filteredKeybinds[i];
-                Rect rowRect = new Rect(6f, rowY, viewRect.width - 12f, rowH - 6f);
-
-                // Alternating row background with conflict tint
-                bool hasConflicts = entry.Conflicts.Count > 0;
-                Color rowBgColor = hasConflicts
-                    ? new Color(0.35f, 0.12f, 0.08f, 0.85f)
-                    : (i % 2 == 0 ? new Color(0.12f, 0.08f, 0.05f, 0.75f) : new Color(0.16f, 0.11f, 0.07f, 0.75f));
-
-                GUI.DrawTexture(rowRect, GetColorTexture(rowBgColor));
-
-                // Left: Category Badge & Action Name
-                float badgeW = 90f;
-                Rect badgeRect = new Rect(rowRect.x + 8f, rowRect.y + 6f, badgeW, 20f);
-                GUI.DrawTexture(badgeRect, GetColorTexture(entry.CategoryColor * 0.45f));
-                GUI.DrawTexture(new Rect(badgeRect.x, badgeRect.y, 3f, badgeRect.height), GetColorTexture(entry.CategoryColor));
-                DrawShadowLabel(badgeRect, entry.Category, smallStyle, entry.CategoryColor, Color.black);
-
-                // Action Name
-                string actionName = IsSpanish() ? entry.NameEs : entry.NameEn;
-                Rect nameRect = new Rect(rowRect.x + badgeW + 18f, rowRect.y + 6f, 260f, 22f);
-                DrawShadowLabel(nameRect, actionName, titleStyle ?? GUI.skin.label, Color.white, Color.black);
-
-                // Overlap Warning Badge (if conflicting)
-                if (hasConflicts)
+                if (DrawKeybindFilterPill(new Rect(sx, segTrack.y + padIn, wVan, segH), $"Vanilla ({vanillaCount})", activeFilter == KeybindFilter.Vanilla))
                 {
-                    string conflictStr = Tr("⚠ Overlaps with: ", "⚠ Solapa con: ") + string.Join(", ", entry.Conflicts);
-                    Rect conflictRect = new Rect(rowRect.x + 8f, rowRect.y + 28f, rowRect.width - 340f, 18f);
-                    GUI.DrawTexture(conflictRect, GetColorTexture(new Color(0.60f, 0.15f, 0.10f, 0.90f)));
-                    DrawShadowLabel(new Rect(conflictRect.x + 4f, conflictRect.y, conflictRect.width - 8f, 18f), conflictStr, smallStyle, new Color(1.0f, 0.85f, 0.30f, 1.0f), Color.black);
+                    activeFilter = KeybindFilter.Vanilla;
+                    ApplyFilterAndSearch();
+                }
+                sx += wVan + 3f;
+
+                if (DrawKeybindFilterPill(new Rect(sx, segTrack.y + padIn, wMod, segH), $"Mods ({modsCount})", activeFilter == KeybindFilter.Mods))
+                {
+                    activeFilter = KeybindFilter.Mods;
+                    ApplyFilterAndSearch();
+                }
+                sx += wMod + 3f;
+
+                string ovlTxt = totalOverlapEntries > 0
+                    ? Tr($"Conflicts ({totalOverlapEntries})", $"Conflictos ({totalOverlapEntries})")
+                    : Tr("Conflicts (0)", "Conflictos (0)");
+                if (DrawKeybindFilterPill(new Rect(sx, segTrack.y + padIn, wOvl, segH), ovlTxt, activeFilter == KeybindFilter.OverlapsOnly, totalOverlapCount > 0))
+                {
+                    activeFilter = KeybindFilter.OverlapsOnly;
+                    ApplyFilterAndSearch();
                 }
 
-                // Right: Primary Key Button
-                float rightX = rowRect.x + rowRect.width - 325f;
-                float keyBtnW = 125f;
-                float keyBtnH = 34f;
-                float keyBtnY = rowRect.y + (rowRect.height - keyBtnH) * 0.5f;
+                // Recessed search field
+                float searchX = segTrack.xMax + 12f;
+                float searchW = Mathf.Max(140f, (winX + winWidth - 16f) - searchX);
+                Rect searchRect = new Rect(searchX, tbY, searchW, tbH);
+                bool searchFocused = GUI.GetNameOfFocusedControl() == "AetherKeybindsSearch";
+                Aether.Nano.NanoSurface.DrawDebossedSlot(searchRect,
+                    new Color(0.042f, 0.034f, 0.027f, 0.96f),
+                    searchFocused ? Aether.Nano.NanoBrand.Ember : Aether.Nano.NanoBrand.Line,
+                    9f);
 
-                bool isRebindingPrimary = (rebindingEntry == entry && rebindingSlot == 0);
-                string pKeyLabel = isRebindingPrimary
-                    ? Tr("⌨ Press Key...", "⌨ Pulsa Tecla...")
-                    : FormatKeyName(entry.PrimaryKey);
-
-                Color? pBtnColor = isRebindingPrimary
-                    ? (Color?)new Color(0.35f, 1.0f, 0.45f, 1.0f)
-                    : (hasConflicts ? (Color?)new Color(1.0f, 0.65f, 0.30f, 1.0f) : null);
-
-                if (DrawNativeWoodButton(new Rect(rightX, keyBtnY, keyBtnW, keyBtnH), pKeyLabel, isRebindingPrimary, pBtnColor))
+                GUI.SetNextControlName("AetherKeybindsSearch");
+                string newSearch = GUI.TextField(new Rect(searchRect.x + 2f, searchRect.y + 1f, searchRect.width - 28f, searchRect.height - 2f), searchQuery ?? "", searchInputStyle);
+                if (newSearch != searchQuery)
                 {
-                    if (rebindingEntry == entry && rebindingSlot == 0)
-                        rebindingEntry = null; // Toggle off
-                    else
+                    searchQuery = newSearch;
+                    ApplyFilterAndSearch();
+                }
+
+                if (string.IsNullOrEmpty(searchQuery))
+                {
+                    Aether.Nano.NanoSurface.DrawCrispLabel(
+                        new Rect(searchRect.x + 12f, searchRect.y, searchRect.width - 24f, searchRect.height),
+                        Tr("Search action, mod or key…", "Buscar acción, mod o tecla…"),
+                        _kbSearchPlaceholderStyle, Aether.Nano.NanoBrand.Mute, 0f);
+                }
+                else
+                {
+                    Rect clearRect = new Rect(searchRect.xMax - 26f, searchRect.y + 5f, 22f, 24f);
+                    bool clearHover = clearRect.Contains(Event.current.mousePosition);
+                    if (Event.current.type == EventType.Repaint)
                     {
-                        rebindingEntry = entry;
-                        rebindingSlot = 0;
+                        if (clearHover)
+                            Aether.Nano.NanoSurface.FillRounded(clearRect, new Color(0.22f, 0.14f, 0.10f, 0.9f), 6f);
+                        Aether.Nano.NanoSurface.DrawCrispLabel(clearRect, "×", _kbFilterStyle,
+                            clearHover ? Aether.Nano.NanoBrand.PaperLight : Aether.Nano.NanoBrand.Mute, 0f);
+                    }
+                    if (GUI.Button(clearRect, GUIContent.none, GUIStyle.none))
+                    {
+                        searchQuery = "";
+                        ApplyFilterAndSearch();
                     }
                 }
 
-                // Secondary Key Button (for Vanilla, or "-" for Mods)
-                rightX += keyBtnW + 8f;
-                bool isRebindingSecondary = (rebindingEntry == entry && rebindingSlot == 1);
-                string sKeyLabel = entry.IsVanilla
-                    ? (isRebindingSecondary ? Tr("⌨ Press...", "⌨ Pulsa...") : FormatKeyName(entry.SecondaryKey))
-                    : "-";
+                // -----------------------------------------------------------------
+                //                     COLUMN HEADERS & LIST SHELL
+                // -----------------------------------------------------------------
+                float colHeaderY = tbY + tbH + 8f;
+                float listOuterX = winX + 16f;
+                float listOuterW = winWidth - 32f;
+                float listY = colHeaderY + 18f;
+                float footerH = 44f;
+                float listH = Mathf.Max(140f, (winY + winHeight - footerH - 8f) - listY);
+                Rect listOuterRect = new Rect(listOuterX, listY, listOuterW, listH);
 
-                Color? sBtnColor = isRebindingSecondary
-                    ? (Color?)new Color(0.35f, 1.0f, 0.45f, 1.0f)
-                    : (entry.IsVanilla && hasConflicts && entry.SecondaryKey != KeyCode.None ? (Color?)new Color(1.0f, 0.65f, 0.30f, 1.0f) : null);
+                // Subtle aligned column labels
+                const float keyBtnW = 122f;
+                const float resetBtnW = 32f;
+                const float colGap = 8f;
+                float rightColsTotal = keyBtnW * 2f + resetBtnW + colGap * 2f + 12f;
+                float hdrRightStart = listOuterRect.xMax - rightColsTotal - 16f;
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(listOuterX + 16f, colHeaderY, 180f, 16f),
+                    Tr("MOD / ACTION", "MOD / ACCIÓN"), _kbColHeaderStyle, Aether.Nano.NanoBrand.Mute, 0.2f);
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hdrRightStart, colHeaderY, keyBtnW, 16f),
+                    Tr("PRIMARY", "PRIMARIA"), _kbColHeaderCenterStyle, Aether.Nano.NanoBrand.Mute, 0.2f);
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hdrRightStart + keyBtnW + colGap, colHeaderY, keyBtnW, 16f),
+                    Tr("SECONDARY", "SECUNDARIA"), _kbColHeaderCenterStyle, Aether.Nano.NanoBrand.Mute, 0.2f);
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hdrRightStart + (keyBtnW + colGap) * 2f, colHeaderY, resetBtnW, 16f),
+                    "↺", _kbColHeaderCenterStyle, Aether.Nano.NanoBrand.Mute, 0.2f);
 
-                if (DrawNativeWoodButton(new Rect(rightX, keyBtnY, keyBtnW, keyBtnH), sKeyLabel, isRebindingSecondary, sBtnColor))
+                // Recessed list frame
+                Aether.Nano.NanoSurface.DrawDebossedSlot(listOuterRect, new Color(0.038f, 0.030f, 0.024f, 0.90f), Aether.Nano.NanoBrand.Line, 10f);
+
+                Rect scrollViewRect = new Rect(listOuterRect.x + 6f, listOuterRect.y + 6f, listOuterRect.width - 12f, listOuterRect.height - 12f);
+
+                if (filteredKeybinds.Count == 0)
                 {
-                    if (entry.IsVanilla)
+                    float cy = scrollViewRect.y + scrollViewRect.height * 0.42f;
+                    bool cleanConflicts = activeFilter == KeybindFilter.OverlapsOnly && string.IsNullOrEmpty(searchQuery);
+                    Aether.Nano.NanoSurface.DrawCrispLabel(
+                        new Rect(scrollViewRect.x + 20f, cy - 16f, scrollViewRect.width - 40f, 28f),
+                        cleanConflicts ? Tr("All bindings are clear", "Sin conflictos activos") : Tr("No matching bindings", "Sin atajos coincidentes"),
+                        _kbEmptyTitleStyle, cleanConflicts ? Aether.Nano.NanoBrand.Ok : Aether.Nano.NanoBrand.Paper, 0.35f);
+                    Aether.Nano.NanoSurface.DrawCrispLabel(
+                        new Rect(scrollViewRect.x + 20f, cy + 14f, scrollViewRect.width - 40f, 22f),
+                        cleanConflicts
+                            ? Tr("Every active key in your game and mods is conflict-free.", "Ninguna tecla de tus mods o del juego se solapa.")
+                            : Tr("Try another keyword or clear the active filter.", "Prueba con otra búsqueda o cambia el filtro."),
+                        _kbEmptySubStyle, Aether.Nano.NanoBrand.Mute, 0.25f);
+                }
+                else
+                {
+                    const float rowStep = 56f;
+                    float totalContentH = filteredKeybinds.Count * rowStep + 4f;
+                    scrollKeybindsPos = Aether.Nano.NanoSurface.BeginScrollView(scrollViewRect, scrollKeybindsPos, totalContentH, out float innerW);
+                    try
                     {
-                        if (rebindingEntry == entry && rebindingSlot == 1)
-                            rebindingEntry = null;
-                        else
+                        float rowY = 2f;
+                        for (int i = 0; i < filteredKeybinds.Count; i++)
                         {
-                            rebindingEntry = entry;
-                            rebindingSlot = 1;
+                            var entry = filteredKeybinds[i];
+                            Rect rowRect = new Rect(2f, rowY, innerW - 4f, rowStep - 6f);
+                            bool hasConflicts = entry.Conflicts.Count > 0;
+                            bool rowHover = rowRect.Contains(Event.current.mousePosition);
+                            bool isEntryRebinding = rebindingEntry == entry;
+
+                            if (Event.current.type == EventType.Repaint)
+                            {
+                                Color rowBg = isEntryRebinding
+                                    ? new Color(0.18f, 0.115f, 0.068f, 0.94f)
+                                    : (hasConflicts
+                                        ? (rowHover ? new Color(0.24f, 0.105f, 0.075f, 0.94f) : new Color(0.19f, 0.085f, 0.062f, 0.90f))
+                                        : (rowHover
+                                            ? new Color(0.125f, 0.100f, 0.078f, 0.94f)
+                                            : (i % 2 == 0 ? new Color(0.082f, 0.066f, 0.052f, 0.88f) : new Color(0.098f, 0.078f, 0.062f, 0.88f))));
+                                Color rowBorder = isEntryRebinding
+                                    ? Aether.Nano.NanoBrand.Ember
+                                    : (hasConflicts
+                                        ? new Color(Aether.Nano.NanoBrand.Warn.r, Aether.Nano.NanoBrand.Warn.g, Aether.Nano.NanoBrand.Warn.b, 0.55f)
+                                        : (rowHover
+                                            ? new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.40f)
+                                            : new Color(Aether.Nano.NanoBrand.Line.r, Aether.Nano.NanoBrand.Line.g, Aether.Nano.NanoBrand.Line.b, 0.65f)));
+
+                                Aether.Nano.NanoSurface.FillRounded(rowRect, rowBg, 8f);
+                                Aether.Nano.NanoSurface.StrokeRounded(rowRect, rowBorder, 1f, 8f);
+                            }
+
+                            // Category chip (squircle, zero decorative side stripe)
+                            float badgeW = 94f;
+                            float badgeY = hasConflicts ? rowRect.y + 6f : rowRect.y + (rowRect.height - 20f) * 0.5f;
+                            Rect badgeRect = new Rect(rowRect.x + 10f, badgeY, badgeW, 20f);
+                            Color catCol = entry.CategoryColor;
+                            if (Event.current.type == EventType.Repaint)
+                            {
+                                Aether.Nano.NanoSurface.DrawChip(badgeRect, entry.Category, _kbBadgeStyle,
+                                    new Color(catCol.r * 0.20f, catCol.g * 0.20f, catCol.b * 0.20f, 0.92f),
+                                    new Color(catCol.r, catCol.g, catCol.b, 0.50f),
+                                    catCol, 5f);
+                            }
+
+                            // Action name & inline conflict note
+                            string actionName = IsSpanish() ? entry.NameEs : entry.NameEn;
+                            float nameX = badgeRect.xMax + 12f;
+                            float rightX = rowRect.xMax - rightColsTotal;
+                            float nameW = Mathf.Max(120f, rightX - nameX - 12f);
+                            float nameY = hasConflicts ? rowRect.y + 5f : rowRect.y + (rowRect.height - 22f) * 0.5f;
+                            if (Event.current.type == EventType.Repaint)
+                            {
+                                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(nameX, nameY, nameW, 22f),
+                                    actionName, _kbRowTitleStyle, Aether.Nano.NanoBrand.Paper, 0.35f);
+
+                                if (hasConflicts)
+                                {
+                                    string conflictStr = Tr("Overlaps with: ", "Solapa con: ") + string.Join(", ", entry.Conflicts);
+                                    Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rowRect.x + 12f, rowRect.y + 28f, rightX - rowRect.x - 22f, 16f),
+                                        conflictStr, _kbConflictStyle, Aether.Nano.NanoBrand.Warn, 0.25f);
+                                }
+                            }
+
+                            // Primary Keycap
+                            const float keyBtnH = 32f;
+                            float keyBtnY = rowRect.y + (rowRect.height - keyBtnH) * 0.5f;
+                            bool isRebindingPrimary = rebindingEntry == entry && rebindingSlot == 0;
+                            bool primaryModified = entry.PrimaryKey != entry.DefaultPrimaryKey;
+                            string pKeyLabel = isRebindingPrimary
+                                ? Tr("Press key…", "Pulsa tecla…")
+                                : FormatKeyName(entry.PrimaryKey);
+
+                            if (DrawKeycapButton(new Rect(rightX, keyBtnY, keyBtnW, keyBtnH), pKeyLabel,
+                                    isRebindingPrimary, hasConflicts && entry.PrimaryKey != KeyCode.None, primaryModified, true))
+                            {
+                                if (isRebindingPrimary)
+                                    rebindingEntry = null;
+                                else
+                                {
+                                    rebindingEntry = entry;
+                                    rebindingSlot = 0;
+                                }
+                            }
+
+                            // Secondary Keycap (Vanilla only)
+                            float secX = rightX + keyBtnW + colGap;
+                            bool isRebindingSecondary = rebindingEntry == entry && rebindingSlot == 1;
+                            bool secondaryModified = entry.IsVanilla && entry.SecondaryKey != entry.DefaultSecondaryKey;
+                            string sKeyLabel = entry.IsVanilla
+                                ? (isRebindingSecondary ? Tr("Press…", "Pulsa…") : FormatKeyName(entry.SecondaryKey))
+                                : "—";
+
+                            if (DrawKeycapButton(new Rect(secX, keyBtnY, keyBtnW, keyBtnH), sKeyLabel,
+                                    isRebindingSecondary, entry.IsVanilla && hasConflicts && entry.SecondaryKey != KeyCode.None,
+                                    secondaryModified, entry.IsVanilla))
+                            {
+                                if (isRebindingSecondary)
+                                    rebindingEntry = null;
+                                else
+                                {
+                                    rebindingEntry = entry;
+                                    rebindingSlot = 1;
+                                }
+                            }
+
+                            // Reset Entry Button [↺]
+                            float rstX = secX + keyBtnW + colGap;
+                            Rect resetBtnRect = new Rect(rstX, keyBtnY, resetBtnW, keyBtnH);
+                            bool anyModified = primaryModified || secondaryModified;
+                            bool rstHover = resetBtnRect.Contains(Event.current.mousePosition);
+                            if (Event.current.type == EventType.Repaint)
+                            {
+                                Color bg = rstHover
+                                    ? new Color(0.20f, 0.15f, 0.11f, 0.96f)
+                                    : (anyModified ? new Color(0.14f, 0.11f, 0.08f, 0.90f) : new Color(0.07f, 0.056f, 0.045f, 0.60f));
+                                Color bd = rstHover
+                                    ? Aether.Nano.NanoBrand.Ember
+                                    : (anyModified ? new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.45f) : Aether.Nano.NanoBrand.Line);
+                                Color fg = rstHover
+                                    ? Aether.Nano.NanoBrand.PaperLight
+                                    : (anyModified ? Aether.Nano.NanoBrand.EmberSoft : new Color(Aether.Nano.NanoBrand.Mute.r, Aether.Nano.NanoBrand.Mute.g, Aether.Nano.NanoBrand.Mute.b, 0.55f));
+                                Aether.Nano.NanoSurface.FillRounded(resetBtnRect, bg, 7f);
+                                Aether.Nano.NanoSurface.StrokeRounded(resetBtnRect, bd, 1f, 7f);
+                                Aether.Nano.NanoSurface.DrawCrispLabel(resetBtnRect, "↺", _kbKeycapStyle, fg, 0.25f);
+                            }
+                            if (GUI.Button(resetBtnRect, GUIContent.none, GUIStyle.none))
+                            {
+                                ResetEntryToDefault(entry);
+                            }
+
+                            rowY += rowStep;
                         }
                     }
+                    finally
+                    {
+                        Aether.Nano.NanoSurface.EndScrollView();
+                    }
                 }
 
-                // Reset Button [↺]
-                rightX += keyBtnW + 8f;
-                Rect resetBtnRect = new Rect(rightX, keyBtnY, 34f, keyBtnH);
-                if (DrawNativeWoodButton(resetBtnRect, "↺", false, new Color(0.9f, 0.9f, 0.7f, 1.0f)))
+                // -----------------------------------------------------------------
+                //                       FOOTER / STATUS BAR
+                // -----------------------------------------------------------------
+                float footerSepY = winY + winHeight - footerH;
+                Aether.Nano.NanoSurface.FillRounded(new Rect(winX + 14f, footerSepY, winWidth - 28f, 1f), Aether.Nano.NanoBrand.Line, 0.5f);
+
+                float footerY = footerSepY + 9f;
+                string tipText = Tr(
+                    "Click any keycap to rebind  ·  [Esc] Cancel  ·  [Backspace/Del] Unbind",
+                    "Clic en una tecla para reasignar  ·  [Esc] Cancelar  ·  [Supr] Desasignar"
+                );
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(winX + 18f, footerY + 2f, winWidth - 290f, 22f),
+                    tipText, _kbTipStyle, Aether.Nano.NanoBrand.Mute, 0.25f);
+
+                // Conflict Status Summary Chip (clicking jumps to Conflicts filter when > 0)
+                Rect statusBadgeRect = new Rect(winX + winWidth - 266f, footerY, 250f, 26f);
+                if (totalOverlapCount == 0)
                 {
-                    ResetEntryToDefault(entry);
+                    Aether.Nano.NanoSurface.DrawChip(statusBadgeRect,
+                        Tr("0 conflicts  ·  all clear", "0 conflictos  ·  todo listo"),
+                        _kbStatusStyle,
+                        new Color(Aether.Nano.NanoBrand.Ok.r * 0.18f, Aether.Nano.NanoBrand.Ok.g * 0.18f, Aether.Nano.NanoBrand.Ok.b * 0.18f, 0.90f),
+                        new Color(Aether.Nano.NanoBrand.Ok.r, Aether.Nano.NanoBrand.Ok.g, Aether.Nano.NanoBrand.Ok.b, 0.55f),
+                        Aether.Nano.NanoBrand.Ok, 7f);
                 }
-
-                rowY += rowH;
-            }
-
-            GUI.EndScrollView();
-
-            // -----------------------------------------------------------------
-            //                     FOOTER / STATUS BAR
-            // -----------------------------------------------------------------
-            float footerY = winY + winHeight - 44f;
-            string tipText = Tr(
-                "✦ Click any key to rebind. [Esc] Cancel  •  [Backspace/Del] Unbind. Real-time conflict detector active.",
-                "✦ Haz clic en una tecla para reasignar. [Esc] Cancelar  •  [Supr] Desasignar. Detector de conflictos en tiempo real."
-            );
-            DrawShadowLabel(new Rect(winX + 22f, footerY + 2f, winWidth - 300f, 22f), tipText, smallStyle, new Color(0.85f, 0.85f, 0.85f, 0.90f), Color.black);
-
-            // Conflict Status Summary Badge
-            Rect statusBadgeRect = new Rect(winX + winWidth - 270f, footerY, 250f, 26f);
-            if (totalOverlapCount == 0)
-            {
-                GUI.DrawTexture(statusBadgeRect, GetColorTexture(new Color(0.12f, 0.35f, 0.12f, 0.90f)));
-                DrawShadowLabel(statusBadgeRect, Tr("✔ All 0 Overlaps / Clear", "✔ 0 Conflictos / Todo Correcto"), smallStyle, new Color(0.50f, 1.0f, 0.40f), Color.black);
-            }
-            else
-            {
-                GUI.DrawTexture(statusBadgeRect, GetColorTexture(new Color(0.55f, 0.18f, 0.10f, 0.95f)));
-                DrawShadowLabel(statusBadgeRect, Tr($"⚠ {totalOverlapEntries} actions share {totalOverlapCount} key(s)", $"⚠ {totalOverlapEntries} acciones comparten {totalOverlapCount} tecla(s)"), smallStyle, new Color(1.0f, 0.85f, 0.30f), Color.black);
+                else
+                {
+                    bool statusHover = statusBadgeRect.Contains(Event.current.mousePosition);
+                    Aether.Nano.NanoSurface.DrawChip(statusBadgeRect,
+                        Tr($"{totalOverlapEntries} actions share {totalOverlapCount} key(s)", $"{totalOverlapEntries} acciones comparten {totalOverlapCount} tecla(s)"),
+                        _kbStatusStyle,
+                        statusHover ? new Color(0.42f, 0.16f, 0.09f, 0.96f) : new Color(0.32f, 0.12f, 0.07f, 0.92f),
+                        statusHover ? Aether.Nano.NanoBrand.Ember : Aether.Nano.NanoBrand.Warn,
+                        new Color(1f, 0.88f, 0.58f, 1f), 7f);
+                    if (GUI.Button(statusBadgeRect, GUIContent.none, GUIStyle.none))
+                    {
+                        activeFilter = KeybindFilter.OverlapsOnly;
+                        ApplyFilterAndSearch();
+                    }
+                }
             }
 
             // Click outside closes modal (unless in rebinding mode)
-            if (rebindingEntry == null && Event.current.type == EventType.MouseDown && (Time.unscaledTime - modalOpenedTimestamp > 0.35f) && !winRect.Contains(Event.current.mousePosition))
+            if (isKeybindsManagerOpen && rebindingEntry == null && Event.current.type == EventType.MouseDown && (Time.unscaledTime - modalOpenedTimestamp > 0.35f) && !winRect.Contains(Event.current.mousePosition))
             {
                 SetKeybindsManagerOpen(false);
                 Event.current.Use();

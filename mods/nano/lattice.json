@@ -1,5 +1,9 @@
 {
   "tagline": "The small library the official mods are built on: the game's look, shared state, settings pages and keys in the game's own menus.",
+  "icon": "images/icon.png",
+  "categories": [
+    "library"
+  ],
   "accent": "ember",
   "hero": "compact",
   "pattern": "cells",

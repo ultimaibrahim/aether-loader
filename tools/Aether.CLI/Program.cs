@@ -82,8 +82,8 @@ public static partial class Program
         Console.WriteLine("  --with-launcher        With 'install' (Linux, experimental): also write aether-launch, a launcher that runs 'aether preflight' first");
         Console.WriteLine("  --no-ui                With 'install': skip the UI package (Aether.UI.dll: F10 menu, HUD, shared widgets)");
         Console.WriteLine("  --core-only            Install only the loader (this is already the default)");
-        Console.WriteLine("  --mods <list>          Also install some official mods: blueprint, dusk, lens, wayfinder (comma-separated)");
-        Console.WriteLine("  --with-mods            Also install all four official mods (alias: --with-flagships)");
+        Console.WriteLine("  --mods <list>          Also install some official mods: blueprint, canvas, dusk, lens, wayfinder (comma-separated)");
+        Console.WriteLine("  --with-mods            Also install all official mods (alias: --with-flagships)");
         Console.WriteLine("  --output <path>        Target folder for 'aether new <ModName>'");
         Console.WriteLine("  --dry-run              Show what would change without touching any file");
         Console.WriteLine("  --yes, -y              Do not ask for confirmation (also installs BepInEx if missing)");

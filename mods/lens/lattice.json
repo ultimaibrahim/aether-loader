@@ -1,5 +1,10 @@
 {
   "tagline": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
+  "icon": "images/icon.png",
+  "categories": [
+    "interface",
+    "qol"
+  ],
   "accent": "ember",
   "hero": "compact",
   "pattern": "cells",

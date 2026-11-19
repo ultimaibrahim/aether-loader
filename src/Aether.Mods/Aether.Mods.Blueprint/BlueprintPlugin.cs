@@ -5,7 +5,7 @@ using BepInEx;
 namespace Aether.Mods.Blueprint
 {
     /// <summary>Aether Blueprint as a BepInEx plugin on Aether Nano: no Aether needed.</summary>
-    [BepInPlugin(Guid, "Aether Blueprint", "1.1.1")]
+    [BepInPlugin(Guid, "Aether Blueprint", "1.1.2")]
     [BepInDependency(Aether.Nano.Nano.Guid)]
     public sealed class BlueprintPlugin : NanoMod
     {

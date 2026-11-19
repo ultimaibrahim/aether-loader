@@ -8,8 +8,8 @@ Matte terrain, darker caves, handheld torchlight and presets.
 
 ## Install
 
-- **With Aether:** open Aether Monitor and install it from the **Catalog** tab (it checks the signature and SHA-256), or press **Add mod…** and pick `aether-dusk-1.1.1.zip`. Settings are in the F10 menu.
-- **Without Aether:** download `aether-dusk-1.1.1.zip` from the release and copy both DLLs (`Aether.Mods.Dusk.dll` and `Aether.Nano.dll`) into `<game>/BepInEx/plugins`. Settings are in the "Mods" button Nano adds to the main menu.
+- **With Aether:** open Aether Monitor and install it from the **Catalog** tab (it checks the signature and SHA-256), or press **Add mod…** and pick `aether-dusk-1.1.2.zip`. Settings are in the F10 menu.
+- **Without Aether:** download `aether-dusk-1.1.2.zip` from the release and copy both DLLs (`Aether.Mods.Dusk.dll` and `Aether.Nano.dll`) into `<game>/BepInEx/plugins`. Settings are in the "Mods" button Nano adds to the main menu.
 
 Then start Block Story.
 

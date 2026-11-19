@@ -11,7 +11,7 @@
    "tag": "Cargador de mods para Block Story",
    "dl": "Descargar",
    "dlsoon": "Descargar · pronto",
-   "meta": "v1.2.3-beta · probado en Linux y Windows 11 · Apache-2.0",
+   "meta": "v1.2.4-beta · probado en Linux y Windows 11 · Apache-2.0",
    "play": "Jugar",
    "playp": "Aether carga mods desde una carpeta. Se instala una vez y ahí sueltas los mods que quieras.",
    "playb": "Cómo instalar",
@@ -19,9 +19,9 @@
    "makep": "Cada mod es un ensamblado con su propia configuración. Hay plantilla y guía en el repositorio.",
    "makeb": "Crear un mod",
    "expl": "Explorar",
-   "explp": "Cuatro mods propios sobre Aether Nano, que también funcionan solo con BepInEx.",
+   "explp": "Cinco mods propios sobre Aether Nano, que también funcionan solo con BepInEx.",
    "explb": "Ver los mods",
-   "mods": "Los cuatro mods",
+   "mods": "Los cinco mods",
    "showc": "Showcase",
    "showp": "Capturas reales del juego con Aether.",
    "inst": "Instalar en tres pasos",
@@ -31,7 +31,7 @@
    "est": "Estado y límites",
    "estp": "Beta. Probado en Linux y Windows 11. Las APIs pueden cambiar.",
    "nov": "Novedades",
-   "novp": "1.2.3-beta · Monitor nuevo: instalar con un clic, apagar mods sin borrarlos y español.",
+   "novp": "1.2.4-beta · Aether Canvas (editor WYSIWYG del HUD en vivo) y rediseño Aether Ink & Squircle en toda la suite.",
    "foot1": "Aether es un proyecto de terceros. No es un producto oficial de Block Story ni está afiliado a sus desarrolladores.",
    "foot2": "Apache-2.0 · Un proyecto de Ultima Ibrahim",
    "lens": "Tarjeta del bloque o criatura que apuntas: nombre, mod de origen, vida y la herramienta para romperlo.",
@@ -107,6 +107,10 @@
    "novh": "Novedades",
    "novlist": [
     [
+     "1.2.4-beta",
+     "Nuevo mod oficial Aether Canvas (1.1.2): editor WYSIWYG del HUD en vivo (F9 o «Editar HUD» en F10) para mover y escalar la interfaz nativa de Block Story y cualquier mod sobre Aether Nano, con siluetas reales para elementos ocultos por el modo de juego y perfiles. Rediseño integral Aether Ink & Squircle en F10, F7, Hover Tooltip, sello del menú, Crash Guard y los cinco mods oficiales (1.1.2) sobre Aether Nano 1.0.2 (controles propios, scrollbars flotantes, animaciones suaves e íconos 128×128)."
+    ],
+    [
      "1.2.3-beta",
      "Monitor nuevo, en español e inglés: cada mod con su ícono o su cubo de color, nivel de verificación en hexágonos. Instalar o actualizar con un clic (pregunta solo si vienen dependencias), «Actualizar todo», tarjetas o lista. Apagar y encender mods con un clic sin borrarlos. Suelta un .zip o .dll para instalarlo. Al instalar ya no queda una copia vieja del mod en la otra carpeta."
     ],
@@ -166,7 +170,8 @@
    "showh": "Showcase",
    "showcap": "Capturas reales del juego, tomadas con 1920×1080.",
    "cta": "Mods de la comunidad aparecerán aquí.",
-   "home": "Inicio"
+   "home": "Inicio",
+   "canvas": "Editor visual WYSIWYG del HUD en vivo: mueve y escala tanto la interfaz nativa de Block Story como cualquier mod sobre Aether Nano."
   },
   "en": {
    "nav": [
@@ -179,7 +184,7 @@
    "tag": "A mod loader for Block Story",
    "dl": "Download",
    "dlsoon": "Download · soon",
-   "meta": "v1.2.3-beta · tested on Linux and Windows 11 · Apache-2.0",
+   "meta": "v1.2.4-beta · tested on Linux and Windows 11 · Apache-2.0",
    "play": "Play",
    "playp": "Aether loads mods from a folder. Install it once and drop in any mods you like.",
    "playb": "How to install",
@@ -187,9 +192,9 @@
    "makep": "Every mod is an assembly with its own settings. A template and a guide are in the repository.",
    "makeb": "Make a mod",
    "expl": "Explore",
-   "explp": "Four mods of our own on Aether Nano, which also run with BepInEx alone.",
+   "explp": "Five mods of our own on Aether Nano, which also run with BepInEx alone.",
    "explb": "See the mods",
-   "mods": "The four mods",
+   "mods": "The five mods",
    "showc": "Showcase",
    "showp": "Real screenshots of the game with Aether.",
    "inst": "Install in three steps",
@@ -199,7 +204,7 @@
    "est": "Status and limits",
    "estp": "Beta. Tested on Linux and Windows 11. APIs may change.",
    "nov": "News",
-   "novp": "1.2.3-beta · A new Monitor: one-click installs, switch mods off without deleting them, and Spanish.",
+   "novp": "1.2.4-beta · Aether Canvas (live WYSIWYG HUD editor) and Aether Ink & Squircle across the entire suite.",
    "foot1": "Aether is a third-party project. It is not an official Block Story product and is not affiliated with its developers.",
    "foot2": "Apache-2.0 · A project by Ultima Ibrahim",
    "lens": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
@@ -275,6 +280,10 @@
    "novh": "News",
    "novlist": [
     [
+     "1.2.4-beta",
+     "New official mod Aether Canvas (1.1.2): live WYSIWYG HUD layout editor (F9 or “Edit HUD” in F10) to move and scale Block Story's native interface and any mod built on Aether Nano, with authentic ghost previews for mode-hidden widgets and profiles. Full Aether Ink & Squircle overhaul across F10, F7, Rich Hover Tooltip, title seal, Crash Guard and all five official mods (1.1.2) on Aether Nano 1.0.2 (custom controls, floating scrollbars, smooth motion and 128×128 icons)."
+    ],
+    [
      "1.2.3-beta",
      "A new Monitor, in Spanish and English: each mod with its icon or its coloured cube, verification level as hexagons. Install or update with one click (it asks only when dependencies come along), “Update all”, cards or list. Switch mods off and on with one click without deleting them. Drop a .zip or .dll to install it. Installing no longer leaves an older copy of the mod in the other folder."
     ],
@@ -334,7 +343,8 @@
    "showh": "Showcase",
    "showcap": "Real in-game screenshots, taken at 1920×1080.",
    "cta": "Community mods will appear here.",
-   "home": "Home"
+   "home": "Home",
+   "canvas": "Live WYSIWYG HUD layout editor: move and scale both Block Story's native interface and any mod built on Aether Nano."
   }
  },
  "N": {
@@ -358,7 +368,7 @@
    "i3": "Abre el juego. Aether carga lo que pusiste en <code>Aether/Mods</code>.",
    "instp": "Instalar en tres pasos",
    "showh": "Showcase",
-   "showp": "Los cuatro mods de Aether. Cada uno se descarga por separado.",
+   "showp": "Los cinco mods de Aether. Cada uno se descarga por separado.",
    "modsh": "Mods",
    "modsp": "Capturas reales del juego con Aether y, más adelante, los mods de la comunidad.",
    "comm": "Los mods de la comunidad aparecerán aquí.",
@@ -398,7 +408,7 @@
      ]
     ]
    ],
-   "fdesc": "Cargador de mods para Block Story, con cuatro mods propios.",
+   "fdesc": "Cargador de mods para Block Story, con cinco mods propios.",
    "how": "Cómo instalar un mod",
    "h1": "Descarga el mod. Si es un mod de Aether Nano, su zip ya trae lo que necesita.",
    "h2": "Instálalo con <code>./aether add Mod.zip</code>, o copia el <code>.dll</code> a <code>Aether/Mods</code>.",
@@ -425,7 +435,7 @@
    "i3": "Open the game. Aether loads what you put in <code>Aether/Mods</code>.",
    "instp": "Install in three steps",
    "showh": "Showcase",
-   "showp": "The four Aether mods. Each one downloads separately.",
+   "showp": "The five Aether mods. Each one downloads separately.",
    "modsh": "Mods",
    "modsp": "Real in-game screenshots with Aether and, later, community mods.",
    "comm": "Community mods will appear here.",
@@ -465,7 +475,7 @@
      ]
     ]
    ],
-   "fdesc": "A mod loader for Block Story, with four mods of its own.",
+   "fdesc": "A mod loader for Block Story, with five mods of its own.",
    "how": "How to install a mod",
    "h1": "Download the mod. A Nano mod's zip already carries what it needs.",
    "h2": "Install it with <code>./aether add Mod.zip</code>, or copy the <code>.dll</code> into <code>Aether/Mods</code>.",
@@ -521,6 +531,12 @@
     "F10",
     "Ajustes, pestaña Mods"
    ]
+  ],
+  "canvas": [
+   [
+    "F9",
+    "Abrir editor de HUD en vivo"
+   ]
   ]
  },
  "MN": [
@@ -539,6 +555,10 @@
   [
    "dusk",
    "Dusk"
+  ],
+  [
+   "canvas",
+   "Canvas"
   ]
  ],
  "DOCS": {

@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Aether.Mods.Wayfinder
 {
     /// <summary>Aether Wayfinder as a BepInEx plugin on Aether Nano: no Aether needed.</summary>
-    [BepInPlugin(Guid, "Aether Wayfinder", "1.1.1")]
+    [BepInPlugin(Guid, "Aether Wayfinder", "1.1.2")]
     [BepInDependency(Aether.Nano.Nano.Guid)]
     public sealed class WayfinderPlugin : NanoMod
     {
@@ -40,7 +40,7 @@ namespace Aether.Mods.Wayfinder
                                                   "Minimapa y mapa completo, capas de cueva y por altura, waypoints, puntos de muerte y exportar a PNG."),
                 Draw = (rect, y) => _module.DrawSettings(rect, y),
                 Config = Config,
-                ContentHeight = 900f,
+                ContentHeight = 820f,
             });
             NanoPanels.Register(new NanoPanel
             {
@@ -53,12 +53,24 @@ namespace Aether.Mods.Wayfinder
             NanoHud.Register(new NanoHudElement
             {
                 Id = Guid,
-                Name = "Wayfinder",
+                Name = "Aether Wayfinder",
                 GetRect = _module.GetMinimapScreenRect,
                 OffsetX = WayfinderModule.MinimapOffsetX,
                 OffsetY = WayfinderModule.MinimapOffsetY,
                 Scale = WayfinderModule.MinimapScale,
+                Size = WayfinderModule.MinimapSize,
+                SizeMin = 110f,
+                SizeMax = 340f,
                 Anchor = WayfinderModule.MinimapAnchor,
+                DrawPreview = _ => _module.DrawCornerMinimap(),
+                OnReset = () =>
+                {
+                    WayfinderModule.MinimapAnchor.Value = "TopRight";
+                    WayfinderModule.MinimapOffsetX.Value = 0f;
+                    WayfinderModule.MinimapOffsetY.Value = 0f;
+                    WayfinderModule.MinimapSize.Value = 180f;
+                    WayfinderModule.MinimapScale.Value = 1.0f;
+                }
             });
         }
 
@@ -79,10 +91,11 @@ namespace Aether.Mods.Wayfinder
 
         protected override void OnDraw()
         {
-            if (_module.IsOpen)
+            float mapAnim = NanoMotion.Sample("aether:wayfinder_full", _module.IsOpen);
+            if (_module.IsOpen || mapAnim > 0.005f)
             {
-                _module.DrawFullscreenWayfinderGUI();
-                NanoInput.DrawGameCursor();
+                _module.DrawFullscreenWayfinderGUI(mapAnim);
+                if (_module.IsOpen) NanoInput.DrawGameCursor();
                 return;
             }
             if (!NanoHud.CanDrawGameplayHud) return;

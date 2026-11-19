@@ -145,145 +145,157 @@ namespace BlockStoryLens
             }
         }
 
+        private static GUIStyle? _healthKickerStyle, _healthValStyle, _healthSubStyle, _healthRowTitle, _healthRowMeta, _healthChipStyle;
+
+        private static void EnsureHealthStyles()
+        {
+            if (_healthKickerStyle != null) return;
+            _healthKickerStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute);
+            _healthValStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 17, Aether.Nano.NanoBrand.Paper);
+            _healthSubStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Body, 11, Aether.Nano.NanoBrand.Mute);
+            _healthRowTitle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 13, Aether.Nano.NanoBrand.Paper);
+            _healthRowMeta = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute);
+            _healthChipStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 9, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+        }
+
         private void DrawModHealthPanel(Rect rightRect, float baseY)
         {
+            EnsureHealthStyles();
             if (Time.unscaledTime - lastHealthRowsRefresh > 1f)
             {
                 RefreshModHealthRows();
                 lastHealthRowsRefresh = Time.unscaledTime;
             }
 
-            float sy = baseY;
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22),
-                Tr("LIVE RUNTIME HEALTH", "SALUD DEL RUNTIME EN VIVO"),
-                sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-            sy += 26f;
+            float pad = 12f;
+            float colW = Mathf.Max(260f, rightRect.width - 20f - pad * 2f);
+            Rect col = new Rect(pad, baseY, colW, rightRect.height);
 
-            float cardW = (rightRect.width - 40f) / 3f;
-            float cardH = 54f;
-            DrawHealthCard(new Rect(10, sy, cardW, cardH),
-                Tr("FPS", "FPS"), $"{healthFps:F0}", $"{healthFrameMs:F1} ms");
-            DrawHealthCard(new Rect(10 + cardW + 10f, sy, cardW, cardH),
-                Tr("MEMORY", "MEMORIA"), $"{healthRamMb} MB", Tr("managed GC", "GC gestionado"));
-            DrawHealthCard(new Rect(10 + (cardW + 10f) * 2f, sy, cardW, cardH),
+            float sy = Aether.Nano.NanoSurface.DrawSectionHeader(col, baseY,
+                Tr("Live runtime health", "Salud del runtime en vivo"),
+                $"{healthFps:F0} FPS");
+
+            float cardW = (colW - 16f) / 3f;
+            float cardH = 58f;
+            DrawHealthCard(new Rect(pad, sy, cardW, cardH),
+                "FPS", $"{healthFps:F0}", $"{healthFrameMs:F1} ms", Aether.Nano.NanoBrand.Paper);
+            DrawHealthCard(new Rect(pad + cardW + 8f, sy, cardW, cardH),
+                Tr("MEMORY", "MEMORIA"), $"{healthRamMb} MB", Tr("managed GC", "GC gestionado"), Aether.Nano.NanoBrand.Paper);
+            DrawHealthCard(new Rect(pad + (cardW + 8f) * 2f, sy, cardW, cardH),
                 Tr("LOADED MODS", "MODS CARGADOS"), $"{(AetherBootstrap.LoadedMods?.Count ?? 0) + Aether.Loader.Hosting.ExternalModCatalog.Snapshot().Count}",
-                Tr("Aether + third-party", "Aether + terceros"));
+                Tr("Aether + external", "Aether + externos"), Aether.Nano.NanoBrand.EmberSoft);
             sy += cardH + 8f;
 
-            DrawHealthCard(new Rect(10, sy, cardW, cardH),
+            DrawHealthCard(new Rect(pad, sy, cardW, cardH),
                 "HARMONY", HarmonyPatchesApplied ? "OK" : "MISSING",
-                Tr("patches applied", "parches aplicados"));
-            DrawHealthCard(new Rect(10 + cardW + 10f, sy, cardW, cardH),
+                Tr("patches applied", "parches aplicados"),
+                HarmonyPatchesApplied ? Aether.Nano.NanoBrand.Ok : Aether.Nano.NanoBrand.Bad);
+            DrawHealthCard(new Rect(pad + cardW + 8f, sy, cardW, cardH),
                 Tr("HOSTED", "EXTERNOS"), $"{Aether.Loader.Hosting.ExternalModCatalog.Snapshot().Count}",
-                Tr("BepInEx plugins in Aether/Mods", "plugins BepInEx en Aether/Mods"));
-            DrawHealthCard(new Rect(10 + (cardW + 10f) * 2f, sy, cardW, cardH),
-                Tr("CRASH GUARD", "CRASH GUARD"), CrashReporter.HasActiveCrash ? "ACTIVE" : "NONE",
-                Tr("active report", "informe activo"));
-            sy += cardH + 14f;
+                Tr("plugins in Aether/Mods", "plugins en Aether/Mods"), Aether.Nano.NanoBrand.Paper);
+            DrawHealthCard(new Rect(pad + (cardW + 8f) * 2f, sy, cardW, cardH),
+                "CRASH GUARD", CrashReporter.HasActiveCrash ? "ACTIVE" : "NONE",
+                Tr("active report", "informe activo"),
+                CrashReporter.HasActiveCrash ? Aether.Nano.NanoBrand.Bad : Aether.Nano.NanoBrand.Ok);
+            sy += cardH + 16f;
 
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22),
-                Tr($"LOADED MOD MANIFESTS ({healthRows.Count})", $"MANIFIESTOS CARGADOS ({healthRows.Count})"),
-                sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-            sy += 24f;
-
-            DrawShadowLabel(new Rect(12, sy, rightRect.width - 24, 14),
-                Tr("STATUS     MOD / ID / VERSION                     ORDER   MODULES   STATUS",
-                   "ESTADO     MOD / ID / VERSIÓN                     ORDEN   MÓDULOS   ESTADO"),
-                sourceStyle, new Color(0.60f, 0.72f, 0.85f), Color.black);
-            sy += 18f;
+            sy = Aether.Nano.NanoSurface.DrawSectionHeader(col, sy,
+                Tr($"Loaded manifests ({healthRows.Count})", $"Manifiestos cargados ({healthRows.Count})"));
 
             if (healthRows.Count == 0)
             {
-                DrawShadowLabel(new Rect(12, sy, rightRect.width - 28, 40),
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, sy, colW, 36f),
                     Tr("No manifests reported by AetherBootstrap.LoadedMods.",
                        "AetherBootstrap.LoadedMods no reporta ningún manifiesto."),
-                    descStyle, new Color(0.95f, 0.70f, 0.45f), Color.black);
-                sy += 46f;
+                    _healthSubStyle!, Aether.Nano.NanoBrand.Warn, 0.3f);
+                sy += 42f;
             }
             else
             {
                 for (int i = 0; i < healthRows.Count; i++)
                 {
-                    DrawHealthRow(new Rect(10, sy, rightRect.width - 20, 46f), healthRows[i]);
-                    sy += 48f;
+                    DrawHealthRow(new Rect(pad, sy, colW, 50f), healthRows[i]);
+                    sy += 54f;
                 }
             }
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22),
-                Tr("SUITE & ENVIRONMENT", "SUITE Y ENTORNO"),
-                sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-            sy += 24f;
+
+            sy += 8f;
+            sy = Aether.Nano.NanoSurface.DrawSectionHeader(col, sy, Tr("Suite & environment", "Suite y entorno"));
 
             string scene = SceneManager.GetActiveScene().name;
             string suite = Instance != null ? "OK" : "MISSING";
-            string line = $"Scene: {scene}   |   Unity {Application.unityVersion}   |   Aether {AetherBootstrap.PluginVersion}   |   Suite: {suite}";
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 18), line, authorStyle,
-                new Color(0.85f, 0.90f, 0.98f), Color.black);
+            string line = $"Scene: {scene}  ·  Unity {Application.unityVersion}  ·  Aether {AetherBootstrap.PluginVersion}  ·  Suite: {suite}";
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, sy, colW, 18f), line, _healthRowMeta!, Aether.Nano.NanoBrand.Paper, 0.3f);
             sy += 20f;
 
             string configPath = Config != null ? Config.ConfigFilePath : "?";
             string configLabel = string.IsNullOrEmpty(configPath) ? "?" : Path.GetFileName(configPath);
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 16), $"Config: {configLabel}", sourceStyle,
-                new Color(0.72f, 0.76f, 0.82f), Color.black);
-            sy += 24f;
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, sy, colW, 16f), $"Config: {configLabel}", _healthRowMeta!, Aether.Nano.NanoBrand.Mute, 0.25f);
+            sy += 26f;
 
-
-            sy += 8f;
-            if (DrawNativeWoodButton(new Rect(10, sy, 150, 30), Tr("↻ Refresh", "↻ Refrescar"), false))
+            if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad, sy, 136f, 30f), Tr("Refresh", "Refrescar"), false))
             {
                 RefreshModHealthRows();
                 lastHealthRowsRefresh = Time.unscaledTime;
             }
-
-            if (DrawNativeWoodButton(new Rect(170, sy, 190, 30), Tr("▤ Write report", "▤ Escribir informe"), true))
+            if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad + 144f, sy, 168f, 30f), Tr("Write report", "Escribir informe"), true))
             {
                 WriteModHealthReport();
             }
-
             if (!string.IsNullOrEmpty(lastHealthReportPath) &&
-                DrawNativeWoodButton(new Rect(370, sy, 150, 30), Tr("▣ Copy path", "▣ Copiar ruta"), false))
+                Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad + 320f, sy, 136f, 30f), Tr("Copy path", "Copiar ruta"), false))
             {
                 GUIUtility.systemCopyBuffer = lastHealthReportPath;
             }
 
-            sy += 36f;
+            sy += 38f;
             if (!string.IsNullOrEmpty(lastHealthReportPath))
             {
-                DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 16), lastHealthReportPath, sourceStyle,
-                    new Color(0.55f, 0.90f, 1.0f), Color.black);
-                sy += 20f;
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, sy, colW, 16f), lastHealthReportPath, _healthRowMeta!, Aether.Nano.NanoBrand.EmberSoft, 0.3f);
+                sy += 22f;
             }
 
-            // Send report: what happened (optional) and one click. The code that comes back is what the player quotes.
-            sy += 8f;
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 16), Tr("Something wrong? Tell us in a line (optional) and send it:", "¿Algo falla? Cuéntalo en una línea (opcional) y envíalo:"), sourceStyle,
-                new Color(0.86f, 0.90f, 0.96f), Color.black);
-            sy += 20f;
-            healthNote = GUI.TextField(new Rect(10, sy, Mathf.Max(200f, rightRect.width - 230f), 28), healthNote ?? string.Empty, 300);
+            // Send report: what happened (optional) and one click.
+            sy += 4f;
+            sy = Aether.Nano.NanoSurface.DrawSectionHeader(col, sy, Tr("Problem report", "Reportar problema"));
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, sy, colW, 16f),
+                Tr("Something wrong? Describe it in one line (optional) and send it:", "¿Algo falla? Cuéntalo en una línea (opcional) y envíalo:"),
+                _healthSubStyle!, Aether.Nano.NanoBrand.Mute, 0.25f);
+            sy += 22f;
+
+            float sendBtnW = 166f;
+            float noteW = Mathf.Max(180f, colW - sendBtnW - 8f);
+            var noteRect = new Rect(pad, sy, noteW, 30f);
+            Aether.Nano.NanoSurface.DrawDebossedSlot(noteRect, new Color(0.055f, 0.044f, 0.036f, 0.94f), Aether.Nano.NanoBrand.Line, 7f);
+            healthNote = GUI.TextField(new Rect(noteRect.x + 6f, noteRect.y + 4f, noteRect.width - 12f, noteRect.height - 8f), healthNote ?? string.Empty, 300);
+
             bool busy = Aether.UI.Diagnostics.ProblemReports.Status == Aether.UI.Diagnostics.ProblemReports.State.Sending;
-            if (DrawNativeWoodButton(new Rect(Mathf.Max(220f, rightRect.width - 210f), sy - 1, 190, 30), busy ? Tr("Sending…", "Enviando…") : Tr("📤 Send report", "📤 Enviar reporte"), true) && !busy)
+            if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad + noteW + 8f, sy, sendBtnW, 30f),
+                    busy ? Tr("Sending…", "Enviando…") : Tr("Send report", "Enviar reporte"), true) && !busy)
             {
                 Aether.UI.Diagnostics.ProblemReports.SendHealth(healthNote);
                 healthNote = string.Empty;
             }
-            sy += 34f;
+            sy += 38f;
+
             string status = Aether.UI.Diagnostics.ProblemReports.StatusText(Tr);
             if (!string.IsNullOrEmpty(status))
             {
-                DrawShadowLabel(new Rect(10, sy, rightRect.width - 160, 16), status, sourceStyle, new Color(0.55f, 0.90f, 1.0f), Color.black);
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, sy, colW - 140f, 18f), status, _healthRowMeta!, Aether.Nano.NanoBrand.EmberSoft, 0.3f);
                 if (Aether.UI.Diagnostics.ProblemReports.Status == Aether.UI.Diagnostics.ProblemReports.State.Sent &&
-                    DrawNativeWoodButton(new Rect(rightRect.width - 150, sy - 6, 130, 26), Tr("Copy code", "Copiar código"), false))
+                    Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad + colW - 130f, sy - 4f, 130f, 26f), Tr("Copy code", "Copiar código"), false))
                     GUIUtility.systemCopyBuffer = Aether.UI.Diagnostics.ProblemReports.LastCode;
-                sy += 22f;
+                sy += 26f;
             }
 
-            // Automatic sending: the player's choice, changeable at any time (the privacy notice points here).
             var auto = Aether.UI.Diagnostics.ProblemReports.AutoSend;
             if (auto != null)
             {
                 string modeText = auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Always ? Tr("Always", "Siempre")
                     : auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Never ? Tr("Only with the button", "Solo con el botón")
                     : Tr("Ask me", "Preguntarme");
-                if (DrawNativeWoodButton(new Rect(10, sy, 330, 28), Tr("Send by itself when something fails: ", "Enviar solo cuando algo falle: ") + modeText, false))
+                if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad, sy, Mathf.Min(360f, colW), 30f),
+                        Tr("Auto-send on crash: ", "Enviar automático al fallar: ") + modeText, false))
                     auto.Value = auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Ask ? Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Always
                         : auto.Value == Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Always ? Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Never
                         : Aether.UI.Diagnostics.ProblemReports.AutoSendMode.Ask;
@@ -292,47 +304,54 @@ namespace BlockStoryLens
 
         private string? healthNote;
 
-        private void DrawHealthCard(Rect rect, string title, string value, string subtitle)
+        private void DrawHealthCard(Rect rect, string title, string value, string subtitle, Color valueColor)
         {
-            DrawDarkSlotBox(rect);
-            DrawShadowLabel(new Rect(rect.x + 8, rect.y + 3, rect.width - 16, 14), title, smallStyle,
-                new Color(0.68f, 0.86f, 1.0f), Color.black);
-            DrawShadowLabel(new Rect(rect.x + 8, rect.y + 16, rect.width - 16, 22), value, toolStyle,
-                Color.white, Color.black);
-            DrawShadowLabel(new Rect(rect.x + 8, rect.y + 37, rect.width - 16, 14), subtitle, authorStyle,
-                new Color(0.80f, 0.82f, 0.86f), Color.black);
+            Aether.Nano.NanoSurface.FillRoundedGradient(rect,
+                new Color(0.105f, 0.084f, 0.066f, 0.94f),
+                new Color(0.068f, 0.054f, 0.042f, 0.96f), 8f);
+            Aether.Nano.NanoSurface.StrokeRounded(rect, Aether.Nano.NanoBrand.Line, 1f, 8f);
+
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rect.x + 10f, rect.y + 5f, rect.width - 20f, 14f),
+                title, _healthKickerStyle!, Aether.Nano.NanoBrand.Mute, 0.25f);
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rect.x + 10f, rect.y + 19f, rect.width - 20f, 22f),
+                value, _healthValStyle!, valueColor, 0.35f);
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rect.x + 10f, rect.y + 40f, rect.width - 20f, 14f),
+                subtitle, _healthSubStyle!, Aether.Nano.NanoBrand.Mute, 0.25f);
         }
 
         private void DrawHealthRow(Rect rect, ModHealthRow row)
         {
-            DrawDarkSlotBox(rect);
+            Aether.Nano.NanoSurface.FillRounded(rect, new Color(0.072f, 0.058f, 0.046f, 0.85f), 8f);
+            Aether.Nano.NanoSurface.StrokeRounded(rect, Aether.Nano.NanoBrand.Line, 1f, 8f);
 
             Color statusColor = !row.PathExists
-                ? new Color(0.95f, 0.35f, 0.30f)
-                : (row.MetadataOk ? new Color(0.25f, 0.90f, 0.40f) : new Color(1.0f, 0.80f, 0.20f));
+                ? Aether.Nano.NanoBrand.Bad
+                : (row.MetadataOk ? Aether.Nano.NanoBrand.Ok : Aether.Nano.NanoBrand.Warn);
 
-            GUI.DrawTexture(new Rect(rect.x + 8, rect.y + 7, 10, 10), GetColorTexture(statusColor));
+            Aether.Nano.NanoSurface.DrawRhombus(new Rect(rect.x + 10f, rect.y + 11f, 8f, 8f), statusColor, true);
 
-            DrawShadowLabel(new Rect(rect.x + 24, rect.y + 3, rect.width - 220, 18), row.Name, modNameStyle,
-                Color.white, Color.black);
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rect.x + 25f, rect.y + 5f, rect.width - 190f, 18f),
+                row.Name, _healthRowTitle!, Aether.Nano.NanoBrand.Paper, 0.35f);
 
-            string meta = $"{row.Id}  •  v{row.Version}  •  {row.Author}";
-            DrawShadowLabel(new Rect(rect.x + 24, rect.y + 21, rect.width - 220, 15), meta, authorStyle,
-                new Color(0.90f, 0.84f, 0.72f), Color.black);
-
-            float rightEdge = rect.x + rect.width;
-            DrawShadowLabel(new Rect(rightEdge - 186, rect.y + 5, 54, 16), $"#{row.LoadOrder}", authorStyle,
-                new Color(0.80f, 0.88f, 1.0f), Color.black);
-            DrawShadowLabel(new Rect(rightEdge - 128, rect.y + 5, 58, 16), $"{row.Modules}", authorStyle,
-                new Color(0.80f, 0.88f, 1.0f), Color.black);
-            DrawShadowLabel(new Rect(rightEdge - 68, rect.y + 5, 60, 16), row.StatusText, authorStyle,
-                statusColor, Color.black);
+            string meta = $"{row.Id}  ·  v{row.Version}  ·  {row.Author}";
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rect.x + 25f, rect.y + 22f, rect.width - 190f, 14f),
+                meta, _healthRowMeta!, Aether.Nano.NanoBrand.Mute, 0.25f);
 
             string path = row.PathExists
                 ? $"{Path.GetFileName(row.Path)}  ({row.SizeKb} KB)"
                 : (string.IsNullOrEmpty(row.Path) ? Tr("no source path", "sin ruta de origen") : row.Path);
-            DrawShadowLabel(new Rect(rect.x + 24, rect.y + 34, rect.width - 34, 12), path, sourceStyle,
-                row.PathExists ? new Color(0.65f, 0.72f, 0.80f) : new Color(0.95f, 0.45f, 0.40f), Color.black);
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rect.x + 25f, rect.y + 35f, rect.width - 190f, 12f),
+                path, _healthRowMeta!, row.PathExists ? new Color(0.55f, 0.50f, 0.43f, 1f) : Aether.Nano.NanoBrand.Bad, 0.2f);
+
+            float rightEdge = rect.xMax - 10f;
+            Aether.Nano.NanoSurface.DrawChip(new Rect(rightEdge - 62f, rect.y + 8f, 62f, 18f),
+                row.StatusText, _healthChipStyle!,
+                new Color(statusColor.r * 0.22f, statusColor.g * 0.22f, statusColor.b * 0.22f, 0.92f),
+                new Color(statusColor.r, statusColor.g, statusColor.b, 0.65f), statusColor, 4f);
+
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(rightEdge - 140f, rect.y + 9f, 70f, 16f),
+                $"#{row.LoadOrder}" + (row.Modules > 0 ? $" · {row.Modules}" : ""),
+                _healthRowMeta!, Aether.Nano.NanoBrand.Mute, 0.25f);
         }
 
         private void WriteModHealthReport()

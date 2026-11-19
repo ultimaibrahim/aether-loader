@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Aether Canvas: standalone WYSIWYG HUD layout editor built on Aether Nano.
+    Detects and moves both Block Story's native HUD elements and every mod registered in NanoHud.
+    Runs with Aether or with BepInEx + Aether.Nano.dll alone.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Aether.Mods.Canvas</AssemblyName>
+    <RootNamespace>Aether.Mods.Canvas</RootNamespace>
+    <Nullable>disable</Nullable>
+    <Version>1.1.1</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Aether.Nano\Aether.Nano.csproj" Private="false" />
+    <EmbeddedResource Include="icon.png" />
+  </ItemGroup>
+  <Import Project="..\..\GameReferences.props" />
+</Project>

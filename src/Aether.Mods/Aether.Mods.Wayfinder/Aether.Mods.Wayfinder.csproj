@@ -13,6 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aether.Nano\Aether.Nano.csproj" Private="false" />
+    <EmbeddedResource Include="icon.png" />
     <Compile Include="..\..\Aether.Core\Mapping\*.cs" Link="Mapping\%(Filename)%(Extension)" />
     <Compile Include="..\..\Aether.Core\Config\LegacyNames.cs" Link="Mapping\LegacyNames.cs" />
   </ItemGroup>

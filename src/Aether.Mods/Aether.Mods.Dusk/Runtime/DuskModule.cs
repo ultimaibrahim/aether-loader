@@ -564,205 +564,195 @@ namespace Aether.Mods.Dusk
         // =====================================================================
         //                      MODMENU SETTINGS GUI
         // =====================================================================
+        private static readonly NanoSegmentOption<string>[] DuskPresetsEn =
+        {
+            new NanoSegmentOption<string>("MinecraftTrueDark", "True Dark", new Color(0.84f, 0.61f, 0.23f)),
+            new NanoSegmentOption<string>("VibrantMoody", "Moody", new Color(1.0f, 0.54f, 0.24f)),
+            new NanoSegmentOption<string>("CrispDaylight", "Crisp Day", new Color(0.56f, 0.78f, 0.94f)),
+            new NanoSegmentOption<string>("Vanilla", "Vanilla", new Color(0.66f, 0.61f, 0.51f))
+        };
+        private static readonly NanoSegmentOption<string>[] DuskPresetsEs =
+        {
+            new NanoSegmentOption<string>("MinecraftTrueDark", "Oscuro", new Color(0.84f, 0.61f, 0.23f)),
+            new NanoSegmentOption<string>("VibrantMoody", "Moody", new Color(1.0f, 0.54f, 0.24f)),
+            new NanoSegmentOption<string>("CrispDaylight", "Día Nítido", new Color(0.56f, 0.78f, 0.94f)),
+            new NanoSegmentOption<string>("Vanilla", "Vanilla", new Color(0.66f, 0.61f, 0.51f))
+        };
+
+        private static GUIStyle _duskKpiLabelStyle, _duskKpiValueStyle, _duskKpiSubStyle;
+
+        private static void EnsureDuskCraftStyles()
+        {
+            if (_duskKpiLabelStyle != null) return;
+            _duskKpiLabelStyle = NanoBrand.Style(NanoBrand.Mono, 9, NanoBrand.Mute);
+            _duskKpiValueStyle = NanoBrand.Style(NanoBrand.BodySemi, 12, NanoBrand.PaperLight);
+            _duskKpiSubStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Mute);
+        }
+
         public void DrawDuskModMenuSettings(Rect rightRect, float baseY = 230f)
         {
-            float sy = baseY;
-            float rw = rightRect.width - 24f;
+            EnsureDuskCraftStyles();
+            bool es = IsSpanish();
+            float pad = 12f;
+            float colW = Mathf.Max(260f, rightRect.width - pad * 2f);
+            float halfW = (colW - 8f) * 0.5f;
+            var col = new Rect(pad, baseY, colW, rightRect.height);
 
-            // --- Header & Presets ---
-            DrawShadowLabel(new Rect(10, sy, rw, 22), Tr("ATMOSPHERIC LIGHTING PRESETS", "PRESETS DE ILUMINACIÓN Y ATMÓSFERA"),
-                SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+            // --- Section 1: Atmospheric Lighting Presets ---
+            float sy = NanoSurface.DrawSectionHeader(col, baseY,
+                es ? "Presets de iluminación y atmósfera" : "Atmospheric lighting presets",
+                DuskPreset.Value);
 
-            sy += 26f;
-
-            // Preset Buttons Row
-            float btnW = (rw - 12f) / 4f;
-            string curPreset = DuskPreset.Value;
-
-            if (DrawNativeWoodButton(new Rect(12, sy, btnW, 34),
-                Tr("Minecraft Dark\n(Recommended)", "Minecraft Oscuro\n(Recomendado)"),
-                curPreset == "MinecraftTrueDark",
-                new Color(1.0f, 0.85f, 0.35f, 1.0f)))
+            if (NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 30f),
+                    es ? DuskPresetsEs : DuskPresetsEn, DuskPreset.Value, out string nextPreset))
             {
-                ApplyDuskPreset("MinecraftTrueDark");
+                ApplyDuskPreset(nextPreset);
             }
+            sy += 42f;
 
-            if (DrawNativeWoodButton(new Rect(12 + btnW + 4f, sy, btnW, 34),
-                Tr("Vibrant Moody\n(Warm Torches)", "Vibrante Moody\n(Antorchas Cálidas)"),
-                curPreset == "VibrantMoody"))
-            {
-                ApplyDuskPreset("VibrantMoody");
-            }
+            // --- Section 2: Shaders & Cave Atmosphere Tuning (zero GUI.HorizontalSlider) ---
+            sy = NanoSurface.DrawSectionHeader(col, sy,
+                es ? "Shaders y atmósfera de cuevas" : "Shaders & cave atmosphere");
 
-            if (DrawNativeWoodButton(new Rect(12 + (btnW + 4f) * 2f, sy, btnW, 34),
-                Tr("Crisp Daylight\n& Deep Caves", "Día Nítido\ny Cuevas"),
-                curPreset == "CrispDaylight"))
-            {
-                ApplyDuskPreset("CrispDaylight");
-            }
+            float labelW = Mathf.Min(196f, colW * 0.42f);
 
-            if (DrawNativeWoodButton(new Rect(12 + (btnW + 4f) * 3f, sy, btnW, 34),
-                Tr("Vanilla Default\n(Original)", "Vanilla Original\n(Por Defecto)"),
-                curPreset == "Vanilla",
-                new Color(0.85f, 0.85f, 0.85f, 1.0f)))
-            {
-                ApplyDuskPreset("Vanilla");
-            }
-
-            sy += 46f;
-
-            // --- Section: Shaders & Atmosphere Tuning ---
-            DrawShadowLabel(new Rect(10, sy, rw, 22), Tr("SHADERS & CAVE ATMOSPHERE TUNING", "AJUSTES DE SHADERS Y ATMÓSFERA DE CUEVAS"),
-                SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-
-            sy += 26f;
-
-            // Slider 1: Block Matte / Anti-Gloss
-            string matteLabel = $"{Tr("Block Matte / Anti-Gloss", "Bloques Mate / Anti-Brillo Plástico")}: {Mathf.RoundToInt(BlockMatteAntiGloss.Value * 100f)}% " +
-                                $"{(BlockMatteAntiGloss.Value >= 0.95f ? Tr("(Pure Matte Voxel)", "(Vóxel 100% Mate)") : "")}";
-            DrawShadowLabel(new Rect(12, sy, rw, 20), matteLabel, ToolStyle, Color.white, Color.black);
-            float newMatte = GUI.HorizontalSlider(new Rect(12, sy + 20, rw, 18), BlockMatteAntiGloss.Value, 0.0f, 1.0f);
-            if (Mathf.Abs(newMatte - BlockMatteAntiGloss.Value) > 0.01f)
+            float newMatte = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Bloques mate" : "Block matte", BlockMatteAntiGloss.Value, 0f, 1f,
+                $"{Mathf.RoundToInt(BlockMatteAntiGloss.Value * 100f)}%", 0.01f, labelW);
+            if (Mathf.Abs(newMatte - BlockMatteAntiGloss.Value) > 0.005f)
             {
                 BlockMatteAntiGloss.Value = newMatte;
                 DuskPreset.Value = "Custom";
                 RefreshAllMaterials();
             }
+            sy += 30f;
 
-            sy += 42f;
-
-            // Slider 2: Cave Darkness Depth
-            string depthLabel = $"{Tr("Cave Darkness Depth", "Profundidad de Oscuridad en Cuevas")}: {Mathf.RoundToInt(CaveDarknessDepth.Value * 100f)}% " +
-                                $"{(CaveDarknessDepth.Value >= 0.95f ? Tr("(Pitch Black Minecraft style)", "(Estilo Minecraft Oscuro)") : "")}";
-            DrawShadowLabel(new Rect(12, sy, rw, 20), depthLabel, ToolStyle, Color.white, Color.black);
-            float newDepth = GUI.HorizontalSlider(new Rect(12, sy + 20, rw, 18), CaveDarknessDepth.Value, 0.0f, 1.0f);
-            if (Mathf.Abs(newDepth - CaveDarknessDepth.Value) > 0.01f)
+            float newDepth = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Oscuridad en cuevas" : "Cave darkness", CaveDarknessDepth.Value, 0f, 1f,
+                $"{Mathf.RoundToInt(CaveDarknessDepth.Value * 100f)}%", 0.01f, labelW);
+            if (Mathf.Abs(newDepth - CaveDarknessDepth.Value) > 0.005f)
             {
                 CaveDarknessDepth.Value = newDepth;
                 DuskPreset.Value = "Custom";
                 RefreshAllMaterials();
             }
+            sy += 30f;
 
-            sy += 42f;
-
-            // Slider 3: Min Ambient Player Light
-            string ambientLabel = $"{Tr("Empty-Hand Player Ambient Halo", "Halo de Luz al estar Desarmado")}: {Mathf.RoundToInt(MinAmbientPlayerLight.Value * 100f)}% " +
-                                  $"{(MinAmbientPlayerLight.Value <= 0.05f ? Tr("(True Darkness - No Fake Glow)", "(Oscuridad Total - Sin Luz Falsa)") : "")}";
-            DrawShadowLabel(new Rect(12, sy, rw, 20), ambientLabel, ToolStyle, Color.white, Color.black);
-            float newAmbient = GUI.HorizontalSlider(new Rect(12, sy + 20, rw, 18), MinAmbientPlayerLight.Value, 0.0f, 1.0f);
-            if (Mathf.Abs(newAmbient - MinAmbientPlayerLight.Value) > 0.01f)
+            float newAmbient = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Halo sin antorcha" : "Empty-hand halo", MinAmbientPlayerLight.Value, 0f, 1f,
+                $"{Mathf.RoundToInt(MinAmbientPlayerLight.Value * 100f)}%", 0.01f, labelW);
+            if (Mathf.Abs(newAmbient - MinAmbientPlayerLight.Value) > 0.005f)
             {
                 MinAmbientPlayerLight.Value = newAmbient;
                 DuskPreset.Value = "Custom";
                 if (cachedPlayerLight != null) cachedPlayerLight.UpdateLight();
             }
+            sy += 30f;
 
-            sy += 42f;
-
-            // Slider 4: Underground Sun Suppression
-            string sunLabel = $"{Tr("Underground Directional Sun Suppression", "Supresión de Luz Solar en Cuevas")}: {Mathf.RoundToInt(SunlightUndergroundSuppression.Value * 100f)}% " +
-                              $"{(SunlightUndergroundSuppression.Value >= 0.95f ? Tr("(No Ceiling Bleed)", "(Sin Fugas de Luz Solar)") : "")}";
-            DrawShadowLabel(new Rect(12, sy, rw, 20), sunLabel, ToolStyle, Color.white, Color.black);
-            float newSun = GUI.HorizontalSlider(new Rect(12, sy + 20, rw, 18), SunlightUndergroundSuppression.Value, 0.0f, 1.0f);
-            if (Mathf.Abs(newSun - SunlightUndergroundSuppression.Value) > 0.01f)
+            float newSun = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Supresión solar cuevas" : "Underground sun block", SunlightUndergroundSuppression.Value, 0f, 1f,
+                $"{Mathf.RoundToInt(SunlightUndergroundSuppression.Value * 100f)}%", 0.01f, labelW);
+            if (Mathf.Abs(newSun - SunlightUndergroundSuppression.Value) > 0.005f)
             {
                 SunlightUndergroundSuppression.Value = newSun;
                 DuskPreset.Value = "Custom";
             }
+            sy += 30f;
 
-            sy += 42f;
-
-            // Slider 5: Ambient Floor Suppression
-            string floorLabel = $"{Tr("Global Ambient Shadow Floor Suppression", "Supresión del Suelo de Luz Ambiental")}: {Mathf.RoundToInt(AmbientFloorSuppression.Value * 100f)}% " +
-                                $"{(AmbientFloorSuppression.Value >= 0.95f ? Tr("(Deep High-Contrast Shadows)", "(Sombras de Alto Contraste)") : "")}";
-            DrawShadowLabel(new Rect(12, sy, rw, 20), floorLabel, ToolStyle, Color.white, Color.black);
-            float newFloor = GUI.HorizontalSlider(new Rect(12, sy + 20, rw, 18), AmbientFloorSuppression.Value, 0.0f, 1.0f);
-            if (Mathf.Abs(newFloor - AmbientFloorSuppression.Value) > 0.01f)
+            float newFloor = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Suelo ambiental" : "Ambient shadow floor", AmbientFloorSuppression.Value, 0f, 1f,
+                $"{Mathf.RoundToInt(AmbientFloorSuppression.Value * 100f)}%", 0.01f, labelW);
+            if (Mathf.Abs(newFloor - AmbientFloorSuppression.Value) > 0.005f)
             {
                 AmbientFloorSuppression.Value = newFloor;
                 DuskPreset.Value = "Custom";
             }
-
-            sy += 50f;
-
-            // --- Section: Dynamic Hand Lights (OptiFine Style) ---
-            DrawShadowLabel(new Rect(10, sy, rw, 22), Tr("DYNAMIC HAND LIGHTS (OPTIFINE / IRIS STYLE)", "LUCES DINÁMICAS EN MANO (ESTILO OPTIFINE)"),
-                SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-
-            sy += 26f;
-
-            // Dynamic Hand Torchlight Toggle
-            string dynText = DynamicHandTorchlight.Value
-                ? Tr("Dynamic Hand Torchlight: ENABLED", "Luz Dinámica de Antorchas en Mano: ACTIVADA")
-                : Tr("Dynamic Hand Torchlight: DISABLED", "Luz Dinámica de Antorchas en Mano: DESACTIVADA");
-            if (DrawNativeWoodButton(new Rect(12, sy, rw, 32), dynText, DynamicHandTorchlight.Value, new Color(1.0f, 0.75f, 0.35f, 1.0f)))
-            {
-                DynamicHandTorchlight.Value = !DynamicHandTorchlight.Value;
-                if (!DynamicHandTorchlight.Value && dynamicLightComponent != null)
-                {
-                    dynamicLightComponent.enabled = false;
-                }
-            }
-
             sy += 38f;
 
-            // Dynamic Torch Intensity & Range Sliders
-            float halfW = (rw - 8f) / 2f;
-            string intLabel = $"{Tr("Dynamic Intensity", "Intensidad Dinámica")}: {DynamicTorchIntensity.Value:F1}x";
-            DrawShadowLabel(new Rect(12, sy, halfW, 20), intLabel, ToolStyle, Color.white, Color.black);
-            float newInt = GUI.HorizontalSlider(new Rect(12, sy + 20, halfW, 18), DynamicTorchIntensity.Value, 0.5f, 3.0f);
-            if (Mathf.Abs(newInt - DynamicTorchIntensity.Value) > 0.05f)
+            // --- Section 3: Dynamic Hand Lights ---
+            sy = NanoSurface.DrawSectionHeader(col, sy,
+                es ? "Luces dinámicas en mano" : "Dynamic hand lights");
+
+            bool nextDyn = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, colW, 32f),
+                es ? "Luz dinámica de antorchas en mano" : "Dynamic hand torchlight",
+                DynamicHandTorchlight.Value);
+            if (nextDyn != DynamicHandTorchlight.Value)
             {
+                DynamicHandTorchlight.Value = nextDyn;
+                if (!DynamicHandTorchlight.Value && dynamicLightComponent != null)
+                    dynamicLightComponent.enabled = false;
+            }
+            sy += 38f;
+
+            float newInt = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Intensidad dinámica" : "Dynamic intensity", DynamicTorchIntensity.Value, 0.5f, 3.0f,
+                $"{DynamicTorchIntensity.Value:F1}x", 0.05f, labelW);
+            if (Mathf.Abs(newInt - DynamicTorchIntensity.Value) > 0.01f)
                 DynamicTorchIntensity.Value = newInt;
-            }
+            sy += 30f;
 
-            string rangeLabel = $"{Tr("Dynamic Range", "Alcance Dinámico")}: {Mathf.RoundToInt(DynamicTorchRange.Value)}m";
-            DrawShadowLabel(new Rect(12 + halfW + 8f, sy, halfW, 20), rangeLabel, ToolStyle, Color.white, Color.black);
-            float newRange = GUI.HorizontalSlider(new Rect(12 + halfW + 8f, sy + 20, halfW, 18), DynamicTorchRange.Value, 8.0f, 30.0f);
-            if (Mathf.Abs(newRange - DynamicTorchRange.Value) > 0.5f)
-            {
+            float newRange = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Alcance dinámico" : "Dynamic range", DynamicTorchRange.Value, 8f, 30f,
+                $"{Mathf.RoundToInt(DynamicTorchRange.Value)} m", 0.5f, labelW);
+            if (Mathf.Abs(newRange - DynamicTorchRange.Value) > 0.1f)
                 DynamicTorchRange.Value = newRange;
-            }
+            sy += 34f;
 
-            sy += 44f;
-
-            // Warm Firelight Color & Torch Flame Flicker Toggles
-            string warmText = WarmFirelightColor.Value
-                ? Tr("Warm Amber Firelight: ON", "Fuego Ámbar Cálido: SÍ")
-                : Tr("Warm Amber Firelight: OFF (Vanilla White)", "Fuego Ámbar Cálido: NO (Blanco)");
-            if (DrawNativeWoodButton(new Rect(12, sy, halfW, 32), warmText, WarmFirelightColor.Value))
+            bool nextWarm = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, halfW, 30f),
+                es ? "Fuego ámbar cálido" : "Warm amber firelight",
+                WarmFirelightColor.Value);
+            if (nextWarm != WarmFirelightColor.Value)
             {
-                WarmFirelightColor.Value = !WarmFirelightColor.Value;
+                WarmFirelightColor.Value = nextWarm;
                 if (cachedPlayerLight != null) cachedPlayerLight.UpdateLight();
             }
 
-            string flickerText = TorchFlameFlicker.Value
-                ? Tr("Living Flame Flicker: ON", "Parpadeo de Llama Viva: SÍ")
-                : Tr("Living Flame Flicker: OFF", "Parpadeo de Llama Viva: NO");
-            if (DrawNativeWoodButton(new Rect(12 + halfW + 8f, sy, halfW, 32), flickerText, TorchFlameFlicker.Value))
-            {
-                TorchFlameFlicker.Value = !TorchFlameFlicker.Value;
-            }
+            TorchFlameFlicker.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad + halfW + 8f, sy, halfW, 30f),
+                es ? "Parpadeo de llama viva" : "Living flame flicker",
+                TorchFlameFlicker.Value);
+            sy += 42f;
 
-            sy += 44f;
+            // --- Section 4: Live Lighting Telemetry (3-tile Bento strip, zero decorative stripes) ---
+            sy = NanoSurface.DrawSectionHeader(col, sy,
+                es ? "Estado del motor de luz" : "Live lighting engine");
 
-            // Telemetry Status Card
-            DrawShadowLabel(new Rect(10, sy, rw, 22), Tr("LIVE LIGHTING ENGINE STATUS", "ESTADO EN VIVO DEL MOTOR DE LUZ"),
-                SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-
-            sy += 24f;
-            string caveStatus = smoothCaveFactor >= 0.5f
-                ? Tr("▼ Underground / Cave (Sun Suppressed)", "▼ Bajo Tierra / Cueva (Luz Solar Suprimida)")
-                : Tr("▲ Open Surface / Daylight Active", "▲ Superficie Abierta / Luz Solar Activa");
-
+            bool underground = smoothCaveFactor >= 0.5f;
             bool isHoldingSource = IsHoldingLightSource(out _, out _);
-            string handSourceStatus = isHoldingSource
-                ? Tr("✦ Holding Radiant Light Source", "✦ Sosteniendo Fuente de Luz Radiante")
-                : Tr("▼ Empty Hand / Cold Tool (True Dark)", "▼ Mano Vacía / Herramienta Fría (Oscuridad)");
+            float tileW = (colW - 12f) / 3f;
+            float tileH = 54f;
 
-            string telemetryText = $"{Tr("Environment", "Entorno")}: {caveStatus}   |   {Tr("Cave Factor", "Factor Cueva")}: {smoothCaveFactor:P0}\n" +
-                                   $"{Tr("Hand Light", "Luz en Mano")}: {handSourceStatus}   |   {Tr("Tracked Materials", "Materiales Optimizados")}: {originalMaterialProps.Count}";
-            DrawShadowLabel(new Rect(12, sy, rw, 44), telemetryText, DescStyle, new Color(0.88f, 0.88f, 0.80f), Color.black);
+            DrawDuskKpiTile(
+                new Rect(pad, sy, tileW, tileH),
+                es ? "ENTORNO" : "ENVIRONMENT",
+                underground ? (es ? "▼ Cueva" : "▼ Cave") : (es ? "▲ Superficie" : "▲ Surface"),
+                $"{(es ? "Cueva" : "Cave")} {smoothCaveFactor:P0}",
+                underground ? NanoBrand.Ember : NanoBrand.Ok);
+
+            DrawDuskKpiTile(
+                new Rect(pad + tileW + 6f, sy, tileW, tileH),
+                es ? "LUZ EN MANO" : "HAND LIGHT",
+                isHoldingSource ? (es ? "✦ Radiante" : "✦ Radiant") : (es ? "◇ Fría" : "◇ Cold"),
+                DynamicHandTorchlight.Value ? $"{DynamicTorchIntensity.Value:F1}x · {Mathf.RoundToInt(DynamicTorchRange.Value)}m" : (es ? "Desactivada" : "Disabled"),
+                isHoldingSource ? NanoBrand.EmberSoft : NanoBrand.Mute);
+
+            DrawDuskKpiTile(
+                new Rect(pad + (tileW + 6f) * 2f, sy, tileW, tileH),
+                es ? "MATERIALES" : "MATERIALS",
+                $"{originalMaterialProps.Count}",
+                es ? "rastreados" : "tracked",
+                NanoBrand.Paper);
+        }
+
+        private static void DrawDuskKpiTile(Rect r, string label, string value, string sub, Color valueColor)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            NanoSurface.DrawDebossedSlot(r, new Color(0.044f, 0.036f, 0.029f, 0.92f), NanoBrand.Line, 8f);
+            NanoSurface.DrawCrispLabel(new Rect(r.x + 10f, r.y + 6f, r.width - 20f, 12f), label, _duskKpiLabelStyle, NanoBrand.Mute, 0.2f);
+            NanoSurface.DrawCrispLabel(new Rect(r.x + 10f, r.y + 20f, r.width - 20f, 16f), value, _duskKpiValueStyle, valueColor, 0.3f);
+            NanoSurface.DrawCrispLabel(new Rect(r.x + 10f, r.y + 37f, r.width - 20f, 12f), sub, _duskKpiSubStyle, NanoBrand.Mute, 0.2f);
         }
     }
 

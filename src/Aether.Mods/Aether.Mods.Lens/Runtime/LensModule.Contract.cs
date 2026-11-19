@@ -33,32 +33,37 @@ namespace Aether.Mods.Lens
         private static void BindScale() =>
             LensScale = Config.Bind("Lens", "Scale", 1.0f, new ConfigDescription("Lens card scale.", new AcceptableValueRange<float>(0.5f, 1.5f)));
 
-        private static float _lastW = 300f, _lastH = 68f;
+        private static float _lastW = 248f, _lastH = 72f;
 
         /// <summary>The card's current screen rect (for hosts that move it, like Aether's HUD editor).</summary>
         public static Rect CurrentCardRect() => GetLensScreenRect(_lastW, _lastH);
 
+        private static float GetLensScale() =>
+            Mathf.Clamp(LensScale != null ? LensScale.Value : 1f, 0.5f, 1.5f);
+
         private static float GetLensCardWidth(bool isCompact)
         {
-            float configured = LensCardWidth != null ? LensCardWidth.Value : 300f;
-            return Mathf.Clamp(isCompact ? configured - 30f : configured, 240f, 420f);
+            float configured = LensCardWidth != null ? LensCardWidth.Value : 248f;
+            return Mathf.Clamp(isCompact ? configured - 30f : configured, 196f, 420f);
         }
 
-        private static Rect GetLensScreenRect(float boxWidth = 320f, float boxHeight = 56f)
+        private static Rect GetLensScreenRect(float boxWidth = 316f, float boxHeight = 72f)
         {
             _lastW = boxWidth; _lastH = boxHeight;
-            float scale = LensScale != null ? LensScale.Value : 1f;
-            boxWidth *= scale;
-            boxHeight *= scale;
+            float scale = GetLensScale();
+            float scaledW = boxWidth * scale;
+            float scaledH = boxHeight * scale;
             float x, y;
             switch (LensAnchor != null ? LensAnchor.Value : "TopCenter")
             {
                 case "TopLeft": x = 18f; y = NanoHud.TopLeftInset(); break;
-                case "BottomCenter": x = (Screen.width - boxWidth) * 0.5f; y = Screen.height - boxHeight - 110f; break;
-                case "AboveCrosshair": x = (Screen.width - boxWidth) * 0.5f; y = Screen.height * 0.5f - boxHeight - 40f; break;
-                default: x = (Screen.width - boxWidth) * 0.5f; y = NanoHud.TopInset(); break;
+                case "BottomCenter": x = (Screen.width - scaledW) * 0.5f; y = Screen.height - scaledH - 110f; break;
+                case "AboveCrosshair": x = (Screen.width - scaledW) * 0.5f; y = Screen.height * 0.5f - scaledH - 40f; break;
+                default: x = (Screen.width - scaledW) * 0.5f; y = NanoHud.TopInset(); break;
             }
-            return new Rect(x + (LensOffsetX?.Value ?? 0f), y + (LensOffsetY?.Value ?? 0f), boxWidth, boxHeight);
+            float clampedX = Mathf.Clamp(x + (LensOffsetX?.Value ?? 0f), 6f, Mathf.Max(6f, Screen.width - scaledW - 6f));
+            float clampedY = Mathf.Clamp(y + (LensOffsetY?.Value ?? 0f), 6f, Mathf.Max(6f, Screen.height - scaledH - 6f));
+            return new Rect(clampedX, clampedY, scaledW, scaledH);
         }
     }
 }

@@ -1,5 +1,11 @@
 {
   "tagline": "Item catalog and recipe browser inside the inventory: search, recipe, “used in” and bookmarks.",
+  "icon": "images/icon.png",
+  "categories": [
+    "items",
+    "interface",
+    "qol"
+  ],
   "accent": "ember",
   "hero": "compact",
   "pattern": "cells",

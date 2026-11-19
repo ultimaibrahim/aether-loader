@@ -291,7 +291,25 @@ renaming keys silently.
 
 ---
 
-## 6. Assets and rendering
+## 6. Assets, mod icons and rendering
+
+### 6.1 Adding a mod icon (shown in F10 Mod Menu and Aether Nano)
+
+Aether resolves your mod's icon automatically (recommended size: square **128×128 PNG** with transparency) in three ways — pick whichever fits your mod:
+
+1. **Embedded inside the DLL (zero code, recommended):** drop `icon.png` next to your `.csproj` and embed it:
+   ```xml
+   <ItemGroup>
+     <EmbeddedResource Include="icon.png" />
+   </ItemGroup>
+   ```
+   Aether's F10 menu and `NanoPages.Register(...)` detect embedded `icon.png`, `mod_icon.png`, or `logo.png` automatically.
+2. **Sidecar PNG next to the DLL (works for any BepInEx plugin):** place `MyMod.png` (or `MyMod.icon.png`) next to `MyMod.dll`, or `icon.png` inside your mod's own subfolder (`Aether/Mods/MyMod/icon.png`).
+3. **Explicit in code or attribute:**
+   - **Aether Nano mod:** set `Icon = NanoIcons.LoadFromAssembly(typeof(MyPlugin).Assembly, "my_icon.png")` (or `IconItemName = "Compass"`) on your `NanoPage`.
+   - **Aether API mod:** set `[assembly: AetherMod("my_mod", "1.0.0", Icon = "textures/icon.png")]` (relative to the DLL or embedded resource name).
+
+### 6.2 Textures and rendering rules
 
 - `AetherResources.LoadTexture(modId, "textures/icon.png")` loads/caches a PNG next to your mod.
 - Prefer the game's native `UIAtlas` sprites for UI chrome; do not replace the native suite with

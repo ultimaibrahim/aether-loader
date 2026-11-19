@@ -21,9 +21,10 @@ public static class AetherAssemblies
     /// <summary>Every assembly Aether itself installs into BepInEx/plugins/Aether.</summary>
     public static string[] All => [.. Core, .. Ui];
 
-    /// <summary>The four official mods (Aether/Mods).</summary>
+    /// <summary>The official mods (Aether/Mods).</summary>
     public static readonly string[] OfficialMods =
     [
+        "Aether.Mods.Canvas.dll",
         "Aether.Mods.Dusk.dll",
         "Aether.Mods.Lens.dll",
         "Aether.Mods.Wayfinder.dll",

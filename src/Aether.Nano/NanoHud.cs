@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Aether.Nano
 {
-    /// <summary>A HUD card a host can move: its current rect and the offsets it is placed with.</summary>
+    /// <summary>A HUD card a host or HUD editor (like Aether Canvas) can inspect, preview and move.</summary>
     public sealed class NanoHudElement
     {
         public string Id = string.Empty;
@@ -13,10 +13,18 @@ namespace Aether.Nano
         public Func<Rect> GetRect;
         public ConfigEntry<float> OffsetX;
         public ConfigEntry<float> OffsetY;
-        /// <summary>Optional: scale of the card, changed with the mouse wheel in Aether's HUD editor.</summary>
+        /// <summary>Optional: scale of the card, changed with the mouse wheel in the HUD editor.</summary>
         public ConfigEntry<float> Scale;
-        /// <summary>Optional: where the card is anchored (TopCenter, TopLeft...), shown in Aether's HUD editor.</summary>
+        /// <summary>Optional: pixel size of the card (e.g. a square minimap), changed with the mouse wheel when set.</summary>
+        public ConfigEntry<float> Size;
+        public float SizeMin = 100f;
+        public float SizeMax = 360f;
+        /// <summary>Optional: where the card is anchored (TopCenter, TopLeft...), editable in the HUD editor.</summary>
         public ConfigEntry<string> Anchor;
+        /// <summary>Optional: draws the real mod HUD live inside the WYSIWYG HUD editor while the game is paused.</summary>
+        public Action<Rect> DrawPreview;
+        /// <summary>Optional: restores this element's position/scale/anchor to its defaults.</summary>
+        public Action OnReset;
     }
 
     /// <summary>
@@ -49,10 +57,26 @@ namespace Aether.Nano
         /// <summary>The host moved the game's top-right buttons to the bottom right (top-right cards can then go higher).</summary>
         public static Func<bool> TopRightButtonsMoved { get; set; } = () => false;
 
-        /// <summary>Opens the host's HUD editor (Aether's drag mode), or null when there is none.</summary>
+        /// <summary>Opens the host's HUD editor (or Aether Canvas when installed), or null when there is none.</summary>
         public static Action OpenHostEditor { get; set; }
 
-        public static bool OverlayOpen => NanoWindow.IsOpen || Safe(HostOverlayOpen);
+        /// <summary>Dedicated WYSIWYG HUD editor registered by Aether Canvas (preferred over host fallback when present).</summary>
+        public static Action OpenCanvasEditor { get; set; }
+
+        /// <summary>True when a dedicated layout mod (Aether Canvas) owns vanilla HUD layout repositioning.</summary>
+        public static bool ExternalLayoutActive { get; set; }
+
+        /// <summary>True while Aether Canvas's live WYSIWYG editor is open (hides gameplay-only overlays like 3D waypoints).</summary>
+        public static bool CanvasEditorOpen { get; set; }
+
+        /// <summary>Opens the best available HUD editor (Aether Canvas first, else host fallback).</summary>
+        public static void OpenEditor()
+        {
+            if (OpenCanvasEditor != null) { OpenCanvasEditor(); return; }
+            OpenHostEditor?.Invoke();
+        }
+
+        public static bool OverlayOpen => NanoWindow.IsOpen || CanvasEditorOpen || Safe(HostOverlayOpen);
         public static bool KeyboardCaptured => NanoWindow.IsOpen || Safe(HostKeyboardCaptured);
 
         /// <summary>True in gameplay with no menu, inventory, pause screen or host overlay on top: the moment to draw a HUD card.</summary>

@@ -239,9 +239,9 @@ namespace BlockStoryLens
             // 6. Wayfinder Minimap Size & Scale are owned and bound by Aether.Mods.Wayfinder
             //    ([Wayfinder] MinimapSize/MinimapScale). They stay accessible through the bridge.
 
-            // 7. Authentic UI Design Theme
-            UiDesignTheme = config.Bind("UI", "DesignTheme", "NativeWood",
-                "Authentic Block Story UI Design Preset: NativeWood, AncientStone, DwarvenGold, ArcaneGlass.");
+            // 7. UI Design Theme
+            UiDesignTheme = config.Bind("UI", "DesignTheme", "Aether",
+                "Aether UI Design Preset: Aether, NativeWood, AncientStone, DwarvenGold, ArcaneGlass.");
 
             ClearCache();
         }
@@ -339,6 +339,8 @@ namespace BlockStoryLens
 
         public static void ApplyVanillaHudLayout(bool force = false)
         {
+            // When Aether Canvas is installed, Canvas owns vanilla HUD positioning (no two-owner fight).
+            if (Aether.Nano.NanoHud.ExternalLayoutActive) return;
             if (SceneManager.GetActiveScene().name != "PlayingMobile") return;
 
             if (cachedStatsAnchor == null || cachedDiamondAnchor == null || cachedButtonsAnchor == null || cachedActionsAnchor == null)
@@ -594,6 +596,10 @@ namespace BlockStoryLens
             return GetGameObjectScreenBounds(cachedActionsObj, new Rect(fx, fy, fw, fh));
         }
 
+        private static GUIStyle handleDetailStyle;
+        private static GUIStyle toolbarChipStyle;
+        private static readonly GUIContent hudMeasure = new GUIContent();
+
         // =====================================================================
         //                 INTERACTIVE HUD DRAG MODE (ALL 6 ELEMENTS)
         // =====================================================================
@@ -601,31 +607,8 @@ namespace BlockStoryLens
         {
             InitStyles();
 
-            // Dark semi-transparent scrim
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), SuitePlugin.GetColorTexture(new Color(0f, 0f, 0f, 0.50f)));
-
-            // Top Instructions Banner
-            float bannerW = Mathf.Min(820f, Screen.width - 40f);
-            float bannerH = 52f;
-            float bannerX = (Screen.width - bannerW) * 0.5f;
-            float bannerY = 86f; // below the TopCenter Lens handle
-            Rect bannerRect = new Rect(bannerX, bannerY, bannerW, bannerH);
-            DrawThemedFrame(bannerRect, null, 1.0f);
-
-            string bannerText = SuitePlugin.Tr(
-                "✥ HUD EDIT MODE  •  Left-Click & Drag to move. Scroll Wheel over handle to Scale (0.5x - 1.5x). [Esc/Enter] Done",
-                "✥ MODO EDICIÓN HUD  •  Arrastra con Clic Izquierdo. Rueda sobre la caja para Escalar (0.5x - 1.5x). [Esc/Enter] Listo"
-            );
-            SuitePlugin.DrawShadowLabel(new Rect(bannerX + 16f, bannerY + 6f, bannerW - 130f, 38f), bannerText, bannerTitleStyle, new Color(0.65f, 1.0f, 0.30f), Color.black);
-
-            Rect doneBtnRect = new Rect(bannerX + bannerW - 105f, bannerY + 10f, 92f, 32f);
-            if (DrawThemedButton(doneBtnRect, SuitePlugin.Tr("Done", "Listo"), true))
-            {
-                plugin.SetDraggingHudElements(false);
-                plugin.Config.Save();
-                plugin.SetModMenuOpen(true);
-                return;
-            }
+            // Dark translucent scrim
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), SuitePlugin.GetColorTexture(new Color(0.02f, 0.015f, 0.012f, 0.56f)));
 
             // Retrieve current bounding boxes
             Rect statsBox = GetStatsScreenRect();
@@ -638,32 +621,104 @@ namespace BlockStoryLens
             bool mapReady = MinimapSize != null && SuitePlugin.MinimapAnchor != null && SuitePlugin.MinimapOffsetX != null && SuitePlugin.MinimapOffsetY != null;
             Rect mapBox = mapReady ? plugin.GetMinimapScreenRect() : Rect.zero;
 
+            // Subtle architectural screen-center alignment guides (light up in Ember when active box aligns)
+            Rect activeBox = ActiveDragTarget switch
+            {
+                CustomizerDragTarget.Stats => statsBox,
+                CustomizerDragTarget.Diamonds => diaBox,
+                CustomizerDragTarget.Buttons => btnBox,
+                CustomizerDragTarget.Actions => actBox,
+                CustomizerDragTarget.Lens => lensBox,
+                CustomizerDragTarget.Minimap => mapBox,
+                _ => Rect.zero
+            };
+            float cx = Screen.width * 0.5f;
+            float cy = Screen.height * 0.5f;
+            bool alignedX = ActiveDragTarget != CustomizerDragTarget.None && Mathf.Abs(activeBox.center.x - cx) <= 6f;
+            bool alignedY = ActiveDragTarget != CustomizerDragTarget.None && Mathf.Abs(activeBox.center.y - cy) <= 6f;
+            Color guideBase = new Color(0.92f, 0.88f, 0.78f, 0.08f);
+            Color guideLit = new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.58f);
+            GUI.DrawTexture(new Rect(cx - 0.5f, 0f, 1f, Screen.height), SuitePlugin.GetColorTexture(alignedX ? guideLit : guideBase));
+            GUI.DrawTexture(new Rect(0f, cy - 0.5f, Screen.width, 1f), SuitePlugin.GetColorTexture(alignedY ? guideLit : guideBase));
+
             Vector2 mousePos = Event.current.mousePosition;
 
-            // Draw Handles
-            DrawHandle(statsBox, SuitePlugin.Tr("★ Player Stats (HP/Mana/XP)", "★ Barra de Stats (HP/Mana/XP)"),
-                $"{StatsScale.Value:F2}x  ({StatsOffsetX.Value:F2}, {StatsOffsetY.Value:F2})",
-                new Color(0.25f, 0.95f, 0.40f), ActiveDragTarget == CustomizerDragTarget.Stats, statsBox.Contains(mousePos));
+            // Floating bottom-center Crystal toolbar (clear of TopCenter Lens and TopLeft Stats)
+            bool es = SuitePlugin.IsSpanish();
+            float bannerW = Mathf.Min(760f, Screen.width - 36f);
+            float bannerH = 48f;
+            float bannerX = (Screen.width - bannerW) * 0.5f;
+            float bannerY = Screen.height - bannerH - 18f;
+            Rect bannerRect = new Rect(bannerX, bannerY, bannerW, bannerH);
 
-            DrawHandle(diaBox, SuitePlugin.Tr("◆ Diamonds", "◆ Diamantes"),
-                $"{DiamondsScale.Value:F2}x  ({DiamondsOffsetX.Value:F2}, {DiamondsOffsetY.Value:F2})",
-                new Color(0.25f, 0.85f, 1.0f), ActiveDragTarget == CustomizerDragTarget.Diamonds, diaBox.Contains(mousePos));
+            Aether.Nano.NanoSurface.DrawCardSurface(
+                bannerRect,
+                new Color(0.094f, 0.074f, 0.058f, 0.94f),
+                new Color(0.047f, 0.039f, 0.031f, 0.96f),
+                Aether.Nano.NanoBrand.Line,
+                Aether.Nano.NanoBrand.Ember,
+                new Color(0.98f, 0.93f, 0.85f, 0.12f),
+                12f, 1f, 0f, 0f);
 
-            DrawHandle(btnBox, SuitePlugin.Tr("≡ Menu Buttons", "≡ Botones de Menú"),
-                $"{MenuButtonsScale.Value:F2}x  ({MenuButtonsOffsetX.Value:F2}, {MenuButtonsOffsetY.Value:F2})",
-                new Color(1.0f, 0.75f, 0.20f), ActiveDragTarget == CustomizerDragTarget.Buttons, btnBox.Contains(mousePos));
+            float tx = bannerRect.x + 14f;
+            if (Aether.Nano.NanoBrand.Cube != null)
+                tx += Aether.Nano.NanoBrand.DrawCube(tx, bannerRect.y + (bannerH - 18f) * 0.5f, 18f) + 9f;
 
-            DrawHandle(actBox, SuitePlugin.Tr("✥ Action / Fly Buttons", "✥ Botones Acción / Vuelo"),
-                $"{ActionsScale.Value:F2}x  ({ActionsOffsetX.Value:F2}, {ActionsOffsetY.Value:F2})",
-                new Color(1.0f, 0.35f, 0.35f), ActiveDragTarget == CustomizerDragTarget.Actions, actBox.Contains(mousePos));
+            string title = es ? "Editor de HUD" : "HUD Editor";
+            hudMeasure.text = title;
+            float titleW = bannerTitleStyle.CalcSize(hudMeasure).x + 6f;
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(tx, bannerRect.y, titleW, bannerH), title, bannerTitleStyle, Aether.Nano.NanoBrand.Paper, 0.4f);
+            tx += titleW + 8f;
 
-            if (lensReady) DrawHandle(lensBox, SuitePlugin.Tr("◉ Lens WAILA Tooltip", "◉ HUD Lens (WAILA)"),
-                $"{LensScale.Value:F2}x  [{SuitePlugin.LensAnchor.Value}] ({SuitePlugin.LensOffsetX.Value:F0}, {SuitePlugin.LensOffsetY.Value:F0})",
-                new Color(0.40f, 1.0f, 0.50f), ActiveDragTarget == CustomizerDragTarget.Lens, lensBox.Contains(mousePos));
+            float rightButtonsLeft = bannerRect.xMax - 208f;
+            tx = DrawToolbarHintChip(tx, bannerRect.y + 14f, rightButtonsLeft, es ? "Arrastrar: mover" : "Drag: move");
+            tx = DrawToolbarHintChip(tx, bannerRect.y + 14f, rightButtonsLeft, es ? "Rueda: escala" : "Scroll: scale");
+            DrawToolbarHintChip(tx, bannerRect.y + 14f, rightButtonsLeft, "Esc");
 
-            if (mapReady) DrawHandle(mapBox, SuitePlugin.Tr("▣ Wayfinder Minimap", "▣ Minimapa Wayfinder"),
-                $"{MinimapSize.Value:F0}px [{(MinimapScale != null ? MinimapScale.Value : 1.0f):F2}x] [{SuitePlugin.MinimapAnchor.Value}] ({SuitePlugin.MinimapOffsetX.Value:F0}, {SuitePlugin.MinimapOffsetY.Value:F0})",
-                new Color(0.35f, 0.80f, 1.0f), ActiveDragTarget == CustomizerDragTarget.Minimap, mapBox.Contains(mousePos));
+            Rect resetBtnRect = new Rect(bannerRect.xMax - 202f, bannerRect.y + 9f, 102f, 30f);
+            if (Aether.Nano.NanoSurface.DrawActionButton(resetBtnRect, es ? "Restablecer" : "Reset", false))
+            {
+                ResetAllHudToDefaults();
+                return;
+            }
+
+            Rect doneBtnRect = new Rect(bannerRect.xMax - 92f, bannerRect.y + 9f, 80f, 30f);
+            if (Aether.Nano.NanoSurface.DrawActionButton(doneBtnRect, es ? "Listo" : "Done", true))
+            {
+                plugin.SetDraggingHudElements(false);
+                plugin.Config.Save();
+                plugin.SetModMenuOpen(true);
+                return;
+            }
+
+            bool overToolbar = bannerRect.Contains(mousePos);
+
+            // Draw Crystal Squircle Handles (sober brand-aligned category tints, zero decorative stripes)
+            DrawHandle(statsBox, SuitePlugin.Tr("Player Stats", "Barra de Stats"),
+                $"{StatsScale.Value:F2}x  ·  {StatsOffsetX.Value:F2}, {StatsOffsetY.Value:F2}",
+                Aether.Nano.NanoBrand.Ok, ActiveDragTarget == CustomizerDragTarget.Stats, !overToolbar && statsBox.Contains(mousePos));
+
+            DrawHandle(diaBox, SuitePlugin.Tr("Diamonds", "Diamantes"),
+                $"{DiamondsScale.Value:F2}x  ·  {DiamondsOffsetX.Value:F2}, {DiamondsOffsetY.Value:F2}",
+                new Color(0.56f, 0.76f, 0.86f), ActiveDragTarget == CustomizerDragTarget.Diamonds, !overToolbar && diaBox.Contains(mousePos));
+
+            DrawHandle(btnBox, SuitePlugin.Tr("Menu Buttons", "Botones de Menú"),
+                $"{MenuButtonsScale.Value:F2}x  ·  {MenuButtonsOffsetX.Value:F2}, {MenuButtonsOffsetY.Value:F2}",
+                Aether.Nano.NanoBrand.Warn, ActiveDragTarget == CustomizerDragTarget.Buttons, !overToolbar && btnBox.Contains(mousePos));
+
+            DrawHandle(actBox, SuitePlugin.Tr("Action Buttons", "Botones Acción"),
+                $"{ActionsScale.Value:F2}x  ·  {ActionsOffsetX.Value:F2}, {ActionsOffsetY.Value:F2}",
+                Aether.Nano.NanoBrand.Bad, ActiveDragTarget == CustomizerDragTarget.Actions, !overToolbar && actBox.Contains(mousePos));
+
+            if (lensReady) DrawHandle(lensBox, SuitePlugin.Tr("Aether Lens", "Aether Lens"),
+                $"{LensScale.Value:F2}x  ·  {SuitePlugin.LensOffsetX.Value:F0}, {SuitePlugin.LensOffsetY.Value:F0}",
+                Aether.Nano.NanoBrand.Ember, ActiveDragTarget == CustomizerDragTarget.Lens, !overToolbar && lensBox.Contains(mousePos));
+
+            if (mapReady) DrawHandle(mapBox, SuitePlugin.Tr("Wayfinder Map", "Mapa Wayfinder"),
+                $"{MinimapSize.Value:F0}px  ·  {SuitePlugin.MinimapOffsetX.Value:F0}, {SuitePlugin.MinimapOffsetY.Value:F0}",
+                new Color(0.62f, 0.51f, 0.77f), ActiveDragTarget == CustomizerDragTarget.Minimap, !overToolbar && mapBox.Contains(mousePos));
+
+            if (overToolbar && Event.current.type == EventType.MouseDown) return;
 
             // Mouse Wheel Scaling (0.5x to 1.5x)
             if (Event.current.type == EventType.ScrollWheel)
@@ -805,15 +860,24 @@ namespace BlockStoryLens
                 }
                 else if (ActiveDragTarget == CustomizerDragTarget.Lens)
                 {
-                    if (SuitePlugin.LensAnchor != null) SuitePlugin.LensOffsetX.Value = Mathf.Clamp(dragStartOffsetX + dx, -600f, 600f);
-                    if (SuitePlugin.LensAnchor != null) SuitePlugin.LensOffsetY.Value = Mathf.Clamp(dragStartOffsetY + dy, -600f, 600f);
+                    if (SuitePlugin.LensAnchor != null)
+                    {
+                        float nextX = Mathf.Clamp(dragStartOffsetX + dx, -600f, 600f);
+                        // Gentle magnetic snap back to exact horizontal center for TopCenter / BottomCenter / AboveCrosshair
+                        if (SuitePlugin.LensAnchor.Value != "TopLeft" && Mathf.Abs(nextX) <= 6f) nextX = 0f;
+                        SuitePlugin.LensOffsetX.Value = nextX;
+                        SuitePlugin.LensOffsetY.Value = Mathf.Clamp(dragStartOffsetY + dy, -600f, 600f);
+                    }
                     SuitePlugin.HudLayoutPreset.Value = "Custom";
                     Event.current.Use();
                 }
                 else if (ActiveDragTarget == CustomizerDragTarget.Minimap)
                 {
-                    if (SuitePlugin.MinimapAnchor != null) SuitePlugin.MinimapOffsetX.Value = Mathf.Clamp(dragStartOffsetX + dx, -600f, 600f);
-                    if (SuitePlugin.MinimapAnchor != null) SuitePlugin.MinimapOffsetY.Value = Mathf.Clamp(dragStartOffsetY + dy, -600f, 600f);
+                    if (SuitePlugin.MinimapAnchor != null)
+                    {
+                        SuitePlugin.MinimapOffsetX.Value = Mathf.Clamp(dragStartOffsetX + dx, -600f, 600f);
+                        SuitePlugin.MinimapOffsetY.Value = Mathf.Clamp(dragStartOffsetY + dy, -600f, 600f);
+                    }
                     SuitePlugin.HudLayoutPreset.Value = "Custom";
                     Event.current.Use();
                 }
@@ -829,40 +893,82 @@ namespace BlockStoryLens
             }
         }
 
+        private static float DrawToolbarHintChip(float x, float y, float maxX, string text)
+        {
+            hudMeasure.text = text;
+            float w = toolbarChipStyle.CalcSize(hudMeasure).x + 14f;
+            if (x + w > maxX - 6f) return x;
+            Aether.Nano.NanoSurface.DrawChip(new Rect(x, y, w, 20f), text, toolbarChipStyle,
+                Aether.Nano.NanoBrand.InkSoft, Aether.Nano.NanoBrand.Line, Aether.Nano.NanoBrand.Mute, 5f);
+            return x + w + 6f;
+        }
+
         private static void DrawHandle(Rect box, string title, string detail, Color accent, bool isSelected, bool isHovered)
         {
-            Color borderCol = isSelected ? Color.white : (isHovered ? Color.Lerp(accent, Color.white, 0.5f) : accent);
-            Color bgCol = isSelected
-                ? new Color(accent.r * 0.35f, accent.g * 0.35f, accent.b * 0.35f, 0.88f)
-                : (isHovered ? new Color(0.10f, 0.14f, 0.20f, 0.85f) : new Color(0.06f, 0.08f, 0.12f, 0.80f));
+            if (box.width < 12f || box.height < 12f) return;
 
-            GUI.DrawTexture(new Rect(box.x - 2, box.y - 2, box.width + 4, box.height + 4), SuitePlugin.GetColorTexture(borderCol));
-            GUI.DrawTexture(box, SuitePlugin.GetColorTexture(bgCol));
-            GUI.DrawTexture(new Rect(box.x, box.y, box.width, 2), SuitePlugin.GetColorTexture(new Color(accent.r, accent.g, accent.b, 0.90f)));
+            Color bgTop = isSelected
+                ? new Color(Mathf.Lerp(0.11f, accent.r, 0.24f), Mathf.Lerp(0.09f, accent.g, 0.24f), Mathf.Lerp(0.07f, accent.b, 0.24f), 0.90f)
+                : (isHovered
+                    ? new Color(0.125f, 0.100f, 0.080f, 0.86f)
+                    : new Color(0.068f, 0.056f, 0.046f, 0.78f));
+            Color bgBot = isSelected
+                ? new Color(Mathf.Lerp(0.06f, accent.r, 0.14f), Mathf.Lerp(0.05f, accent.g, 0.14f), Mathf.Lerp(0.04f, accent.b, 0.14f), 0.92f)
+                : new Color(0.042f, 0.035f, 0.028f, 0.84f);
+            Color borderCol = isSelected
+                ? Aether.Nano.NanoBrand.PaperLight
+                : (isHovered ? Color.Lerp(accent, Aether.Nano.NanoBrand.PaperLight, 0.35f) : new Color(accent.r, accent.g, accent.b, 0.72f));
 
-            string label = $"{title}\n{detail}";
-            SuitePlugin.DrawShadowLabel(box, label, handleStyle, Color.white, Color.black);
+            Aether.Nano.NanoSurface.DrawCardSurface(
+                box,
+                bgTop,
+                bgBot,
+                borderCol,
+                accent,
+                new Color(1f, 0.96f, 0.90f, isSelected ? 0.18f : 0.10f),
+                10f, 1f, 0f, 0f);
+
+            // Subtle corner grip dots on hover / active drag (tactile handle cue, zero stripes)
+            if (isSelected || isHovered)
+            {
+                Color dotCol = isSelected ? Aether.Nano.NanoBrand.PaperLight : accent;
+                const float d = 3f;
+                const float m = 6f;
+                Aether.Nano.NanoSurface.FillRounded(new Rect(box.x + m, box.y + m, d, d), dotCol, 1.5f);
+                Aether.Nano.NanoSurface.FillRounded(new Rect(box.xMax - m - d, box.y + m, d, d), dotCol, 1.5f);
+                Aether.Nano.NanoSurface.FillRounded(new Rect(box.x + m, box.yMax - m - d, d, d), dotCol, 1.5f);
+                Aether.Nano.NanoSurface.FillRounded(new Rect(box.xMax - m - d, box.yMax - m - d, d, d), dotCol, 1.5f);
+            }
+
+            float centerY = box.y + box.height * 0.5f;
+            if (box.height >= 42f)
+            {
+                Aether.Nano.NanoSurface.DrawCrispLabel(
+                    new Rect(box.x + 8f, centerY - 17f, box.width - 16f, 18f),
+                    title, handleStyle, isSelected ? Aether.Nano.NanoBrand.PaperLight : Aether.Nano.NanoBrand.Paper, 0.45f);
+                Aether.Nano.NanoSurface.DrawCrispLabel(
+                    new Rect(box.x + 8f, centerY + 1f, box.width - 16f, 16f),
+                    detail, handleDetailStyle, isSelected ? accent : Aether.Nano.NanoBrand.Mute, 0.35f);
+            }
+            else
+            {
+                Aether.Nano.NanoSurface.DrawCrispLabel(
+                    new Rect(box.x + 6f, box.y, box.width - 12f, box.height),
+                    title, handleStyle, Aether.Nano.NanoBrand.Paper, 0.45f);
+            }
         }
 
         private static void InitStyles()
         {
             if (handleStyle == null)
             {
-                handleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 11,
-                    fontStyle = FontStyle.Bold
-                };
+                handleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 12, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+                handleDetailStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleCenter);
+                toolbarChipStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleCenter);
             }
             if (bannerTitleStyle == null)
             {
-                bannerTitleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    alignment = TextAnchor.MiddleLeft,
-                    fontSize = 13,
-                    fontStyle = FontStyle.Bold
-                };
+                bannerTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 13, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleLeft);
             }
         }
 
@@ -1007,9 +1113,10 @@ namespace BlockStoryLens
         public static void ResetAllHudToDefaults()
         {
             ApplyHudPreset("ModernModpack");
-            UiDesignTheme.Value = "NativeWood";
-            if (SuitePlugin.LensAnchor != null) SuitePlugin.LensTheme.Value = "NativeWood";
-            SuitePlugin.MinimapTheme.Value = "NativeWood";
+            UiDesignTheme.Value = "Aether";
+            Aether.Nano.NanoThemes.Default = "Aether";
+            if (SuitePlugin.LensAnchor != null) SuitePlugin.LensTheme.Value = "Aether";
+            if (SuitePlugin.MinimapTheme != null) SuitePlugin.MinimapTheme.Value = "NativeWood";
             SuitePlugin.Instance?.Config.Save();
         }
     }

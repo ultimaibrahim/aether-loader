@@ -64,7 +64,7 @@ namespace Aether.Mods.Blueprint
         private static readonly List<InvBaseItem> blueprintAllItems = new List<InvBaseItem>();
         private static readonly List<InvBaseItem> blueprintFilteredItems = new List<InvBaseItem>();
         private static readonly HashSet<string> blueprintBookmarkedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private static readonly BlueprintCategory[] BlueprintCategoriesAll = (BlueprintCategory[])Enum.GetValues(typeof(BlueprintCategory));
+        private static readonly NanoSegmentOption<int>[] RecipeTabOpts = new NanoSegmentOption<int>[2];
 
         // Recipe index
         private static readonly Dictionary<string, List<BlueprintRecipeEntry>> recipesByResult = new Dictionary<string, List<BlueprintRecipeEntry>>(StringComparer.OrdinalIgnoreCase);
@@ -86,6 +86,71 @@ namespace Aether.Mods.Blueprint
         private static InvBaseItem hoveredTopmostItem = null;
         private static Rect hoveredTopmostRect = default;
         private static string hoveredTopmostText = null;
+
+        // Cached Aether Ink craft styles (zero per-frame allocations)
+        private static GUIStyle _bpTitleStyle, _bpMetaStyle, _bpMonoStyle, _bpMonoCenterStyle, _bpChipStyle;
+        private static GUIStyle _bpItemTitleStyle, _bpBodyStyle, _bpSearchStyle, _bpPlaceholderStyle, _bpArrowStyle;
+        private static readonly GUIContent _bpMeasure = new GUIContent();
+
+        private static readonly NanoSegmentOption<BlueprintCategory>[] CatSegmentsEn =
+        {
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.All, "All"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Blocks, "Blk"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Weapons, "Wpn"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Tools, "Tool"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Armor, "Arm"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Consumables, "Food"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Materials, "Mat")
+        };
+        private static readonly NanoSegmentOption<BlueprintCategory>[] CatSegmentsEs =
+        {
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.All, "Todo"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Blocks, "Bloq"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Weapons, "Arma"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Tools, "Herr"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Armor, "Armd"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Consumables, "Com"),
+            new NanoSegmentOption<BlueprintCategory>(BlueprintCategory.Materials, "Mat")
+        };
+
+        private static void EnsureBlueprintCraftStyles()
+        {
+            if (_bpTitleStyle != null) return;
+            _bpTitleStyle = NanoBrand.Style(NanoBrand.Display, 19, NanoBrand.Paper);
+            _bpMetaStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Mute);
+            _bpMonoStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Paper);
+            _bpMonoCenterStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Paper, TextAnchor.MiddleCenter);
+            _bpChipStyle = NanoBrand.Style(NanoBrand.Mono, 9, NanoBrand.PaperLight, TextAnchor.MiddleCenter);
+            _bpItemTitleStyle = NanoBrand.Style(NanoBrand.Display, 18, NanoBrand.PaperLight);
+            _bpBodyStyle = NanoBrand.Style(NanoBrand.Body, 12, NanoBrand.Paper, TextAnchor.UpperLeft, true);
+            _bpPlaceholderStyle = NanoBrand.Style(NanoBrand.Body, 12, new Color(NanoBrand.Mute.r, NanoBrand.Mute.g, NanoBrand.Mute.b, 0.58f));
+            _bpArrowStyle = NanoBrand.Style(NanoBrand.Display, 24, NanoBrand.Ember, TextAnchor.MiddleCenter);
+            _bpSearchStyle = new GUIStyle(GUI.skin.textField)
+            {
+                font = NanoBrand.Body,
+                fontSize = 12,
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(9, 8, 2, 2)
+            };
+            _bpSearchStyle.normal.textColor = NanoBrand.PaperLight;
+            _bpSearchStyle.focused.textColor = NanoBrand.PaperLight;
+            Texture2D clear = GetColorTexture(new Color(0f, 0f, 0f, 0f));
+            _bpSearchStyle.normal.background = clear;
+            _bpSearchStyle.focused.background = clear;
+            _bpSearchStyle.hover.background = clear;
+        }
+
+        private static void DrawBlueprintShell(Rect rect, float radius = 12f, float opacity = 0.97f)
+        {
+            NanoSurface.DrawCardSurface(
+                rect,
+                new Color(0.092f, 0.074f, 0.058f, opacity),
+                new Color(0.047f, 0.039f, 0.031f, Mathf.Clamp01(opacity + 0.01f)),
+                NanoBrand.Line,
+                NanoBrand.Ember,
+                new Color(0.98f, 0.93f, 0.85f, 0.11f),
+                radius, 1f, 0f, 0f);
+        }
 
         // =====================================================================
         //                      INITIALIZATION & CONFIG
@@ -733,264 +798,290 @@ namespace Aether.Mods.Blueprint
         public void DrawBlueprintGUI()
         {
             string currentScene = SceneManager.GetActiveScene().name;
-            if (currentScene == "Menu" || currentScene == "StartScene") return;
+            if (currentScene == "Menu" || currentScene == "StartScene")
+            {
+                NanoMotion.Snap("aether:blueprint_drawer", false);
+                NanoMotion.Snap("aether:blueprint_card", false);
+                return;
+            }
 
             hoveredTopmostItem = null;
             hoveredTopmostRect = default;
             hoveredTopmostText = null;
 
-            // Draw Blueprint Overlay & Recipe Card
-            if (BlueprintEnabled.Value && !IsModMenuOpen && !IsWayfinderOpen && !IsHudDragOpen)
+            bool allowDraw = BlueprintEnabled.Value && !IsModMenuOpen && !IsWayfinderOpen && !IsHudDragOpen && !NanoHud.CanvasEditorOpen;
+            float drawerAnim = NanoMotion.Sample("aether:blueprint_drawer", allowDraw && isBlueprintVisible, 0.21f, 0.14f);
+            float cardAnim = NanoMotion.Sample("aether:blueprint_card", allowDraw && isRecipeCardOpen && activeRecipeItem != null, 0.20f, 0.13f);
+
+            if (drawerAnim > 0.005f || cardAnim > 0.005f)
             {
                 EnsureBlueprintItemsIndexed();
                 EnsureRecipesIndexed();
+                EnsureBlueprintCraftStyles();
 
-                if (isBlueprintVisible)
-                {
-                    DrawBlueprintSidebarGUI();
-                }
+                if (drawerAnim > 0.005f)
+                    DrawBlueprintSidebarGUI(drawerAnim);
 
-                if (isRecipeCardOpen && activeRecipeItem != null)
-                {
-                    DrawRecipeExplorerCardGUI();
-                }
+                if (cardAnim > 0.005f && activeRecipeItem != null)
+                    DrawRecipeExplorerCardGUI(cardAnim);
 
-                // TASK B FIX: Draw rich tooltip card ON TOP OF EVERYTHING at the very end
-                if (hoveredTopmostText != null)
-                {
+                if (allowDraw && hoveredTopmostText != null)
                     DrawTopmostTooltipCard(Event.current.mousePosition, hoveredTopmostText, hoveredTopmostItem);
-                }
             }
         }
 
         // =====================================================================
         //                      Blueprint GUI RENDERING
         // =====================================================================
-        private void DrawBlueprintSidebarGUI()
+        private void DrawBlueprintSidebarGUI(float anim)
         {
-            float blueprintWidth = 312f;
-            float blueprintHeight = Mathf.Min(680f, Screen.height - 48f);
+            bool es = IsSpanish();
+            float blueprintWidth = 316f;
+            float blueprintHeight = Mathf.Min(680f, Screen.height - 44f);
             float blueprintX = Screen.width - blueprintWidth - 14f;
             float blueprintY = (Screen.height - blueprintHeight) * 0.5f;
-
             Rect panelRect = new Rect(blueprintX, blueprintY, blueprintWidth, blueprintHeight);
 
-            DrawWoodPanel(panelRect, 0.98f);
-            GUI.DrawTexture(new Rect(blueprintX + 6, blueprintY + 6, blueprintWidth - 12, blueprintHeight - 12), GetColorTexture(new Color(0.08f, 0.05f, 0.03f, 0.65f)));
-
-            float cy = blueprintY + 10f;
-            string title = Tr("Blueprint  •  ITEM CATALOG", "Blueprint  •  CATÁLOGO DE ÍTEMS");
-            DrawShadowLabel(new Rect(blueprintX + 12, cy, blueprintWidth - 56, 26), title, MenuHeaderStyle, new Color(0.65f, 1.0f, 0.30f), Color.black);
-
-            Rect closeBtnRect = new Rect(blueprintX + blueprintWidth - 38, cy - 2, 28, 26);
-            if (DrawNativeWoodButton(closeBtnRect, "X", false, new Color(1.0f, 0.55f, 0.55f, 1.0f)))
+            using (NanoMotion.BeginSlide(anim, 32f, 0f))
             {
-                isBlueprintVisible = false;
-                return;
-            }
+                DrawBlueprintShell(panelRect, 12f, 0.96f);
 
-            cy += 30f;
+                // Integrated Top Bar (open cube + Gloock wordmark + count + close)
+                float pad = 12f;
+                float cy = blueprintY + 10f;
+                float hx = blueprintX + pad;
+                if (NanoBrand.Cube != null)
+                    hx += NanoBrand.DrawCube(hx, cy + 3f, 18f) + 8f;
+                NanoSurface.DrawCrispLabel(new Rect(hx, cy - 2f, 110f, 28f), "blueprint", _bpTitleStyle, NanoBrand.Paper, 0.4f);
 
-            Rect searchRect = new Rect(blueprintX + 12, cy, blueprintWidth - 54, 26);
-            string newQuery = GUI.TextField(searchRect, blueprintSearchQuery ?? "", GUI.skin.textField);
-            if (newQuery != blueprintSearchQuery)
-            {
-                blueprintSearchQuery = newQuery;
-                ApplyBlueprintFilter();
-            }
+                int totalItems = blueprintFilteredItems.Count;
+                string countTag = $"{totalItems}";
+                NanoSurface.DrawCrispLabel(new Rect(blueprintX + blueprintWidth - 88f, cy + 5f, 44f, 16f),
+                    countTag, _bpMonoCenterStyle, NanoBrand.Mute, 0.25f);
 
-            Rect clearSearchRect = new Rect(blueprintX + blueprintWidth - 38, cy, 26, 26);
-            if (DrawNativeWoodButton(clearSearchRect, "×", false, new Color(0.9f, 0.7f, 0.7f, 1f)))
-            {
-                blueprintSearchQuery = "";
-                ApplyBlueprintFilter();
-            }
-
-            cy += 32f;
-
-            float tabW = (blueprintWidth - 24f) / 7f;
-            BlueprintCategory[] categories = BlueprintCategoriesAll;
-            string[] catLabelsEn = { "All", "Block", "Weap", "Tool", "Armor", "Food", "Item" };
-            string[] catLabelsEs = { "Todo", "Bloq", "Arma", "Herr", "Armad", "Com", "Ítem" };
-
-            for (int i = 0; i < categories.Length; i++)
-            {
-                BlueprintCategory cat = categories[i];
-                bool isSelected = (cat == blueprintSelectedCategory);
-                Rect tabRect = new Rect(blueprintX + 12 + i * tabW, cy, tabW - 2, 24);
-                string label = IsSpanish() ? catLabelsEs[i] : catLabelsEn[i];
-
-                Color tabCol = isSelected ? new Color(0.70f, 1.0f, 0.35f, 1.0f) : new Color(0.85f, 0.75f, 0.60f, 1.0f);
-                if (DrawNativeWoodButton(tabRect, label, isSelected, tabCol))
+                if (NanoSurface.DrawActionButton(new Rect(blueprintX + blueprintWidth - 38f, cy, 26f, 24f), "×", false))
                 {
-                    blueprintSelectedCategory = cat;
+                    isBlueprintVisible = false;
+                    return;
+                }
+
+                cy += 30f;
+                NanoSurface.FillRounded(new Rect(blueprintX + pad, cy, blueprintWidth - pad * 2f, 1f), NanoBrand.Line, 0.5f);
+                cy += 8f;
+
+                // Debossed squircle search field + clear button
+                float searchW = blueprintWidth - pad * 2f - 30f;
+                Rect searchRect = new Rect(blueprintX + pad, cy, searchW, 28f);
+                if (Event.current.type == EventType.Repaint)
+                {
+                    NanoSurface.DrawDebossedSlot(searchRect, new Color(0.036f, 0.028f, 0.022f, 0.96f), NanoBrand.Line, 7f);
+                    if (string.IsNullOrEmpty(blueprintSearchQuery))
+                    {
+                        NanoSurface.DrawCrispLabel(new Rect(searchRect.x + 9f, searchRect.y, searchRect.width - 14f, searchRect.height),
+                            es ? "Buscar ítem…" : "Search items…", _bpPlaceholderStyle, _bpPlaceholderStyle.normal.textColor, 0f);
+                    }
+                }
+                string newQuery = GUI.TextField(searchRect, blueprintSearchQuery ?? "", _bpSearchStyle);
+                if (newQuery != blueprintSearchQuery)
+                {
+                    blueprintSearchQuery = newQuery;
                     ApplyBlueprintFilter();
                 }
-            }
 
-            cy += 28f;
-
-            // Pinned Bookmarks Bar
-            if (blueprintBookmarkedNames.Count > 0)
-            {
-                DrawShadowLabel(new Rect(blueprintX + 12, cy, 140, 18), Tr("★ PINNED BOOKMARKS", "★ MARCADORES"), DescStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-                cy += 20f;
-
-                Rect bStripRect = new Rect(blueprintX + 12, cy, blueprintWidth - 24, 38);
-                GUI.DrawTexture(bStripRect, GetColorTexture(new Color(0.04f, 0.03f, 0.02f, 0.50f)));
-
-                int bSlot = 0;
-                // Snapshot: right-clicking a pin calls ToggleBookmark(), which removes from the
-                // HashSet currently being enumerated -> InvalidOperationException every unpin.
-                List<string> pinnedSnapshot = new List<string>(blueprintBookmarkedNames);
-                foreach (string bName in pinnedSnapshot)
+                if (NanoSurface.DrawActionButton(new Rect(searchRect.xMax + 4f, cy, 26f, 28f), "×", false))
                 {
-                    if (bSlot >= 8) break;
-                    InvBaseItem bItem = SafeFindItemByName(bName);
-                    if (bItem == null) continue;
+                    blueprintSearchQuery = "";
+                    ApplyBlueprintFilter();
+                }
 
-                    Rect bRect = new Rect(blueprintX + 14 + bSlot * 34, cy + 2, 32, 32);
-                    DrawInvSlot(bRect, new Color(1.0f, 0.90f, 0.40f, 0.85f));
-                    DrawItemIcon(new Rect(bRect.x + 3, bRect.y + 3, 26, 26), bItem);
+                cy += 34f;
 
-                    if (bRect.Contains(Event.current.mousePosition))
+                // Category Segmented Control
+                if (NanoSurface.DrawSegmented(new Rect(blueprintX + pad, cy, blueprintWidth - pad * 2f, 26f),
+                        es ? CatSegmentsEs : CatSegmentsEn, blueprintSelectedCategory, out BlueprintCategory nextCat))
+                {
+                    blueprintSelectedCategory = nextCat;
+                    ApplyBlueprintFilter();
+                }
+
+                cy += 32f;
+
+                // Pinned Bookmarks Tray
+                if (blueprintBookmarkedNames.Count > 0)
+                {
+                    NanoSurface.DrawCrispLabel(new Rect(blueprintX + pad, cy, 180f, 16f),
+                        es ? "★ MARCADORES" : "★ PINNED", _bpMetaStyle, NanoBrand.EmberSoft, 0.25f);
+                    cy += 18f;
+
+                    Rect bStripRect = new Rect(blueprintX + pad, cy, blueprintWidth - pad * 2f, 40f);
+                    NanoSurface.DrawDebossedSlot(bStripRect, new Color(0.038f, 0.030f, 0.024f, 0.92f), NanoBrand.Line, 8f);
+
+                    int bSlot = 0;
+                    List<string> pinnedSnapshot = new List<string>(blueprintBookmarkedNames);
+                    foreach (string bName in pinnedSnapshot)
                     {
-                        DrawItemHoverBorder(bRect);
-                        hoveredTopmostItem = bItem;
-                        hoveredTopmostRect = bRect;
-                        string locName = T.ItemNames(bItem.name) ?? bItem.name;
-                        hoveredTopmostText = $"{locName}\n[Left: Recipe | Right: Unpin]";
+                        if (bSlot >= 8) break;
+                        InvBaseItem bItem = SafeFindItemByName(bName);
+                        if (bItem == null) continue;
 
-                        if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+                        Rect bRect = new Rect(bStripRect.x + 4f + bSlot * 35f, bStripRect.y + 4f, 32f, 32f);
+                        bool bHov = isBlueprintVisible && bRect.Contains(Event.current.mousePosition);
+                        DrawBlueprintItemSlot(bRect, true, bHov);
+                        DrawItemIcon(new Rect(bRect.x + 3f, bRect.y + 3f, 26f, 26f), bItem);
+
+                        if (bHov)
                         {
-                            OpenRecipeCard(bItem, 0);
-                            Event.current.Use();
+                            hoveredTopmostItem = bItem;
+                            hoveredTopmostRect = bRect;
+                            string locName = T.ItemNames(bItem.name) ?? bItem.name;
+                            hoveredTopmostText = es
+                                ? $"{locName}\nClic izq.: Receta  ·  Clic der.: Quitar"
+                                : $"{locName}\nLeft-Click: Recipe  ·  Right-Click: Unpin";
+
+                            if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+                            {
+                                OpenRecipeCard(bItem, 0);
+                                Event.current.Use();
+                            }
+                            else if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+                            {
+                                ToggleBookmark(bName);
+                                Event.current.Use();
+                            }
                         }
-                        else if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
-                        {
-                            ToggleBookmark(bName);
-                            Event.current.Use();
-                        }
+
+                        bSlot++;
                     }
 
-                    bSlot++;
+                    cy += 46f;
                 }
 
-                cy += 42f;
-            }
+                // Item Grid
+                int totalPages = Mathf.Max(1, Mathf.CeilToInt((float)totalItems / BlueprintItemsPerPage));
+                blueprintCurrentPage = Mathf.Clamp(blueprintCurrentPage, 0, totalPages - 1);
 
-            int totalItems = blueprintFilteredItems.Count;
-            int totalPages = Mathf.Max(1, Mathf.CeilToInt((float)totalItems / BlueprintItemsPerPage));
-            blueprintCurrentPage = Mathf.Clamp(blueprintCurrentPage, 0, totalPages - 1);
+                int startIdx = blueprintCurrentPage * BlueprintItemsPerPage;
+                int endIdx = Mathf.Min(startIdx + BlueprintItemsPerPage, totalItems);
 
-            int startIdx = blueprintCurrentPage * BlueprintItemsPerPage;
-            int endIdx = Mathf.Min(startIdx + BlueprintItemsPerPage, totalItems);
+                float gridStartY = cy;
+                float slotW = 44f;
+                float slotH = 44f;
+                float slotGapX = 5f;
+                float slotGapY = 5f;
+                float gridW = BlueprintCols * slotW + (BlueprintCols - 1) * slotGapX;
+                float gridMarginLeft = (blueprintWidth - gridW) * 0.5f;
+                float gridAvailH = (blueprintY + blueprintHeight - 46f) - gridStartY;
+                int visibleRows = Mathf.Clamp(Mathf.FloorToInt((gridAvailH + slotGapY) / (slotH + slotGapY)), 1, BlueprintRows);
+                int maxIdx = Mathf.Min(endIdx, startIdx + visibleRows * BlueprintCols);
 
-            float gridStartY = cy;
-            float slotW = 44f;
-            float slotH = 44f;
-            float slotGapX = 4f;
-            float slotGapY = 4f;
-            float gridMarginLeft = (blueprintWidth - (BlueprintCols * slotW + (BlueprintCols - 1) * slotGapX)) * 0.5f;
-
-            Rect gridArea = new Rect(blueprintX + 10, gridStartY, blueprintWidth - 20, BlueprintRows * (slotH + slotGapY));
-
-            if (gridArea.Contains(Event.current.mousePosition) && Event.current.type == EventType.ScrollWheel)
-            {
-                if (Event.current.delta.y > 0.05f)
+                Rect gridArea = new Rect(blueprintX + 10f, gridStartY, blueprintWidth - 20f, Mathf.Max(48f, gridAvailH));
+                if (isBlueprintVisible && gridArea.Contains(Event.current.mousePosition) && Event.current.type == EventType.ScrollWheel)
                 {
-                    blueprintCurrentPage = Mathf.Min(totalPages - 1, blueprintCurrentPage + 1);
-                    Event.current.Use();
-                }
-                else if (Event.current.delta.y < -0.05f)
-                {
-                    blueprintCurrentPage = Mathf.Max(0, blueprintCurrentPage - 1);
-                    Event.current.Use();
-                }
-            }
-
-            for (int idx = startIdx; idx < endIdx; idx++)
-            {
-                int gridPos = idx - startIdx;
-                int col = gridPos % BlueprintCols;
-                int row = gridPos / BlueprintCols;
-
-                float sx = blueprintX + gridMarginLeft + col * (slotW + slotGapX);
-                float sy = gridStartY + row * (slotH + slotGapY);
-                Rect slotRect = new Rect(sx, sy, slotW, slotH);
-
-                InvBaseItem item = blueprintFilteredItems[idx];
-                bool isPinned = blueprintBookmarkedNames.Contains(item.name);
-
-                DrawInvSlot(slotRect, isPinned ? new Color(1f, 0.9f, 0.3f, 0.9f) : (Color?)null);
-
-                Rect iconRect = new Rect(sx + 4, sy + 4, slotW - 8, slotH - 8);
-                DrawItemIcon(iconRect, item);
-
-                if (isPinned)
-                {
-                    DrawShadowLabel(new Rect(sx + 2, sy + 2, 14, 14), "★", DescStyle, new Color(1f, 0.85f, 0.2f), Color.black);
-                }
-
-                if (slotRect.Contains(Event.current.mousePosition))
-                {
-                    DrawItemHoverBorder(slotRect);
-
-                    // TASK B: Record hover info for top-level drawing at end of frame
-                    hoveredTopmostItem = item;
-                    hoveredTopmostRect = slotRect;
-                    string localizedName = T.ItemNames(item.name) ?? item.name;
-                    hoveredTopmostText = $"{localizedName}\n[L-Click/R: Recipe | R-Click/U: Uses | A: Pin]";
-
-                    if (Event.current.type == EventType.MouseDown)
+                    if (Event.current.delta.y > 0.05f)
                     {
-                        if (Event.current.button == 0)
-                        {
-                            OpenRecipeCard(item, 0);
-                            Event.current.Use();
-                        }
-                        else if (Event.current.button == 1)
-                        {
-                            OpenRecipeCard(item, 1);
-                            Event.current.Use();
-                        }
+                        blueprintCurrentPage = Mathf.Min(totalPages - 1, blueprintCurrentPage + 1);
+                        Event.current.Use();
                     }
-                    else if (Event.current.type == EventType.KeyDown)
+                    else if (Event.current.delta.y < -0.05f)
                     {
-                        if (Event.current.keyCode == BlueprintRecipeKey.Value)
-                        {
-                            OpenRecipeCard(item, 0);
-                            Event.current.Use();
-                        }
-                        else if (Event.current.keyCode == BlueprintUsageKey.Value)
-                        {
-                            OpenRecipeCard(item, 1);
-                            Event.current.Use();
-                        }
-                        else if (Event.current.keyCode == BlueprintBookmarkKey.Value)
-                        {
-                            ToggleBookmark(item.name);
-                            Event.current.Use();
-                        }
+                        blueprintCurrentPage = Mathf.Max(0, blueprintCurrentPage - 1);
+                        Event.current.Use();
                     }
                 }
-            }
 
-            float botY = blueprintY + blueprintHeight - 38f;
-            Rect prevBtn = new Rect(blueprintX + 12, botY, 68, 28);
-            if (DrawNativeWoodButton(prevBtn, "< Prev", blueprintCurrentPage > 0))
-            {
-                if (blueprintCurrentPage > 0) blueprintCurrentPage--;
-            }
+                for (int idx = startIdx; idx < maxIdx; idx++)
+                {
+                    int gridPos = idx - startIdx;
+                    int col = gridPos % BlueprintCols;
+                    int row = gridPos / BlueprintCols;
 
-            string pageInfo = $"{blueprintCurrentPage + 1} / {totalPages} ({totalItems})";
-            DrawShadowLabel(new Rect(blueprintX + 84, botY + 4, blueprintWidth - 168, 22), pageInfo, DescStyle, new Color(0.95f, 0.90f, 0.75f), Color.black);
+                    float sx = blueprintX + gridMarginLeft + col * (slotW + slotGapX);
+                    float sy = gridStartY + row * (slotH + slotGapY);
+                    Rect slotRect = new Rect(sx, sy, slotW, slotH);
 
-            Rect nextBtn = new Rect(blueprintX + blueprintWidth - 80, botY, 68, 28);
-            if (DrawNativeWoodButton(nextBtn, "Next >", blueprintCurrentPage < totalPages - 1))
-            {
-                if (blueprintCurrentPage < totalPages - 1) blueprintCurrentPage++;
+                    InvBaseItem item = blueprintFilteredItems[idx];
+                    bool isPinned = blueprintBookmarkedNames.Contains(item.name);
+                    bool hov = isBlueprintVisible && slotRect.Contains(Event.current.mousePosition);
+
+                    DrawBlueprintItemSlot(slotRect, isPinned, hov);
+                    DrawItemIcon(new Rect(sx + 5f, sy + 5f, slotW - 10f, slotH - 10f), item);
+
+                    if (isPinned)
+                    {
+                        NanoSurface.DrawRhombus(new Rect(sx + slotW - 9f, sy + 4f, 5f, 5f), NanoBrand.Ember, true);
+                    }
+
+                    if (hov)
+                    {
+                        hoveredTopmostItem = item;
+                        hoveredTopmostRect = slotRect;
+                        string localizedName = T.ItemNames(item.name) ?? item.name;
+                        hoveredTopmostText = es
+                            ? $"{localizedName}\n[R / Izq.] Receta  ·  [U / Der.] Usos  ·  [A] Fijar"
+                            : $"{localizedName}\n[R / L-Click] Recipe  ·  [U / R-Click] Uses  ·  [A] Pin";
+
+                        if (Event.current.type == EventType.MouseDown)
+                        {
+                            if (Event.current.button == 0)
+                            {
+                                OpenRecipeCard(item, 0);
+                                Event.current.Use();
+                            }
+                            else if (Event.current.button == 1)
+                            {
+                                OpenRecipeCard(item, 1);
+                                Event.current.Use();
+                            }
+                        }
+                        else if (Event.current.type == EventType.KeyDown)
+                        {
+                            if (Event.current.keyCode == BlueprintRecipeKey.Value)
+                            {
+                                OpenRecipeCard(item, 0);
+                                Event.current.Use();
+                            }
+                            else if (Event.current.keyCode == BlueprintUsageKey.Value)
+                            {
+                                OpenRecipeCard(item, 1);
+                                Event.current.Use();
+                            }
+                            else if (Event.current.keyCode == BlueprintBookmarkKey.Value)
+                            {
+                                ToggleBookmark(item.name);
+                                Event.current.Use();
+                            }
+                        }
+                    }
+                }
+
+                // Bottom pagination bar
+                float botY = blueprintY + blueprintHeight - 38f;
+                if (NanoSurface.DrawActionButton(new Rect(blueprintX + pad, botY, 72f, 26f), es ? "‹ Ant." : "‹ Prev", false))
+                {
+                    if (blueprintCurrentPage > 0) blueprintCurrentPage--;
+                }
+
+                string pageInfo = $"{blueprintCurrentPage + 1} / {totalPages}";
+                NanoSurface.DrawCrispLabel(new Rect(blueprintX + 88f, botY, blueprintWidth - 176f, 26f),
+                    pageInfo, _bpMonoCenterStyle, NanoBrand.Paper, 0.3f);
+
+                if (NanoSurface.DrawActionButton(new Rect(blueprintX + blueprintWidth - pad - 72f, botY, 72f, 26f), es ? "Sig. ›" : "Next ›", false))
+                {
+                    if (blueprintCurrentPage < totalPages - 1) blueprintCurrentPage++;
+                }
             }
+        }
+
+        private static void DrawBlueprintItemSlot(Rect rect, bool pinned, bool hovered)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            Color bg = hovered
+                ? new Color(0.145f, 0.112f, 0.086f, 0.96f)
+                : new Color(0.048f, 0.038f, 0.030f, 0.92f);
+            Color bd = hovered
+                ? NanoBrand.Ember
+                : (pinned ? new Color(NanoBrand.Ember.r, NanoBrand.Ember.g, NanoBrand.Ember.b, 0.48f) : NanoBrand.Line);
+            NanoSurface.DrawDebossedSlot(rect, bg, bd, 7f);
         }
 
         // =====================================================================
@@ -1027,321 +1118,322 @@ namespace Aether.Mods.Blueprint
             SaveBlueprintBookmarks();
         }
 
-        private void DrawRecipeExplorerCardGUI()
+        private void DrawRecipeExplorerCardGUI(float anim)
         {
+            bool es = IsSpanish();
             Rect fullScreen = new Rect(0, 0, Screen.width, Screen.height);
-            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0f, 0f, 0f, 0.60f)));
+            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0.02f, 0.015f, 0.012f, 0.60f * anim)));
 
-            float cardW = 440f;
-            float cardH = 390f;
+            float cardW = 456f;
+            float cardH = 408f;
             float cardX = (Screen.width - cardW) * 0.5f;
             float cardY = (Screen.height - cardH) * 0.5f;
             Rect cardRect = new Rect(cardX, cardY, cardW, cardH);
 
-            DrawWoodPanel(cardRect, 1.0f);
-            GUI.DrawTexture(new Rect(cardX + 8, cardY + 8, cardW - 16, cardH - 16), GetColorTexture(new Color(0.08f, 0.05f, 0.03f, 0.70f)));
-
-            float curY = cardY + 12f;
-
-            if (recipeHistory.Count > 0)
+            using (NanoMotion.BeginModal(cardRect, anim))
             {
-                Rect backBtn = new Rect(cardX + 12, curY, 68, 26);
-                if (DrawNativeWoodButton(backBtn, "< Back"))
+                DrawBlueprintShell(cardRect, 14f, 0.98f);
+
+                float pad = 14f;
+                float curY = cardY + 12f;
+                float tx = cardX + pad;
+
+                if (recipeHistory.Count > 0)
                 {
-                    var prev = recipeHistory.Pop();
-                    activeRecipeItem = prev.Item1;
-                    activeRecipeTab = prev.Item2;
+                    if (NanoSurface.DrawActionButton(new Rect(tx, curY, 64f, 26f), es ? "‹ Atrás" : "‹ Back", false))
+                    {
+                        var prev = recipeHistory.Pop();
+                        activeRecipeItem = prev.Item1;
+                        activeRecipeTab = prev.Item2;
+                        activeRecipeIndex = 0;
+                        return;
+                    }
+                    tx += 70f;
+                }
+
+                List<BlueprintRecipeEntry> usesList = GetRecipesForIngredient(activeRecipeItem);
+                int usesCount = usesList != null ? usesList.Count : 0;
+
+                float tabAreaW = (cardX + cardW - pad - 68f) - tx;
+                RecipeTabOpts[0] = new NanoSegmentOption<int>(0, es ? "Receta (R)" : "Recipe (R)");
+                RecipeTabOpts[1] = new NanoSegmentOption<int>(1, (es ? "Usos" : "Used In") + $" ({usesCount})");
+                if (NanoSurface.DrawSegmented(new Rect(tx, curY, tabAreaW, 26f), RecipeTabOpts, activeRecipeTab, out int nextTab))
+                {
+                    activeRecipeTab = nextTab;
                     activeRecipeIndex = 0;
+                }
+
+                bool isPinned = blueprintBookmarkedNames.Contains(activeRecipeItem.name);
+                if (NanoSurface.DrawActionButton(new Rect(cardX + cardW - pad - 62f, curY, 30f, 26f), isPinned ? "★" : "☆", isPinned))
+                    ToggleBookmark(activeRecipeItem.name);
+
+                if (NanoSurface.DrawActionButton(new Rect(cardX + cardW - pad - 28f, curY, 28f, 26f), "×", false))
+                {
+                    isRecipeCardOpen = false;
+                    ModalClosedTimestamp = Time.unscaledTime;
                     return;
                 }
-            }
 
-            Rect tabRecipe = new Rect(cardX + (recipeHistory.Count > 0 ? 84 : 14), curY, 130, 26);
-            string rTabTitle = Tr("Recipe (R)", "Receta (R)");
-            if (DrawNativeWoodButton(tabRecipe, rTabTitle, activeRecipeTab == 0))
-            {
-                activeRecipeTab = 0;
-                activeRecipeIndex = 0;
-            }
+                curY += 36f;
 
-            List<BlueprintRecipeEntry> usesList = GetRecipesForIngredient(activeRecipeItem);
-            int usesCount = usesList != null ? usesList.Count : 0;
+                // Hero Target Item Plate
+                Rect summaryRect = new Rect(cardX + pad, curY, cardW - pad * 2f, 60f);
+                NanoSurface.DrawDebossedSlot(summaryRect, new Color(0.040f, 0.032f, 0.026f, 0.94f), NanoBrand.Line, 9f);
 
-            Rect tabUses = new Rect(tabRecipe.x + 134, curY, 130, 26);
-            string uTabTitle = $"{Tr("Used In", "Usos")} ({usesCount})";
-            if (DrawNativeWoodButton(tabUses, uTabTitle, activeRecipeTab == 1))
-            {
-                activeRecipeTab = 1;
-                activeRecipeIndex = 0;
-            }
+                Rect bigSlot = new Rect(summaryRect.x + 8f, summaryRect.y + 8f, 44f, 44f);
+                DrawBlueprintItemSlot(bigSlot, isPinned, false);
+                DrawItemIcon(new Rect(bigSlot.x + 4f, bigSlot.y + 4f, 36f, 36f), activeRecipeItem);
 
-            bool isPinned = blueprintBookmarkedNames.Contains(activeRecipeItem.name);
-            Rect pinBtn = new Rect(cardX + cardW - 74, curY, 32, 26);
-            string pinLabel = isPinned ? "★" : "☆";
-            Color pinCol = isPinned ? new Color(1.0f, 0.85f, 0.20f, 1.0f) : Color.white;
-            if (DrawNativeWoodButton(pinBtn, pinLabel, isPinned, pinCol))
-            {
-                ToggleBookmark(activeRecipeItem.name);
-            }
+                string itemName = T.ItemNames(activeRecipeItem.name) ?? activeRecipeItem.name;
+                NanoSurface.DrawCrispLabel(new Rect(bigSlot.xMax + 12f, summaryRect.y + 7f, summaryRect.width - 72f, 24f),
+                    itemName, _bpItemTitleStyle, NanoBrand.PaperLight, 0.4f);
 
-            Rect closeBtn = new Rect(cardX + cardW - 38, curY, 26, 26);
-            if (DrawNativeWoodButton(closeBtn, "X", false, new Color(1f, 0.6f, 0.6f, 1f)))
-            {
-                isRecipeCardOpen = false;
-                ModalClosedTimestamp = Time.unscaledTime;
-                return;
-            }
+                string meta = $"{activeRecipeItem.category}";
+                if (activeRecipeItem.price > 0) meta += $"  ·  ${activeRecipeItem.price}";
+                if (activeRecipeItem.durability > 1) meta += $"  ·  {(es ? "Dur." : "Dur")} {activeRecipeItem.durability}";
+                NanoSurface.DrawCrispLabel(new Rect(bigSlot.xMax + 12f, summaryRect.y + 34f, summaryRect.width - 72f, 18f),
+                    meta, _bpMetaStyle, NanoBrand.Mute, 0.25f);
 
-            curY += 34f;
+                curY += 70f;
 
-            // Target Item Summary Box
-            Rect summaryRect = new Rect(cardX + 14, curY, cardW - 28, 56);
-            GUI.DrawTexture(summaryRect, GetColorTexture(new Color(0.12f, 0.08f, 0.05f, 0.55f)));
-
-            Rect bigSlot = new Rect(summaryRect.x + 6, summaryRect.y + 6, 44, 44);
-            DrawInvSlot(bigSlot);
-            DrawItemIcon(new Rect(bigSlot.x + 4, bigSlot.y + 4, 36, 36), activeRecipeItem);
-
-            string itemName = T.ItemNames(activeRecipeItem.name) ?? activeRecipeItem.name;
-            DrawShadowLabel(new Rect(summaryRect.x + 58, summaryRect.y + 6, summaryRect.width - 64, 24), itemName, MenuTitleStyle, new Color(0.65f, 1.0f, 0.30f), Color.black);
-
-            string meta = $"{Tr("Category", "Categoría")}: {activeRecipeItem.category}   |   {Tr("Price", "Precio")}: ${activeRecipeItem.price}";
-            if (activeRecipeItem.durability > 1) meta += $"   |   {Tr("Max Durability", "Durabilidad")}: {activeRecipeItem.durability}";
-            DrawShadowLabel(new Rect(summaryRect.x + 58, summaryRect.y + 30, summaryRect.width - 64, 18), meta, AuthorStyle, new Color(0.90f, 0.84f, 0.72f), Color.black);
-
-            curY += 64f;
-
-            // TAB 0: Crafting Recipe View (R)
-            if (activeRecipeTab == 0)
-            {
-                List<BlueprintRecipeEntry> recipes = GetRecipesForResult(activeRecipeItem);
-
-                if (recipes == null || recipes.Count == 0)
+                // TAB 0: Crafting Recipe View (R)
+                if (activeRecipeTab == 0)
                 {
-                    Rect emptyBox = new Rect(cardX + 14, curY + 20, cardW - 28, 140);
-                    GUI.DrawTexture(emptyBox, GetColorTexture(new Color(0.12f, 0.08f, 0.05f, 0.40f)));
+                    List<BlueprintRecipeEntry> recipes = GetRecipesForResult(activeRecipeItem);
 
-                    string noRecipeTitle = Tr("No Crafting Recipe Found", "No se encontró receta de crafteo");
-                    DrawShadowLabel(new Rect(emptyBox.x, emptyBox.y + 36, emptyBox.width, 24), noRecipeTitle, SectionTitleStyle, new Color(1.0f, 0.75f, 0.35f), Color.black);
-
-                    string howToObtain = Tr("• Obtainable via World Drops, Mining, Quests, or Merchants", "• Obtenible por Drops del Mundo, Minería, Misiones o Comerciantes");
-                    DrawShadowLabel(new Rect(emptyBox.x, emptyBox.y + 68, emptyBox.width, 20), howToObtain, DescStyle, new Color(0.85f, 0.82f, 0.75f), Color.black);
-                }
-                else
-                {
-                    activeRecipeIndex = Mathf.Clamp(activeRecipeIndex, 0, recipes.Count - 1);
-                    BlueprintRecipeEntry currentEntry = recipes[activeRecipeIndex];
-                    Recipe recipe = currentEntry.recipe;
-
-                    // Header row: Recipe counter + Station badge
-                    Rect navRect = new Rect(cardX + 14, curY, cardW - 28, 24);
-
-                    string stName = IsSpanish() ? currentEntry.stationNameEs : currentEntry.stationName;
-                    Color stColor = new Color(0.50f, 1.0f, 0.40f);
-                    if (currentEntry.stationName == "Furnace") stColor = new Color(1.0f, 0.65f, 0.25f);
-                    else if (currentEntry.stationName == "Cauldron") stColor = new Color(0.85f, 0.55f, 1.0f);
-                    else if (currentEntry.stationName == "Anvil") stColor = new Color(0.55f, 0.85f, 1.0f);
-                    else if (currentEntry.stationName == "Coloring Table") stColor = new Color(1.0f, 0.90f, 0.35f);
-
-                    string stationBadge = $"[{stName}]";
-                    DrawShadowLabel(new Rect(navRect.x, navRect.y + 2, 160, 20), stationBadge, ToolStyle, stColor, Color.black);
-
-                    if (recipes.Count > 1)
+                    if (recipes == null || recipes.Count == 0)
                     {
-                        if (DrawNativeWoodButton(new Rect(navRect.x + navRect.width - 150, navRect.y, 44, 22), "< Prev", activeRecipeIndex > 0))
-                        {
-                            activeRecipeIndex = Mathf.Max(0, activeRecipeIndex - 1);
-                        }
+                        Rect emptyBox = new Rect(cardX + pad, curY + 12f, cardW - pad * 2f, 150f);
+                        NanoSurface.DrawDebossedSlot(emptyBox, new Color(0.038f, 0.030f, 0.024f, 0.88f), NanoBrand.Line, 10f);
 
-                        string recCounter = $"{activeRecipeIndex + 1} / {recipes.Count}";
-                        DrawShadowLabel(new Rect(navRect.x + navRect.width - 102, navRect.y + 2, 54, 20), recCounter, DescStyle, new Color(1.0f, 0.90f, 0.40f), Color.black);
+                        string noRecipeTitle = es ? "Sin receta de crafteo" : "No Crafting Recipe";
+                        NanoSurface.DrawCrispLabel(new Rect(emptyBox.x + 16f, emptyBox.y + 38f, emptyBox.width - 32f, 26f),
+                            noRecipeTitle, _bpItemTitleStyle, NanoBrand.Warn, 0.35f);
 
-                        if (DrawNativeWoodButton(new Rect(navRect.x + navRect.width - 44, navRect.y, 44, 22), "Next >", activeRecipeIndex < recipes.Count - 1))
-                        {
-                            activeRecipeIndex = Mathf.Min(recipes.Count - 1, activeRecipeIndex + 1);
-                        }
+                        string howToObtain = es
+                            ? "Se obtiene por drops del mundo, minería, misiones o comerciantes."
+                            : "Obtainable via world drops, mining, quests, or merchants.";
+                        NanoSurface.DrawCrispLabel(new Rect(emptyBox.x + 16f, emptyBox.y + 72f, emptyBox.width - 32f, 44f),
+                            howToObtain, _bpBodyStyle, NanoBrand.Mute, 0.25f);
                     }
-
-                    curY += 28f;
-
-                    // Crafting Matrix (up to 3x3)
-                    float matrixX = cardX + 34f;
-                    float matrixY = curY;
-                    float cSlotSize = 42f;
-                    float cSlotGap = 4f;
-
-                    int maxRows = recipe.ingredients != null ? Mathf.Max(1, Mathf.Min(3, recipe.ingredients.GetLength(0))) : 3;
-                    int maxCols = recipe.ingredients != null ? Mathf.Max(1, Mathf.Min(3, recipe.ingredients.GetLength(1))) : 3;
-
-                    for (int r = 0; r < 3; r++)
+                    else
                     {
-                        for (int c = 0; c < 3; c++)
+                        activeRecipeIndex = Mathf.Clamp(activeRecipeIndex, 0, recipes.Count - 1);
+                        BlueprintRecipeEntry currentEntry = recipes[activeRecipeIndex];
+                        Recipe recipe = currentEntry.recipe;
+
+                        Rect navRect = new Rect(cardX + pad, curY, cardW - pad * 2f, 24f);
+                        string stName = es ? currentEntry.stationNameEs : currentEntry.stationName;
+                        Color stColor = NanoBrand.Ok;
+                        if (currentEntry.stationName == "Furnace") stColor = NanoBrand.Ember;
+                        else if (currentEntry.stationName == "Cauldron") stColor = new Color(0.72f, 0.58f, 0.92f);
+                        else if (currentEntry.stationName == "Anvil") stColor = new Color(0.56f, 0.78f, 0.94f);
+                        else if (currentEntry.stationName == "Coloring Table") stColor = NanoBrand.Warn;
+
+                        _bpMeasure.text = stName;
+                        float chipW = Mathf.Max(82f, _bpChipStyle.CalcSize(_bpMeasure).x + 16f);
+                        NanoSurface.DrawChip(new Rect(navRect.x, navRect.y + 2f, chipW, 20f), stName, _bpChipStyle,
+                            new Color(0.08f, 0.064f, 0.050f, 0.94f), new Color(stColor.r, stColor.g, stColor.b, 0.65f), stColor, 5f);
+
+                        if (recipes.Count > 1)
                         {
-                            Rect cSlotRect = new Rect(matrixX + c * (cSlotSize + cSlotGap), matrixY + r * (cSlotSize + cSlotGap), cSlotSize, cSlotSize);
-                            DrawInvSlot(cSlotRect);
+                            if (NanoSurface.DrawActionButton(new Rect(navRect.xMax - 124f, navRect.y, 34f, 22f), "‹", false))
+                                activeRecipeIndex = Mathf.Max(0, activeRecipeIndex - 1);
 
-                            InvGameItem ing = null;
-                            if (recipe.ingredients != null && r < recipe.ingredients.GetLength(0) && c < recipe.ingredients.GetLength(1))
+                            NanoSurface.DrawCrispLabel(new Rect(navRect.xMax - 88f, navRect.y, 52f, 22f),
+                                $"{activeRecipeIndex + 1} / {recipes.Count}", _bpMonoCenterStyle, NanoBrand.Paper, 0.3f);
+
+                            if (NanoSurface.DrawActionButton(new Rect(navRect.xMax - 34f, navRect.y, 34f, 22f), "›", false))
+                                activeRecipeIndex = Mathf.Min(recipes.Count - 1, activeRecipeIndex + 1);
+                        }
+
+                        curY += 32f;
+
+                        // Recessed Crafting Stage
+                        float stageH = 166f;
+                        Rect stageRect = new Rect(cardX + pad, curY, cardW - pad * 2f, stageH);
+                        NanoSurface.DrawDebossedSlot(stageRect, new Color(0.036f, 0.028f, 0.022f, 0.90f), NanoBrand.Line, 10f);
+
+                        float cSlotSize = 44f;
+                        float cSlotGap = 5f;
+                        float matrixX = stageRect.x + 30f;
+                        float matrixY = stageRect.y + (stageH - (3 * cSlotSize + 2 * cSlotGap)) * 0.5f;
+
+                        for (int r = 0; r < 3; r++)
+                        {
+                            for (int c = 0; c < 3; c++)
                             {
-                                ing = recipe.ingredients[r, c];
-                            }
+                                Rect cSlotRect = new Rect(matrixX + c * (cSlotSize + cSlotGap), matrixY + r * (cSlotSize + cSlotGap), cSlotSize, cSlotSize);
+                                InvGameItem ing = null;
+                                if (recipe.ingredients != null && r < recipe.ingredients.GetLength(0) && c < recipe.ingredients.GetLength(1))
+                                    ing = recipe.ingredients[r, c];
 
-                            if (ing != null && ing.baseItem != null)
-                            {
-                                DrawItemIcon(new Rect(cSlotRect.x + 3, cSlotRect.y + 3, cSlotSize - 6, cSlotSize - 6), ing.baseItem);
+                                bool ingHov = ing != null && ing.baseItem != null && isRecipeCardOpen && cSlotRect.Contains(Event.current.mousePosition);
+                                DrawBlueprintItemSlot(cSlotRect, false, ingHov);
 
-                                if (ing.count > 1)
+                                if (ing != null && ing.baseItem != null)
                                 {
-                                    DrawShadowLabel(new Rect(cSlotRect.x + 2, cSlotRect.y + cSlotSize - 16, cSlotSize - 4, 14), ing.count.ToString(), DescStyle, Color.white, Color.black);
-                                }
+                                    DrawItemIcon(new Rect(cSlotRect.x + 5f, cSlotRect.y + 5f, cSlotSize - 10f, cSlotSize - 10f), ing.baseItem);
 
-                                if (cSlotRect.Contains(Event.current.mousePosition))
-                                {
-                                    DrawItemHoverBorder(cSlotRect);
-                                    hoveredTopmostItem = ing.baseItem;
-                                    hoveredTopmostRect = cSlotRect;
-                                    string ingHover = $"{T.ItemNames(ing.baseItem.name) ?? ing.baseItem.name} (x{ing.count})\n[Left-Click: Recipe | Right-Click: Uses]";
-                                    hoveredTopmostText = ingHover;
-
-                                    if (Event.current.type == EventType.MouseDown)
+                                    if (ing.count > 1)
                                     {
-                                        if (Event.current.button == 0)
+                                        NanoSurface.DrawCrispLabel(new Rect(cSlotRect.x + 2f, cSlotRect.yMax - 15f, cSlotSize - 5f, 14f),
+                                            ing.count.ToString(), _bpMonoStyle, NanoBrand.PaperLight, 0.55f);
+                                    }
+
+                                    if (ingHov)
+                                    {
+                                        hoveredTopmostItem = ing.baseItem;
+                                        hoveredTopmostRect = cSlotRect;
+                                        hoveredTopmostText = es
+                                            ? $"{T.ItemNames(ing.baseItem.name) ?? ing.baseItem.name} (×{ing.count})\nClic izq.: Receta  ·  Clic der.: Usos"
+                                            : $"{T.ItemNames(ing.baseItem.name) ?? ing.baseItem.name} (×{ing.count})\nLeft-Click: Recipe  ·  Right-Click: Uses";
+
+                                        if (Event.current.type == EventType.MouseDown)
                                         {
-                                            OpenRecipeCard(ing.baseItem, 0);
-                                            Event.current.Use();
-                                        }
-                                        else if (Event.current.button == 1)
-                                        {
-                                            OpenRecipeCard(ing.baseItem, 1);
-                                            Event.current.Use();
+                                            if (Event.current.button == 0)
+                                            {
+                                                OpenRecipeCard(ing.baseItem, 0);
+                                                Event.current.Use();
+                                            }
+                                            else if (Event.current.button == 1)
+                                            {
+                                                OpenRecipeCard(ing.baseItem, 1);
+                                                Event.current.Use();
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Crafting Arrow ➔
-                    float arrowX = matrixX + 3 * (cSlotSize + cSlotGap) + 16f;
-                    float arrowY = matrixY + 44f;
-                    DrawShadowLabel(new Rect(arrowX, arrowY, 40, 36), "➔", MenuHeaderStyle, new Color(0.70f, 1.0f, 0.35f), Color.black);
+                        // Crafting Arrow ->
+                        float arrowX = matrixX + 3 * (cSlotSize + cSlotGap) + 22f;
+                        float arrowY = stageRect.center.y - 16f;
+                        NanoSurface.DrawCrispLabel(new Rect(arrowX, arrowY, 36f, 32f), "→", _bpArrowStyle, NanoBrand.Ember, 0.35f);
 
-                    // Output Result Slot
-                    float outX = arrowX + 46f;
-                    float outY = matrixY + 36f;
-                    Rect outSlotRect = new Rect(outX, outY, 54, 54);
-                    DrawInvSlot(outSlotRect, new Color(0.40f, 1.0f, 0.40f, 0.90f));
-                    DrawItemIcon(new Rect(outX + 5, outY + 5, 44, 44), activeRecipeItem);
+                        // Output Result Slot
+                        float outX = arrowX + 48f;
+                        float outY = stageRect.center.y - 30f;
+                        Rect outSlotRect = new Rect(outX, outY, 60f, 60f);
+                        bool outHov = isRecipeCardOpen && outSlotRect.Contains(Event.current.mousePosition);
+                        NanoSurface.DrawDebossedSlot(outSlotRect, new Color(0.068f, 0.052f, 0.038f, 0.96f),
+                            outHov ? NanoBrand.Ember : new Color(NanoBrand.Ember.r, NanoBrand.Ember.g, NanoBrand.Ember.b, 0.65f), 10f);
+                        DrawItemIcon(new Rect(outX + 7f, outY + 7f, 46f, 46f), activeRecipeItem);
 
-                    int resultCount = recipe.result != null ? recipe.result.count : 1;
-                    if (resultCount > 1)
-                    {
-                        DrawShadowLabel(new Rect(outX + 4, outY + 34, 46, 16), resultCount.ToString(), SectionTitleStyle, Color.yellow, Color.black);
-                    }
-
-                    if (outSlotRect.Contains(Event.current.mousePosition))
-                    {
-                        DrawItemHoverBorder(outSlotRect);
-                        hoveredTopmostItem = activeRecipeItem;
-                        hoveredTopmostRect = outSlotRect;
-                        string outHover = $"{T.ItemNames(activeRecipeItem.name) ?? activeRecipeItem.name} (x{resultCount})\n[Right-Click: Uses]";
-                        hoveredTopmostText = outHover;
-
-                        if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+                        int resultCount = recipe.result != null ? recipe.result.count : 1;
+                        if (resultCount > 1)
                         {
-                            OpenRecipeCard(activeRecipeItem, 1);
-                            Event.current.Use();
+                            NanoSurface.DrawCrispLabel(new Rect(outX + 4f, outY + 41f, 50f, 16f),
+                                $"×{resultCount}", _bpMonoStyle, NanoBrand.EmberSoft, 0.5f);
+                        }
+
+                        if (outHov)
+                        {
+                            hoveredTopmostItem = activeRecipeItem;
+                            hoveredTopmostRect = outSlotRect;
+                            hoveredTopmostText = es
+                                ? $"{T.ItemNames(activeRecipeItem.name) ?? activeRecipeItem.name} (×{resultCount})\nClic der.: Ver usos"
+                                : $"{T.ItemNames(activeRecipeItem.name) ?? activeRecipeItem.name} (×{resultCount})\nRight-Click: Uses";
+
+                            if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+                            {
+                                OpenRecipeCard(activeRecipeItem, 1);
+                                Event.current.Use();
+                            }
+                        }
+
+                        // Extra Recipe Info Footer
+                        float infoY = stageRect.yMax + 10f;
+                        string extraInfo = "";
+                        if (recipe.mana > 0.1f) extraInfo += $"Maná {recipe.mana:F0}  ·  ";
+                        if (recipe.minutes > 0.01f) extraInfo += $"{(es ? "Tiempo" : "Time")} {recipe.minutes:F1}m  ·  ";
+                        if (recipe.cost > 0.1f) extraInfo += $"{(es ? "Costo" : "Cost")} {recipe.cost:F0}  ·  ";
+                        extraInfo += $"{(es ? "Estación" : "Station")}: {stName}";
+                        NanoSurface.DrawCrispLabel(new Rect(cardX + pad, infoY, cardW - pad * 2f, 20f),
+                            extraInfo, _bpMetaStyle, NanoBrand.Mute, 0.25f);
+                    }
+                }
+                // TAB 1: Used In View (U) with Custom Aether ScrollView
+                else if (activeRecipeTab == 1)
+                {
+                    if (usesList == null || usesList.Count == 0)
+                    {
+                        Rect emptyBox = new Rect(cardX + pad, curY + 12f, cardW - pad * 2f, 150f);
+                        NanoSurface.DrawDebossedSlot(emptyBox, new Color(0.038f, 0.030f, 0.024f, 0.88f), NanoBrand.Line, 10f);
+
+                        NanoSurface.DrawCrispLabel(new Rect(emptyBox.x + 16f, emptyBox.y + 42f, emptyBox.width - 32f, 26f),
+                            es ? "Sin usos en recetas" : "Not Used in Any Recipe", _bpItemTitleStyle, NanoBrand.Warn, 0.35f);
+                        NanoSurface.DrawCrispLabel(new Rect(emptyBox.x + 16f, emptyBox.y + 74f, emptyBox.width - 32f, 40f),
+                            es ? "Este ítem no se requiere como ingrediente actualmente." : "This item is not required as an ingredient.",
+                            _bpBodyStyle, NanoBrand.Mute, 0.25f);
+                    }
+                    else
+                    {
+                        Rect scrollArea = new Rect(cardX + pad, curY, cardW - pad * 2f, cardH - (curY - cardY) - 14f);
+                        float viewHeight = usesList.Count * 48f;
+                        usedInScrollPos = NanoSurface.BeginScrollView(scrollArea, usedInScrollPos, viewHeight, out float uRowW);
+                        try
+                        {
+                            for (int u = 0; u < usesList.Count; u++)
+                            {
+                                BlueprintRecipeEntry recEntry = usesList[u];
+                                Recipe rec = recEntry.recipe;
+                                InvBaseItem resItem = rec.result?.baseItem;
+                                if (resItem == null && !string.IsNullOrEmpty(rec.name))
+                                    resItem = SafeFindItemByName(rec.name);
+                                if (resItem == null) continue;
+
+                                Rect rowRect = new Rect(0f, u * 48f, uRowW, 44f);
+                                bool rHov = rowRect.Contains(Event.current.mousePosition);
+                                if (Event.current.type == EventType.Repaint)
+                                {
+                                    NanoSurface.FillRounded(rowRect,
+                                        rHov ? new Color(0.115f, 0.090f, 0.072f, 0.94f) : new Color(0.056f, 0.045f, 0.036f, 0.88f), 8f);
+                                    NanoSurface.StrokeRounded(rowRect,
+                                        rHov ? new Color(NanoBrand.Ember.r, NanoBrand.Ember.g, NanoBrand.Ember.b, 0.55f) : NanoBrand.Line, 1f, 8f);
+                                }
+
+                                Rect uSlot = new Rect(rowRect.x + 5f, rowRect.y + 4f, 36f, 36f);
+                                DrawBlueprintItemSlot(uSlot, false, false);
+                                DrawItemIcon(new Rect(uSlot.x + 3f, uSlot.y + 3f, 30f, 30f), resItem);
+
+                                string resName = T.ItemNames(resItem.name) ?? resItem.name;
+                                if (rec.result != null && rec.result.count > 1) resName += $"  ×{rec.result.count}";
+                                string stBadge = es ? recEntry.stationNameEs : recEntry.stationName;
+
+                                NanoSurface.DrawCrispLabel(new Rect(uSlot.xMax + 10f, rowRect.y + 5f, rowRect.width - 118f, 18f),
+                                    resName, _bpBodyStyle, NanoBrand.PaperLight, 0.35f);
+                                NanoSurface.DrawCrispLabel(new Rect(uSlot.xMax + 10f, rowRect.y + 24f, rowRect.width - 118f, 15f),
+                                    stBadge, _bpMetaStyle, NanoBrand.Ok, 0.25f);
+
+                                if (NanoSurface.DrawActionButton(new Rect(rowRect.xMax - 62f, rowRect.y + 9f, 54f, 26f), es ? "Ver" : "View", false))
+                                {
+                                    OpenRecipeCard(resItem, 0);
+                                    return;
+                                }
+
+                                if (rHov)
+                                {
+                                    hoveredTopmostItem = resItem;
+                                    hoveredTopmostRect = rowRect;
+                                    hoveredTopmostText = es
+                                        ? $"{T.ItemNames(resItem.name) ?? resItem.name}\nPulsa Ver para abrir la receta"
+                                        : $"{T.ItemNames(resItem.name) ?? resItem.name}\nClick View to inspect recipe";
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            NanoSurface.EndScrollView();
                         }
                     }
-
-                    // Extra Recipe Info (Mana, Time, Diamonds Cost, Station)
-                    float infoY = matrixY + 3 * (cSlotSize + cSlotGap) + 10f;
-                    string extraInfo = "";
-                    if (recipe.mana > 0.1f) extraInfo += $"Mana: {recipe.mana:F0}   ";
-                    if (recipe.minutes > 0.01f) extraInfo += $"{Tr("Time", "Tiempo")}: {recipe.minutes:F1}m   ";
-                    if (recipe.cost > 0.1f) extraInfo += $"{Tr("Cost", "Costo")}: {recipe.cost:F0}   ";
-                    extraInfo += $"{Tr("Station", "Estación")}: {stName}";
-
-                    DrawShadowLabel(new Rect(cardX + 14, infoY, cardW - 28, 20), extraInfo, AuthorStyle, new Color(0.88f, 0.88f, 0.74f), Color.black);
                 }
             }
-            // TAB 1: Used In View (U)
-            else if (activeRecipeTab == 1)
-            {
-                if (usesList == null || usesList.Count == 0)
-                {
-                    Rect emptyBox = new Rect(cardX + 14, curY + 20, cardW - 28, 140);
-                    GUI.DrawTexture(emptyBox, GetColorTexture(new Color(0.12f, 0.08f, 0.05f, 0.40f)));
-
-                    string noUsesTitle = Tr("Not Used in Any Known Recipes", "No se usa en ninguna receta conocida");
-                    DrawShadowLabel(new Rect(emptyBox.x, emptyBox.y + 45, emptyBox.width, 24), noUsesTitle, SectionTitleStyle, new Color(1.0f, 0.75f, 0.35f), Color.black);
-
-                    string noUsesDesc = Tr("This item is not currently required as an ingredient.", "Este ítem no se requiere como ingrediente actualmente.");
-                    DrawShadowLabel(new Rect(emptyBox.x, emptyBox.y + 75, emptyBox.width, 20), noUsesDesc, DescStyle, new Color(0.85f, 0.82f, 0.75f), Color.black);
-                }
-                else
-                {
-                    Rect scrollArea = new Rect(cardX + 14, curY, cardW - 28, cardH - (curY - cardY) - 16f);
-                    float viewHeight = usesList.Count * 46f;
-                    usedInScrollPos = GUI.BeginScrollView(scrollArea, usedInScrollPos, new Rect(0, 0, scrollArea.width - 20, viewHeight));
-
-                    for (int u = 0; u < usesList.Count; u++)
-                    {
-                        BlueprintRecipeEntry recEntry = usesList[u];
-                        Recipe rec = recEntry.recipe;
-                        InvBaseItem resItem = rec.result?.baseItem;
-                        if (resItem == null && !string.IsNullOrEmpty(rec.name))
-                        {
-                            resItem = SafeFindItemByName(rec.name);
-                        }
-                        if (resItem == null) continue;
-
-                        Rect rowRect = new Rect(0, u * 46f, scrollArea.width - 24, 42f);
-                        DrawDarkSlotBox(rowRect, false, rowRect.Contains(Event.current.mousePosition));
-
-                        Rect uSlot = new Rect(rowRect.x + 4, rowRect.y + 3, 36, 36);
-                        DrawInvSlot(uSlot);
-                        DrawItemIcon(new Rect(uSlot.x + 3, uSlot.y + 3, 30, 30), resItem);
-
-                        string resName = T.ItemNames(resItem.name) ?? resItem.name;
-                        if (rec.result != null && rec.result.count > 1) resName += $"  (x{rec.result.count})";
-
-                        string stBadge = $"[{ (IsSpanish() ? recEntry.stationNameEs : recEntry.stationName) }]";
-                        DrawShadowLabel(new Rect(rowRect.x + 46, rowRect.y + 4, rowRect.width - 120, 18), resName, ModNameStyle, Color.white, Color.black);
-                        DrawShadowLabel(new Rect(rowRect.x + 46, rowRect.y + 22, rowRect.width - 120, 16), stBadge, AuthorStyle, new Color(0.70f, 0.90f, 0.50f), Color.black);
-
-                        Rect viewBtn = new Rect(rowRect.x + rowRect.width - 64, rowRect.y + 8, 56, 26);
-                        if (DrawNativeWoodButton(viewBtn, Tr("View", "Ver")))
-                        {
-                            OpenRecipeCard(resItem, 0);
-                        }
-
-                        if (rowRect.Contains(Event.current.mousePosition))
-                        {
-                            hoveredTopmostItem = resItem;
-                            hoveredTopmostRect = rowRect;
-                            hoveredTopmostText = $"{T.ItemNames(resItem.name) ?? resItem.name}\n[Click View: Recipe]";
-                        }
-                    }
-
-                    GUI.EndScrollView();
-                }
-            }
-        }
-
-        private static void DrawItemHoverBorder(Rect rect)
-        {
-            Color old = GUI.color;
-            GUI.color = new Color(0.65f, 1.0f, 0.30f, 0.85f);
-            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 2), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x, rect.y + rect.height - 2, rect.width, 2), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x, rect.y, 2, rect.height), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(rect.x + rect.width - 2, rect.y, 2, rect.height), Texture2D.whiteTexture);
-            GUI.color = old;
         }
 
         // =====================================================================
-        //        TASK B: TOPMOST RICH FLOATING TOOLTIP (DRAWN ON TOP OF ALL SLOTS)
+        //        TOPMOST FLOATING TOOLTIP (SMOKED CRYSTAL AETHER INK)
         // =====================================================================
         private void DrawTopmostTooltipCard(Vector2 mousePos, string text, InvBaseItem item)
         {
@@ -1349,39 +1441,38 @@ namespace Aether.Mods.Blueprint
             GUI.depth = -2000;
             try
             {
-                GUIContent content = new GUIContent(text);
-                Vector2 size = DescStyle.CalcSize(content);
-                float cardW = Mathf.Max(160f, size.x + 22f);
-                float cardH = size.y + 16f;
+                EnsureBlueprintCraftStyles();
+                _bpMeasure.text = text;
+                Vector2 size = _bpBodyStyle.CalcSize(_bpMeasure);
+                float cardW = Mathf.Max(184f, Mathf.Min(310f, size.x + 24f));
+                float bodyH = _bpBodyStyle.CalcHeight(_bpMeasure, cardW - 22f);
+                float cardH = bodyH + (item != null ? 36f : 18f);
 
-                if (item != null)
-                {
-                    cardW = Mathf.Max(cardW, 190f);
-                    cardH += 20f;
-                }
-
-                // Clamp to screen bounds so tooltip is never clipped or drawn off-screen
                 float px = Mathf.Clamp(mousePos.x + 16f, 10f, Screen.width - cardW - 12f);
                 float py = Mathf.Clamp(mousePos.y - cardH - 8f, 10f, Screen.height - cardH - 12f);
-
                 Rect cardRect = new Rect(px, py, cardW, cardH);
 
-                DrawWoodPanel(cardRect, 1.0f);
-                GUI.DrawTexture(new Rect(px + 4, py + 4, cardW - 8, cardH - 8), GetColorTexture(new Color(0.06f, 0.04f, 0.02f, 0.95f)));
+                // Floating crystal-glass surface (glass reserved strictly for floating layers!)
+                NanoSurface.DrawCardSurface(
+                    cardRect,
+                    new Color(0.088f, 0.070f, 0.056f, 0.92f),
+                    new Color(0.044f, 0.036f, 0.028f, 0.94f),
+                    new Color(NanoBrand.Ember.r, NanoBrand.Ember.g, NanoBrand.Ember.b, 0.42f),
+                    NanoBrand.Ember,
+                    new Color(1f, 0.96f, 0.90f, 0.14f),
+                    9f, 1f, 0f, 0f);
 
+                float ty = py + 8f;
                 if (item != null)
                 {
-                    string catInfo = $"[{item.category}]";
-                    if (item.price > 0) catInfo += $"  •  ${item.price}";
-                    if (item.durability > 1) catInfo += $"  •  Dur: {item.durability}";
-                    DrawShadowLabel(new Rect(px + 10, py + 6, cardW - 20, 16), catInfo, AuthorStyle, new Color(0.75f, 0.85f, 1.0f), Color.black);
+                    string catInfo = $"{item.category}";
+                    if (item.price > 0) catInfo += $"  ·  ${item.price}";
+                    if (item.durability > 1) catInfo += $"  ·  Dur {item.durability}";
+                    NanoSurface.DrawCrispLabel(new Rect(px + 11f, ty, cardW - 22f, 15f), catInfo, _bpMetaStyle, NanoBrand.EmberSoft, 0.25f);
+                    ty += 18f;
+                }
 
-                    DrawShadowLabel(new Rect(px + 10, py + 22, cardW - 20, size.y + 8), text, DescStyle, new Color(1.0f, 0.96f, 0.88f), Color.black);
-                }
-                else
-                {
-                    DrawShadowLabel(new Rect(px + 10, py + 8, cardW - 20, size.y + 8), text, DescStyle, new Color(1.0f, 0.96f, 0.88f), Color.black);
-                }
+                NanoSurface.DrawCrispLabel(new Rect(px + 11f, ty, cardW - 22f, bodyH + 4f), text, _bpBodyStyle, NanoBrand.PaperLight, 0.35f);
             }
             finally
             {
@@ -1394,42 +1485,47 @@ namespace Aether.Mods.Blueprint
         // =====================================================================
         public void DrawBlueprintModMenuSettings(Rect rightRect, float baseY = 230f)
         {
-            float sy = baseY;
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22), Tr("REAL-TIME Blueprint SETTINGS", "AJUSTES DE Blueprint EN TIEMPO REAL"), SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+            EnsureBlueprintCraftStyles();
+            bool es = IsSpanish();
+            float pad = 12f;
+            float colW = Mathf.Max(260f, rightRect.width - pad * 2f);
+            float halfW = (colW - 8f) * 0.5f;
+            var col = new Rect(pad, baseY, colW, rightRect.height);
 
-            string blueprintToggleText = BlueprintEnabled.Value
-                ? Tr("Blueprint Recipe Browser: ENABLED (O)", "Navegador Blueprint: ACTIVADO (O)")
-                : Tr("Blueprint Recipe Browser: DISABLED (O)", "Navegador Blueprint: DESACTIVADO (O)");
-            if (DrawNativeWoodButton(new Rect(12, sy + 26, 270, 32), blueprintToggleText, BlueprintEnabled.Value))
-            {
-                BlueprintEnabled.Value = !BlueprintEnabled.Value;
-                Config.Save();
-            }
+            float sy = NanoSurface.DrawSectionHeader(col, baseY,
+                es ? "Catálogo de recetas Blueprint" : "Blueprint recipe browser",
+                $"{BlueprintToggleKey.Value}");
 
-            string autoOpenText = BlueprintAutoOpenWithInventory.Value
-                ? Tr("Auto-Open with Inventory: YES", "Auto-abrir con Inventario: SÍ")
-                : Tr("Auto-Open with Inventory: NO", "Auto-abrir con Inventario: NO");
-            if (DrawNativeWoodButton(new Rect(290, sy + 26, 250, 32), autoOpenText, BlueprintAutoOpenWithInventory.Value))
-            {
-                BlueprintAutoOpenWithInventory.Value = !BlueprintAutoOpenWithInventory.Value;
-                Config.Save();
-            }
+            bool nextEn = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, halfW, 32f),
+                es ? $"Navegador activo ({BlueprintToggleKey.Value})" : $"Browser enabled ({BlueprintToggleKey.Value})",
+                BlueprintEnabled.Value);
+            if (nextEn != BlueprintEnabled.Value) { BlueprintEnabled.Value = nextEn; Config.Save(); }
 
-            sy += 70f;
-            DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22), Tr("HOTKEYS & SHORTCUTS", "ATAJOS DE TECLADO"), SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+            bool nextAuto = NanoSurface.DrawToggleRow(
+                new Rect(pad + halfW + 8f, sy, halfW, 32f),
+                es ? "Auto-abrir con inventario" : "Auto-open with inventory",
+                BlueprintAutoOpenWithInventory.Value);
+            if (nextAuto != BlueprintAutoOpenWithInventory.Value) { BlueprintAutoOpenWithInventory.Value = nextAuto; Config.Save(); }
 
-            string hotkeysDesc = Tr(
-                "• [R] Key / Left-Click: View Crafting Recipe on any item in catalog or hovered inventory slot.\n" +
-                "• [U] Key / Right-Click: View Uses (every recipe where item is an ingredient).\n" +
-                "• [A] Key: Bookmark item to pin it to quick access bar.\n" +
-                "• [O] Key: Manually toggle Blueprint catalog visibility.\n" +
-                "• Mouse Wheel: Smoothly scroll item pages in the grid.",
-                "• Tecla [R] / Clic Izq: Ver receta de crafteo de cualquier ítem o ranura de inventario.\n" +
-                "• Tecla [U] / Clic Der: Ver usos (todas las recetas que usan este ingrediente).\n" +
-                "• Tecla [A]: Fijar marcador a la barra de acceso rápido.\n" +
-                "• Tecla [O]: Alternar visibilidad de Blueprint manualmente.\n" +
-                "• Rueda del Ratón: Paginación suave en la cuadrícula de ítems.");
-            DrawShadowLabel(new Rect(12, sy + 26, rightRect.width - 24, 110), hotkeysDesc, DescStyle, new Color(0.90f, 0.88f, 0.80f), Color.black);
+            sy += 44f;
+            sy = NanoSurface.DrawSectionHeader(col, sy, es ? "Atajos de teclado" : "Shortcuts");
+
+            DrawShortcutRow(pad, sy, colW, $"{BlueprintRecipeKey.Value}", es ? "Ver receta de crafteo (o clic izquierdo)" : "View crafting recipe (or left-click)");
+            sy += 28f;
+            DrawShortcutRow(pad, sy, colW, $"{BlueprintUsageKey.Value}", es ? "Ver usos del ingrediente (o clic derecho)" : "View recipe uses (or right-click)");
+            sy += 28f;
+            DrawShortcutRow(pad, sy, colW, $"{BlueprintBookmarkKey.Value}", es ? "Fijar o quitar de marcadores" : "Pin or unpin bookmark");
+            sy += 28f;
+            DrawShortcutRow(pad, sy, colW, $"{BlueprintToggleKey.Value}", es ? "Mostrar u ocultar el catálogo" : "Toggle catalog drawer");
+        }
+
+        private static void DrawShortcutRow(float x, float y, float w, string key, string desc)
+        {
+            var chip = new Rect(x, y + 2f, 34f, 20f);
+            NanoSurface.DrawChip(chip, key, _bpChipStyle,
+                new Color(0.11f, 0.088f, 0.070f, 0.94f), NanoBrand.Line, NanoBrand.EmberSoft, 5f);
+            NanoSurface.DrawCrispLabel(new Rect(x + 44f, y + 2f, w - 44f, 20f), desc, _bpBodyStyle, NanoBrand.Paper, 0.25f);
         }
 
     }

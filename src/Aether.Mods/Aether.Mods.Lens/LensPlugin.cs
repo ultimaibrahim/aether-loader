@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Aether.Mods.Lens
 {
     /// <summary>Aether Lens as a BepInEx plugin on Aether Nano: no Aether needed.</summary>
-    [BepInPlugin(Guid, "Aether Lens", "1.1.1")]
+    [BepInPlugin(Guid, "Aether Lens", "1.1.2")]
     [BepInDependency(Aether.Nano.Nano.Guid)]
     public sealed class LensPlugin : NanoMod
     {
@@ -34,17 +34,25 @@ namespace Aether.Mods.Lens
                                                   "Tarjeta del bloque o criatura que miras: nombre, mod de origen, vida y la herramienta que lo rompe."),
                 Draw = (rect, y) => _module.DrawSettings(rect, y),
                 Config = Config,
-                ContentHeight = 560f,
+                ContentHeight = 830f,
             });
             NanoHud.Register(new NanoHudElement
             {
                 Id = Guid,
-                Name = "Lens",
+                Name = "Aether Lens",
                 GetRect = LensModule.CurrentCardRect,
                 OffsetX = LensModule.LensOffsetX,
                 OffsetY = LensModule.LensOffsetY,
                 Scale = LensModule.LensScale,
                 Anchor = LensModule.LensAnchor,
+                DrawPreview = _ => _module.DrawCanvasPreview(),
+                OnReset = () =>
+                {
+                    LensModule.LensAnchor.Value = "TopCenter";
+                    LensModule.LensOffsetX.Value = 0f;
+                    LensModule.LensOffsetY.Value = 0f;
+                    LensModule.LensScale.Value = 1.0f;
+                }
             });
         }
 

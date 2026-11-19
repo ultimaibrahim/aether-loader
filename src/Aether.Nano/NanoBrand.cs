@@ -16,8 +16,10 @@ namespace Aether.Nano
     {
         // ---- Palette (the website's dark theme, since it is drawn over the game) ------------------------------------------
         public static readonly Color Ember = Hex(0xFF8A3D);      // accent: names, active states
+        public static readonly Color EmberSoft = Hex(0xFFB27A);  // warm hover / light accent
         public static readonly Color EmberDeep = Hex(0xC2500A);  // the brand colour on light ground, chip fills
         public static readonly Color Ink = Hex(0x0C0A08, 0.94f); // card ground
+        public static readonly Color InkElevated = Hex(0x16110D);// top of warm ink vertical gradient
         public static readonly Color InkSoft = Hex(0x1C1611);    // chips, hover
         public static readonly Color Line = Hex(0x2A2119);       // hairlines
         public static readonly Color Paper = Hex(0xEADFC6);      // text on ink
@@ -122,20 +124,24 @@ namespace Aether.Nano
         }
 
         /// <summary>
-        /// Aether's card: warm ink with a hairline frame and an ember rule along the top (no side stripe). The rule is the
-        /// mark that it is Aether talking, not the game.
+        /// Aether's card: warm ink squircle with a specular inner bevel and hairline frame (no decorative side or top stripes).
+        /// When <paramref name="ruleAlpha"/> exceeds 0.85 (e.g. hover), the hairline subtly warms toward ember.
         /// </summary>
         public static void DrawCard(Rect r, float ruleAlpha = 1f)
         {
-            Color prev = GUI.color;
-            GUI.color = Color.white;
-            GUI.DrawTexture(r, Solid(Ink));
-            GUI.DrawTexture(new Rect(r.x, r.yMax - 1, r.width, 1), Solid(Line));
-            GUI.DrawTexture(new Rect(r.x, r.y, 1, r.height), Solid(Line));
-            GUI.DrawTexture(new Rect(r.xMax - 1, r.y, 1, r.height), Solid(Line));
-            GUI.color = new Color(1, 1, 1, ruleAlpha);
-            GUI.DrawTexture(new Rect(r.x, r.y, r.width, 2), Solid(Ember));
-            GUI.color = prev;
+            float hoverMix = Mathf.Clamp01((ruleAlpha - 0.7f) / 0.3f);
+            Color border = Color.Lerp(Line, new Color(Ember.r, Ember.g, Ember.b, 0.55f), hoverMix * 0.65f);
+            NanoSurface.DrawCardSurface(
+                r,
+                new Color(0.094f, 0.074f, 0.058f, 0.94f),
+                new Color(0.047f, 0.039f, 0.031f, 0.96f),
+                border,
+                Ember,
+                new Color(0.98f, 0.93f, 0.85f, 0.10f),
+                9f,
+                1f,
+                0f,
+                0f);
         }
 
         /// <summary>The cube scaled to <paramref name="height"/>, its top-left at (x, y); returns its width.</summary>

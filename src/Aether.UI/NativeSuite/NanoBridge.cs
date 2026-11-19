@@ -22,7 +22,12 @@ namespace BlockStoryLens
             // Only Aether's own menus: a mod's panel (Blueprint's recipe card) must not hide that same mod.
             NanoHud.HostOverlayOpen = () => isModMenuOpen || isWayfinderOpen || isDraggingHudElements || isKeybindsManagerOpen || showKeybindsModal;
             NanoHud.HostKeyboardCaptured = () => isKeybindsManagerOpen || rebindingEntry != null;
-            NanoHud.OpenHostEditor = () => { SetModMenuOpen(false); SetDraggingHudElements(true); };
+            NanoHud.OpenHostEditor = () =>
+            {
+                SetModMenuOpen(false);
+                if (NanoHud.OpenCanvasEditor != null) NanoHud.OpenCanvasEditor();
+                else SetDraggingHudElements(true);
+            };
             NanoHud.CloseHostMenus = () =>
             {
                 if (isModMenuOpen) SetModMenuOpen(false);

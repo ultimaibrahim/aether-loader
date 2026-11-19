@@ -4,6 +4,11 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+## 1.2.4-beta
+
+- **Aether Canvas (1.1.2).** A new official mod on Aether Nano: a live WYSIWYG HUD layout editor (`F9`, or `Edit HUD` in `F10`) that moves and scales both Block Story's native NGUI HUD (`Stats`, `QuickSlotBar`, `ActionButtons`, `Buttons`, `Diamonds`, `Compass`) and every mod registered with `NanoHud`. It projects real screen-pixel widget contours, shows low-opacity authentic silhouettes and a mode notice for elements hidden by the active world mode (e.g. `Stats` in Creative Mode), supports snapping and profiles, and writes zero-cost event-driven layout snapshots (`Aether/logs/canvas-snapshot.txt`).
+- **Aether Ink & Squircle across the entire in-game suite.** The Mod Menu (`F10`), Keybind Manager (`F7`), Rich Hover Tooltip, Title Watermark seal, Crash Guard, and all five official mods (`Lens`, `Wayfinder`, `Blueprint`, `Dusk`, `Canvas`, now **1.1.2**) use the unified `NanoSurface` and `NanoMotion` engines in **Aether Nano 1.0.2**: GPU-rounded squircle cards and controls, custom floating pill scrollbars (no native Unity grey scrollbars or sliders), smooth modal and drawer entrance/exit transitions, and bespoke 128×128 icons for every official mod (`NanoIcons`).
+
 ## 1.2.3-beta
 
 - **A new Monitor.** Sections for Status, My mods, Catalog and Problems & logs, drawn in Aether's own signs: each mod shows its icon (or its cube in its own colour, the same as on Lattice), the verification level as three hexagons and its state as rhombi. Spanish and English, with a switch in the title bar; the choice is remembered.

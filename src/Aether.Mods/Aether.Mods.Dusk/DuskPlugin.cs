@@ -6,7 +6,7 @@ using HarmonyLib;
 namespace Aether.Mods.Dusk
 {
     /// <summary>Aether Dusk as a BepInEx plugin on Aether Nano: no Aether needed.</summary>
-    [BepInPlugin(Guid, "Aether Dusk", "1.1.1")]
+    [BepInPlugin(Guid, "Aether Dusk", "1.1.2")]
     [BepInDependency(Aether.Nano.Nano.Guid)]
     public sealed class DuskPlugin : NanoMod
     {
@@ -37,7 +37,8 @@ namespace Aether.Mods.Dusk
                 Description = Aether.Nano.Nano.Tr("Matte terrain, cave darkness, underground sun suppression and handheld torchlight.",
                                          "Terreno mate, cuevas oscuras, sin sol bajo tierra y luz de antorcha en mano."),
                 Draw = (rect, y) => _module.DrawDuskModMenuSettings(rect, y),
-                ContentHeight = 620f,
+                Config = Config,
+                ContentHeight = 640f,
             });
         }
 

@@ -3,7 +3,7 @@
 #   aether-<version>-<rid>.zip        the loader (no mods) + the installer window, light (needs .NET 9 installed)
 #   aether-<version>-<rid>-full.zip   the same with its own .NET runtime (nothing to install, larger)
 #   aether-cli-<version>-<rid>.zip                                  the optional command line tool for mod makers
-#   aether-<mod>-<version>.zip                                      one zip per official mod (blueprint, dusk, lens, wayfinder)
+#   aether-<mod>-<version>.zip                                      one zip per official mod (blueprint, canvas, dusk, lens, wayfinder)
 # Mods are separate on purpose: the loader installs none by default, and 'aether add <zip>' installs the ones you pick.
 # Usage: ./scripts/package.sh [version]        (RIDS="linux-x64" limits the loader zips, handy for a quick local run)
 # If the game is not in the default Steam folder, export GameManagedPath and BepInExCorePath first (see docs/DEV_SETUP.md).
@@ -13,13 +13,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-$(grep -oP '(?<=<AetherVersion>)[^<]+' "$ROOT/Directory.Build.props" | head -1)}"
 RIDS="${RIDS:-linux-x64 win-x64}"
 # The official mods have their own version (their [BepInPlugin]); their zips are named with it, not with the loader's.
-MOD_VERSION="${MOD_VERSION:-1.1.1}"
+MOD_VERSION="${MOD_VERSION:-1.1.2}"
 for P in "$ROOT"/src/Aether.Mods/Aether.Mods.*/*Plugin.cs; do
   V="$(grep -oP '\[BepInPlugin\([^,]+,\s*"[^"]+",\s*"\K[^"]+' "$P" | head -1)"
   if [[ "$V" != "$MOD_VERSION" ]]; then echo "package.sh: $(basename "$P") declares $V, zips say $MOD_VERSION. Set MOD_VERSION or fix the plugin." >&2; exit 1; fi
 done
 # Signed with Aether's strong-name key the mods show "By Aether" in the F10 list; without it they are plain Nano mods.
-SNK="${AETHER_MODS_KEY:-$HOME/aether/keys/aether-mods.snk}"
+if [[ -n "${AETHER_MODS_KEY:-}" ]]; then
+  SNK="$AETHER_MODS_KEY"
+elif [[ -f "$ROOT/../interno/keys/aether-mods.snk" ]]; then
+  SNK="$ROOT/../interno/keys/aether-mods.snk"
+else
+  SNK="$HOME/aether/keys/aether-mods.snk"
+fi
 if [[ ! -f "$SNK" ]]; then echo "package.sh: no strong-name key at $SNK: the official mods will be unsigned (shown as Nano)." >&2; fi
 DIST="$ROOT/dist"
 STAGE="$DIST/.stage"
@@ -101,12 +107,12 @@ done
 
 echo "== Mod packages =="
 # Mods already moved to Aether Nano: plain BepInEx plugins that run without Aether. Their zip carries Aether.Nano.dll.
-NANO_MODS=" dusk lens blueprint wayfinder "
+NANO_MODS=" canvas dusk lens blueprint wayfinder "
 NANO_DLL="$ROOT/src/Aether.Nano/bin/Release/netstandard2.1/Aether.Nano.dll"
 [[ -f "$NANO_DLL" ]] || { echo "ERROR: missing $NANO_DLL" >&2; exit 1; }
 cp "$NANO_DLL" "$DIST/"
 # key:Assembly name. The DLL is netstandard2.1, so one zip serves every platform.
-for entry in blueprint:Blueprint dusk:Dusk lens:Lens wayfinder:Wayfinder; do
+for entry in blueprint:Blueprint canvas:Canvas dusk:Dusk lens:Lens wayfinder:Wayfinder; do
   KEY="${entry%%:*}"; NAME="${entry##*:}"
   DLL="$ROOT/src/Aether.Mods/Aether.Mods.$NAME/bin/Release/netstandard2.1/Aether.Mods.$NAME.dll"
   [[ -f "$DLL" ]] || { echo "ERROR: missing $DLL (did the build succeed?)" >&2; exit 1; }

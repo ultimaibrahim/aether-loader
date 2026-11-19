@@ -14,7 +14,7 @@ namespace Aether.Nano
     public static class Nano
     {
         public const string Guid = "dev.ultimaibrahim.aether.nano";
-        public const string Version = "1.0.1";
+        public const string Version = "1.0.2";
 
         private static ManualLogSource _log;
         public static ManualLogSource Log => _log ??= BepInEx.Logging.Logger.CreateLogSource("Aether Nano");

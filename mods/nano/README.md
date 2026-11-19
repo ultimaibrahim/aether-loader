@@ -1,7 +1,7 @@
 # Aether Nano
 
 A small shared library for Block Story mods: a plain BepInEx plugin (`Aether.Nano.dll`) with no dependency on the Aether loader.
-The four official mods (Lens, Wayfinder, Blueprint, Dusk) are built on it, and so is every mod that `aether new` creates.
+The five official mods (Lens, Wayfinder, Blueprint, Dusk, Canvas) are built on it, and so is every mod that `aether new` creates.
 
 ## What it gives a mod
 

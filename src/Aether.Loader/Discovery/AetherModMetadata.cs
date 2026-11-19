@@ -14,6 +14,7 @@ namespace Aether.Loader.Discovery
         public SemanticVersion Version { get; set; } = new(1, 0, 0);
         public string Description { get; set; } = string.Empty;
         public string Author { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
         public string Environment { get; set; } = "client";
 
         /// <summary>
@@ -47,6 +48,8 @@ namespace Aether.Loader.Discovery
         public string? Name { get; set; }
         public string? Author { get; set; }
         public string? Description { get; set; }
+        /// <summary>Optional path (relative to the mod DLL) or embedded resource name for a PNG mod icon (e.g. <c>"icon.png"</c>).</summary>
+        public string? Icon { get; set; }
 
         /// <summary>Comma/semicolon list: <c>mod_id@semver-range</c>. Example: <c>aether_ui@1.0.0</c>.</summary>
         public string? Depends { get; set; }

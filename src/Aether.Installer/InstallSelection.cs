@@ -7,7 +7,7 @@ namespace Aether.Installer;
 public static class InstallSelection
 {
     /// <summary>Official mods, in the order they are listed and installed.</summary>
-    public static readonly string[] OfficialMods = ["blueprint", "dusk", "lens", "wayfinder"];
+    public static readonly string[] OfficialMods = ["blueprint", "canvas", "dusk", "lens", "wayfinder"];
 
     public static string DllName(string mod) => "Aether.Mods." + char.ToUpperInvariant(mod[0]) + mod[1..] + ".dll";
 

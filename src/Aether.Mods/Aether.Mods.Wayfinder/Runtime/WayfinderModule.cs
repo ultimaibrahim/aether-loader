@@ -140,6 +140,98 @@ namespace Aether.Mods.Wayfinder
         private static readonly string[] MapLayerModeIds = { "Auto", "Surface", "Cave", "Interior", "Slice" };
         private static readonly string[] MapRenderModeIds = { "Day", "Night", "Topo", "Biome" };
 
+        private static readonly NanoSegmentOption<string>[] LayerSegmentsEn =
+        {
+            new NanoSegmentOption<string>("Auto", "Auto"),
+            new NanoSegmentOption<string>("Surface", "Surface"),
+            new NanoSegmentOption<string>("Cave", "Cave"),
+            new NanoSegmentOption<string>("Interior", "Interior"),
+            new NanoSegmentOption<string>("Slice", "Slice")
+        };
+        private static readonly NanoSegmentOption<string>[] LayerSegmentsEs =
+        {
+            new NanoSegmentOption<string>("Auto", "Auto"),
+            new NanoSegmentOption<string>("Surface", "Superf."),
+            new NanoSegmentOption<string>("Cave", "Cueva"),
+            new NanoSegmentOption<string>("Interior", "Interior"),
+            new NanoSegmentOption<string>("Slice", "Corte")
+        };
+
+        private static readonly NanoSegmentOption<string>[] RenderSegmentsEn =
+        {
+            new NanoSegmentOption<string>("Day", "Day"),
+            new NanoSegmentOption<string>("Night", "Night"),
+            new NanoSegmentOption<string>("Topo", "Topo"),
+            new NanoSegmentOption<string>("Biome", "Biome")
+        };
+        private static readonly NanoSegmentOption<string>[] RenderSegmentsEs =
+        {
+            new NanoSegmentOption<string>("Day", "Día"),
+            new NanoSegmentOption<string>("Night", "Noche"),
+            new NanoSegmentOption<string>("Topo", "Topo"),
+            new NanoSegmentOption<string>("Biome", "Bioma")
+        };
+
+        // Cached Aether Ink craft styles (zero per-frame allocations)
+        private static GUIStyle _wfTitleStyle, _wfMetaStyle, _wfMonoStyle, _wfMonoSmallStyle, _wfMonoCenterStyle;
+        private static GUIStyle _wfRowTitleStyle, _wfRowSubStyle, _wfLabelStyle, _wfChipStyle, _wfCardinalStyle, _wfInputStyle;
+        private static readonly GUIContent _wfMeasure = new GUIContent();
+
+        private static void EnsureWayfinderCraftStyles()
+        {
+            if (_wfTitleStyle != null) return;
+            _wfTitleStyle = NanoBrand.Style(NanoBrand.Display, 21, NanoBrand.Paper);
+            _wfMetaStyle = NanoBrand.Style(NanoBrand.Mono, 11, NanoBrand.Mute);
+            _wfMonoStyle = NanoBrand.Style(NanoBrand.Mono, 11, NanoBrand.Paper);
+            _wfMonoSmallStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Paper);
+            _wfMonoCenterStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Paper, TextAnchor.MiddleCenter);
+            _wfRowTitleStyle = NanoBrand.Style(NanoBrand.BodySemi, 12, NanoBrand.Paper);
+            _wfRowSubStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.Mute);
+            _wfLabelStyle = NanoBrand.Style(NanoBrand.BodySemi, 11, NanoBrand.Mute);
+            _wfChipStyle = NanoBrand.Style(NanoBrand.Mono, 9, NanoBrand.PaperLight, TextAnchor.MiddleCenter);
+            _wfCardinalStyle = NanoBrand.Style(NanoBrand.Mono, 10, NanoBrand.PaperLight, TextAnchor.MiddleCenter);
+            _wfInputStyle = new GUIStyle(GUI.skin.textField)
+            {
+                font = NanoBrand.Mono,
+                fontSize = 11,
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(7, 7, 2, 2)
+            };
+            _wfInputStyle.normal.textColor = NanoBrand.PaperLight;
+            _wfInputStyle.focused.textColor = NanoBrand.PaperLight;
+            _wfInputStyle.normal.background = Texture2D.blackTexture;
+            _wfInputStyle.focused.background = Texture2D.blackTexture;
+            _wfInputStyle.hover.background = Texture2D.blackTexture;
+            // Transparent skin background so our debossed squircle slot shows cleanly behind the text
+            Texture2D clear = GetColorTexture(new Color(0f, 0f, 0f, 0f));
+            _wfInputStyle.normal.background = clear;
+            _wfInputStyle.focused.background = clear;
+            _wfInputStyle.hover.background = clear;
+        }
+
+        private static void DrawWayfinderSurface(Rect rect, string theme, float opacity = 0.96f, float radius = 10f)
+        {
+            if (string.Equals(theme, "NativeWood", StringComparison.OrdinalIgnoreCase))
+            {
+                DrawThemedPanel(rect, theme, opacity);
+                return;
+            }
+            NanoTheme pal = NanoThemes.Get(string.IsNullOrEmpty(theme) ? "Aether" : theme);
+            Color bot = new Color(pal.InnerBgColor.r, pal.InnerBgColor.g, pal.InnerBgColor.b, Mathf.Clamp01(pal.InnerBgColor.a * opacity));
+            Color top = Color.Lerp(bot, new Color(0.14f, 0.11f, 0.085f, bot.a), 0.35f);
+            Color spec = new Color(0.98f, 0.93f, 0.85f, 0.11f);
+            NanoSurface.DrawCardSurface(rect, top, bot, pal.BorderColor, pal.AccentColor, spec, radius, 1f, 0f, 0f);
+        }
+
+        private static string DrawWayfinderTextField(Rect rect, string value, int maxLength)
+        {
+            if (Event.current.type == EventType.Repaint)
+            {
+                NanoSurface.DrawDebossedSlot(rect, new Color(0.036f, 0.028f, 0.022f, 0.96f), NanoBrand.Line, 6f);
+            }
+            return GUI.TextField(rect, value ?? string.Empty, maxLength, _wfInputStyle);
+        }
+
         // =====================================================================
         //        INITIALIZATION & LIFECYCLE
         // =====================================================================
@@ -164,7 +256,7 @@ namespace Aether.Mods.Wayfinder
             MinimapAnchor = Config.Bind("Wayfinder", "Anchor", "TopRight", "Corner minimap anchor: TopRight, TopLeft, BottomRight, BottomLeft.");
             MinimapOffsetX = Config.Bind("Wayfinder", "OffsetX", 0f, new ConfigDescription("Horizontal pixel offset.", new AcceptableValueRange<float>(-400f, 400f)));
             MinimapOffsetY = Config.Bind("Wayfinder", "OffsetY", 0f, new ConfigDescription("Vertical pixel offset.", new AcceptableValueRange<float>(-400f, 400f)));
-            MinimapTheme = Config.Bind("Wayfinder", "Theme", "NativeWood", "Minimap theme: NativeWood, DarkObsidian, MinimalistGlass, RoyalGold.");
+            MinimapTheme = Config.Bind("Wayfinder", "Theme", "Aether", "Minimap theme: Aether, NativeWood, DarkObsidian, MinimalistGlass, RoyalGold.");
             MapLayerMode = Config.Bind("Wayfinder", "LayerMode", "Auto",
                 "Terrain layer mode: Auto, Surface, Cave, Interior, Slice. Interior forces the current-Y slice with the explored surface dimmed (for icebergs, rooms and other structures).");
             MapRenderMode = Config.Bind("Wayfinder", "RenderMode", "Day", "Map render mode: Day, Night, Topo, Biome.");
@@ -1147,14 +1239,16 @@ namespace Aether.Mods.Wayfinder
         private void DrawMapInfoCard(Rect canvas, Vector3 playerPos, IWorld world)
         {
             if (ShowMapInfo == null || !ShowMapInfo.Value) return;
-            Rect info = new Rect(canvas.xMin + 8f, canvas.yMin + 8f, 208f, 38f);
-            GUI.DrawTexture(info, GetColorTexture(new Color(0f, 0f, 0f, 0.55f)));
+            EnsureWayfinderCraftStyles();
+            Rect info = new Rect(canvas.xMin + 8f, canvas.yMin + 8f, 214f, 40f);
+            NanoSurface.FillRounded(info, new Color(0.055f, 0.044f, 0.035f, 0.86f), 7f);
+            NanoSurface.StrokeRounded(info, NanoBrand.Line, 1f, 7f);
             string line1 = $"{LiveFps:F0} FPS · {LiveFrameTimeMs:F1} ms";
             string line2 = $"{GetMapClockLabel()} · {GetMapDayLabel()} · {GetMapLightLabel(world, playerPos)}";
-            Color fpsColor = LiveFps >= 45f ? new Color(0.55f, 1f, 0.65f)
-                : (LiveFps >= 25f ? new Color(1f, 0.88f, 0.40f) : new Color(1f, 0.45f, 0.45f));
-            DrawShadowLabel(new Rect(info.x + 6f, info.y + 1f, info.width - 12f, 16f), line1, ToolStyle, fpsColor, Color.black);
-            DrawShadowLabel(new Rect(info.x + 6f, info.y + 18f, info.width - 12f, 16f), line2, ToolStyle, new Color(0.80f, 0.90f, 1f), Color.black);
+            Color fpsColor = LiveFps >= 45f ? NanoBrand.Ok
+                : (LiveFps >= 25f ? NanoBrand.Warn : NanoBrand.Bad);
+            NanoSurface.DrawCrispLabel(new Rect(info.x + 8f, info.y + 3f, info.width - 16f, 16f), line1, _wfMonoSmallStyle, fpsColor, 0.35f);
+            NanoSurface.DrawCrispLabel(new Rect(info.x + 8f, info.y + 20f, info.width - 16f, 16f), line2, _wfMonoSmallStyle, NanoBrand.Mute, 0.3f);
         }
 
         /// <summary>
@@ -1180,12 +1274,13 @@ namespace Aether.Mods.Wayfinder
         {
             Camera cam = CachedCamera != null ? CachedCamera : Camera.main;
             if (cam == null) return;
+            EnsureWayfinderCraftStyles();
 
             Vector3 playerPos = cam.transform.position;
             IWorld world = GetActiveWorld();
 
             bool isCircle = (MinimapShape != null && MinimapShape.Value == "Circle");
-            string minimapTheme = MinimapTheme != null ? MinimapTheme.Value : "NativeWood";
+            string minimapTheme = MinimapTheme != null ? MinimapTheme.Value : "Aether";
             string minimapLayer = MapLayerMode != null ? MapLayerMode.Value : "Auto";
             string minimapRender = MapRenderMode != null ? MapRenderMode.Value : "Day";
             int minimapGrid = GetMapGridStyle();
@@ -1201,7 +1296,7 @@ namespace Aether.Mods.Wayfinder
 
             Rect innerMap = isCircle
                 ? new Rect(frameRect.x + 6, frameRect.y + 6, mapSize - 12, mapSize - 12)
-                : new Rect(frameRect.x + 8, frameRect.y + 8, mapSize - 16, mapSize - 16);
+                : new Rect(frameRect.x + 6, frameRect.y + 6, mapSize - 12, mapSize - 12);
 
             Vector2 center = innerMap.center;
             float pxPerBlock = innerMap.width / (worldRadius * 2f);
@@ -1234,8 +1329,8 @@ namespace Aether.Mods.Wayfinder
             }
             else
             {
-                DrawThemedPanel(frameRect, minimapTheme, 0.96f);
-                GUI.DrawTexture(innerMap, GetColorTexture(new Color(0.05f, 0.07f, 0.10f, 0.95f)));
+                DrawWayfinderSurface(frameRect, minimapTheme, 0.96f, 10f);
+                GUI.DrawTexture(innerMap, GetColorTexture(new Color(0.045f, 0.055f, 0.072f, 0.96f)));
                 // Chunk-grid terrain: stable textures drawn at world positions, so panning is
                 // inherently smooth and zoom only rescales the quads.
                 try
@@ -1246,13 +1341,14 @@ namespace Aether.Mods.Wayfinder
                         minimapSurfaceStructure);
                 }
                 catch (Exception ex) { LogMapException("minimap DrawView", ex); }
+                NanoSurface.StrokeRounded(innerMap, new Color(0.16f, 0.13f, 0.10f, 0.72f), 1f, 3f);
             }
 
             if (isCircle)
             {
-                Color bezelTint = Color.white;
+                Color bezelTint = new Color(0.92f, 0.86f, 0.76f, 1f);
                 if (minimapTheme == "RoyalGold") bezelTint = new Color(1.0f, 0.82f, 0.25f, 1f);
-                else if (minimapTheme == "DarkObsidian") bezelTint = new Color(0.40f, 0.35f, 0.55f, 1f);
+                else if (minimapTheme == "DarkObsidian") bezelTint = new Color(0.42f, 0.46f, 0.54f, 1f);
                 else if (minimapTheme == "MinimalistGlass") bezelTint = new Color(0.70f, 0.85f, 1.0f, 0.8f);
 
                 Color oldC = GUI.color;
@@ -1378,111 +1474,105 @@ namespace Aether.Mods.Wayfinder
             GUI.color = oldCol;
             GUI.matrix = matBackup;
 
-            // Cardinal letters
-            DrawShadowLabel(new Rect(center.x - 10, innerMap.yMin + 1, 20, 15), "N", MinimapLabelStyle, new Color(1f, 0.85f, 0.25f), Color.black);
-            DrawShadowLabel(new Rect(center.x - 10, innerMap.yMax - 15, 20, 15), "S", MinimapLabelStyle, new Color(0.85f, 0.85f, 0.85f), Color.black);
-            DrawShadowLabel(new Rect(innerMap.xMax - 14, center.y - 8, 14, 15), "E", MinimapLabelStyle, new Color(0.85f, 0.85f, 0.85f), Color.black);
-            DrawShadowLabel(new Rect(innerMap.xMin + 1, center.y - 8, 14, 15), "W", MinimapLabelStyle, new Color(0.85f, 0.85f, 0.85f), Color.black);
+            // Cardinal letters (Ember N, crisp Paper S/E/W over subtle ink pills for legibility on any biome)
+            DrawCardinalMark(new Rect(center.x - 8f, innerMap.yMin + 2f, 16f, 14f), "N", NanoBrand.Ember);
+            DrawCardinalMark(new Rect(center.x - 8f, innerMap.yMax - 16f, 16f, 14f), "S", NanoBrand.Paper);
+            DrawCardinalMark(new Rect(innerMap.xMax - 16f, center.y - 7f, 14f, 14f), "E", NanoBrand.Paper);
+            DrawCardinalMark(new Rect(innerMap.xMin + 2f, center.y - 7f, 14f, 14f), "W", NanoBrand.Paper);
 
-            float curBottomY = frameRect.y + frameRect.height + 4f;
+            // Unified cartographic footer card directly below the minimap (replaces 4 stacked legacy slabs)
+            bool showCoords = MinimapShowCoords != null && MinimapShowCoords.Value;
+            bool showInfo = ShowMapInfo != null && ShowMapInfo.Value && mapSize >= 200f;
+            float footerY = frameRect.y + frameRect.height + 5f;
+            float footerH = 6f + (showCoords ? 18f : 0f) + (showInfo ? 16f : 0f) + 22f + 4f;
+            Rect footerRect = new Rect(frameRect.x, footerY, mapSize, footerH);
+            DrawWayfinderSurface(footerRect, minimapTheme, 0.94f, 9f);
 
-            // 1. Coordinates & Biome Badges (compact formats keep narrow minimaps readable)
-            if (MinimapShowCoords != null && MinimapShowCoords.Value)
+            float rowY = footerY + 5f;
+            if (showCoords)
             {
-                Rect coordsBg = new Rect(frameRect.x, curBottomY, mapSize, 20f);
-                DrawThemedPanel(coordsBg, minimapTheme, 0.94f);
                 string coordsText;
-                if (mapSize >= 240f)
+                if (mapSize >= 236f)
                 {
                     string biomeName = world != null
                         ? BiomeHelper.GetBiomeName(world, Mathf.RoundToInt(playerPos.x), Mathf.RoundToInt(playerPos.y), Mathf.RoundToInt(playerPos.z), IsSpanish())
                         : "?";
                     string layerBadge = MapCave ? "▼ " : "▲ ";
-                    coordsText = $"X:{playerPos.x:F0} Y:{playerPos.y:F0} Z:{playerPos.z:F0} • {layerBadge}{biomeName}";
+                    coordsText = $"X {playerPos.x:F0} · Y {playerPos.y:F0} · Z {playerPos.z:F0}  ·  {layerBadge}{biomeName}";
                 }
-                else if (mapSize >= 160f)
+                else if (mapSize >= 156f)
                 {
-                    coordsText = $"X:{playerPos.x:F0} Y:{playerPos.y:F0} Z:{playerPos.z:F0}";
+                    coordsText = $"X {playerPos.x:F0} · Y {playerPos.y:F0} · Z {playerPos.z:F0}";
                 }
                 else
                 {
                     coordsText = $"{playerPos.x:F0},{playerPos.y:F0},{playerPos.z:F0}";
                 }
-                DrawShadowLabel(coordsBg, coordsText, MinimapLabelStyle, new Color(0.85f, 1.0f, 0.50f), Color.black);
-                curBottomY += 23f;
+                NanoSurface.DrawCrispLabel(new Rect(footerRect.x + 6f, rowY, mapSize - 12f, 16f),
+                    coordsText, _wfMonoCenterStyle, NanoBrand.PaperLight, 0.35f);
+                rowY += 18f;
             }
 
-            if (ShowMapInfo != null && ShowMapInfo.Value && mapSize >= 220f)
+            if (showInfo)
             {
-                Rect infoBg = new Rect(frameRect.x, curBottomY, mapSize, 18f);
-                DrawThemedPanel(infoBg, minimapTheme, 0.90f);
-                string info = $"{LiveFps:F0} FPS · {GetMapClockLabel()}";
-                DrawShadowLabel(infoBg, info, MinimapLabelStyle, new Color(0.65f, 0.88f, 1f), Color.black);
-                curBottomY += 18f;
+                Color fpsCol = LiveFps >= 45f ? NanoBrand.Ok : (LiveFps >= 25f ? NanoBrand.Warn : NanoBrand.Bad);
+                string mapKeyLabel = WayfinderKey != null ? WayfinderKey.Value.ToString() : "M";
+                string infoLeft = $"{LiveFps:F0} FPS · {GetMapClockLabel()}";
+                string infoRight = $"[{mapKeyLabel}] " + Tr("Map", "Mapa");
+                NanoSurface.DrawCrispLabel(new Rect(footerRect.x + 8f, rowY, mapSize * 0.60f, 14f),
+                    infoLeft, _wfMonoSmallStyle, fpsCol, 0.25f);
+                _wfMeasure.text = infoRight;
+                float rw = _wfMonoSmallStyle.CalcSize(_wfMeasure).x + 2f;
+                NanoSurface.DrawCrispLabel(new Rect(footerRect.xMax - rw - 8f, rowY, rw, 14f),
+                    infoRight, _wfMonoSmallStyle, NanoBrand.Mute, 0.25f);
+                rowY += 16f;
             }
 
-            // 2. Quick Minimap Controls: [Mode] [- Sz +] [- Zm +] [J]
-            Rect ctrlBarRect = new Rect(frameRect.x, curBottomY, mapSize, 22f);
-            DrawThemedPanel(ctrlBarRect, minimapTheme, 0.92f);
-
-            float bx = frameRect.x + 2f;
-            float by = curBottomY + 2f;
-            float bh = 18f;
-            float remW = mapSize - 4f;
+            // Compact toolbar row: [▲Auto] [- Sz +] [- Z +] [M]
+            float bx = footerRect.x + 5f;
+            float by = rowY + 1f;
+            float bh = 20f;
+            float remW = mapSize - 10f;
             string layerMode = MapLayerMode != null ? MapLayerMode.Value : "Auto";
+            bool caveActive = layerMode == "Cave" || layerMode == "Interior" || layerMode == "Slice" || (layerMode == "Auto" && MapCave);
+            float sBtnW = 16f;
 
-            // Narrow bars drop the optional groups instead of drawing outside the panel.
-            float sBtnW = 14f;
-
-            // Mode button (always visible)
-            string modeIcon = (layerMode == "Auto")
-                ? (MapCave ? "▼" : "▲")
-                : (layerMode == "Cave" || layerMode == "Interior" ? "▼" : "▲");
+            string modeIcon = caveActive ? "▼" : "▲";
             string modeText = $"{modeIcon}{layerMode}";
-            float modeW = Mathf.Clamp(remW * 0.28f, 38f, 64f);
-            if (DrawCompactMinimapButton(new Rect(bx, by, modeW, bh), modeText))
-            {
+            float modeW = Mathf.Clamp(remW * 0.30f, 42f, 68f);
+            if (DrawCompactMinimapButton(new Rect(bx, by, modeW, bh), modeText, caveActive))
                 CycleMapLayerMode();
-                }
-            bx += modeW + 2f;
+            bx += modeW + 3f;
 
-            // Priority: mode, J, zoom, size. Widths are 14 px so a default 180 px card
-            // still fits every group.
-            float rightEdge = frameRect.x + mapSize - 2f;
+            float rightEdge = footerRect.xMax - 5f;
             float afterMode = rightEdge - bx;
-            bool showZoomControls = afterMode >= 60f;
-            bool showSizeControls = afterMode - (showZoomControls ? 44f : 0f) >= 74f;
+            bool showZoomControls = afterMode >= 64f;
+            bool showSizeControls = afterMode - (showZoomControls ? 48f : 0f) >= 78f;
 
             if (showSizeControls)
             {
-                // Size: [-] [Sz] [+]
-                if (DrawCompactMinimapButton(new Rect(bx, by, sBtnW, bh), "-"))
+                if (DrawCompactMinimapButton(new Rect(bx, by, sBtnW, bh), "−"))
                 {
-                    float ns = Mathf.Clamp(MinimapSize.Value - 15f, 110f, 340f);
-                    MinimapSize.Value = ns;
-                    if (MinimapSize != null) MinimapSize.Value = ns;
+                    MinimapSize.Value = Mathf.Clamp(MinimapSize.Value - 15f, 110f, 340f);
                     Config.Save();
                 }
                 bx += sBtnW + 1f;
 
-                float szLabelW = Mathf.Clamp(remW * 0.14f, 20f, 28f);
-                DrawShadowLabel(new Rect(bx, by, szLabelW, bh), $"{MinimapSize.Value:F0}", MinimapLabelStyle, new Color(1.0f, 0.85f, 0.30f), Color.black);
+                float szLabelW = Mathf.Clamp(remW * 0.13f, 22f, 28f);
+                NanoSurface.DrawCrispLabel(new Rect(bx, by, szLabelW, bh), $"{MinimapSize.Value:F0}", _wfMonoCenterStyle, NanoBrand.Paper, 0.3f);
                 bx += szLabelW + 1f;
 
                 if (DrawCompactMinimapButton(new Rect(bx, by, sBtnW, bh), "+"))
                 {
-                    float ns = Mathf.Clamp(MinimapSize.Value + 15f, 110f, 340f);
-                    MinimapSize.Value = ns;
-                    if (MinimapSize != null) MinimapSize.Value = ns;
+                    MinimapSize.Value = Mathf.Clamp(MinimapSize.Value + 15f, 110f, 340f);
                     Config.Save();
                 }
-                bx += sBtnW + 2f;
+                bx += sBtnW + 3f;
             }
 
             if (showZoomControls)
             {
-                // Zoom: [-] [Z] [+] -- minus widens the radar, plus narrows it.
-                if (DrawCompactMinimapButton(new Rect(bx, by, sBtnW, bh), "-"))
+                if (DrawCompactMinimapButton(new Rect(bx, by, sBtnW, bh), "−"))
                 {
                     MinimapRadarRange.Value = WayfinderMath.ClampRadarRange(MinimapRadarRange.Value + 12f);
                     Config.Save();
@@ -1490,7 +1580,7 @@ namespace Aether.Mods.Wayfinder
                 bx += sBtnW + 1f;
 
                 float zmLabelW = 12f;
-                DrawShadowLabel(new Rect(bx, by, zmLabelW, bh), "Z", MinimapLabelStyle, new Color(0.40f, 0.85f, 1.0f), Color.black);
+                NanoSurface.DrawCrispLabel(new Rect(bx, by, zmLabelW, bh), "Z", _wfMonoCenterStyle, NanoBrand.Mute, 0.3f);
                 bx += zmLabelW + 1f;
 
                 if (DrawCompactMinimapButton(new Rect(bx, by, sBtnW, bh), "+"))
@@ -1498,41 +1588,59 @@ namespace Aether.Mods.Wayfinder
                     MinimapRadarRange.Value = WayfinderMath.ClampRadarRange(MinimapRadarRange.Value - 12f);
                     Config.Save();
                 }
-                bx += sBtnW + 2f;
+                bx += sBtnW + 3f;
             }
 
-            // [J] Fullscreen map button (fills the remaining space)
-            float jWidth = (frameRect.x + mapSize - 2f) - bx;
-            if (jWidth >= 16f)
+            // Fullscreen map button showing the real bound hotkey (e.g. "M")
+            float mapBtnW = rightEdge - bx;
+            if (mapBtnW >= 18f)
             {
-                if (DrawCompactMinimapButton(new Rect(bx, by, jWidth, bh), "J", false, new Color(0.95f, 0.80f, 0.20f)))
-                {
+                string keyStr = WayfinderKey != null ? WayfinderKey.Value.ToString() : "M";
+                if (DrawCompactMinimapButton(new Rect(bx, by, mapBtnW, bh), keyStr, false, NanoBrand.Ember))
                     SetWayfinderOpen(true);
-                }
             }
-            curBottomY += 24f;
-
-            Rect expandHintRect = new Rect(frameRect.x, curBottomY, mapSize, 18f);
-            DrawThemedPanel(expandHintRect, minimapTheme, 0.88f);
-            DrawShadowLabel(expandHintRect, Tr("[M] Fullscreen Map", "[M] Mapa Completo"), MinimapLabelStyle, new Color(0.70f, 1.0f, 0.35f), Color.black);
         }
 
-        private bool DrawCompactMinimapButton(Rect rect, string text, bool isSelected = false, Color? tint = null)
+        private static void DrawCardinalMark(Rect r, string letter, Color ink)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            NanoSurface.FillRounded(r, new Color(0.055f, 0.044f, 0.035f, 0.72f), 4f);
+            NanoSurface.DrawCrispLabel(r, letter, _wfCardinalStyle, ink, 0.45f);
+        }
+
+        private bool DrawCompactMinimapButton(Rect rect, string text, bool isSelected = false, Color? accentTint = null)
         {
             Vector2 mousePos = Event.current.mousePosition;
             bool hover = rect.Contains(mousePos);
-            Color bg = isSelected ? new Color(0.22f, 0.50f, 0.22f, 0.95f) : (hover ? new Color(0.40f, 0.34f, 0.22f, 0.95f) : new Color(0.18f, 0.15f, 0.12f, 0.90f));
-            if (tint.HasValue) bg = Color.Lerp(bg, tint.Value, 0.45f);
-            GUI.DrawTexture(rect, GetColorTexture(bg));
+            if (Event.current.type == EventType.Repaint)
+            {
+                Color accent = accentTint ?? NanoBrand.Ember;
+                Color bg;
+                Color border;
+                Color textCol;
+                if (isSelected)
+                {
+                    bg = new Color(0.20f, 0.11f, 0.06f, 0.96f);
+                    border = new Color(accent.r, accent.g, accent.b, 0.72f);
+                    textCol = NanoBrand.PaperLight;
+                }
+                else if (accentTint.HasValue)
+                {
+                    bg = hover ? new Color(0.28f, 0.14f, 0.06f, 0.96f) : new Color(0.18f, 0.10f, 0.05f, 0.92f);
+                    border = new Color(accent.r, accent.g, accent.b, hover ? 0.85f : 0.55f);
+                    textCol = hover ? NanoBrand.PaperLight : NanoBrand.EmberSoft;
+                }
+                else
+                {
+                    bg = hover ? new Color(0.15f, 0.12f, 0.095f, 0.96f) : new Color(0.085f, 0.068f, 0.054f, 0.92f);
+                    border = hover ? new Color(NanoBrand.Ember.r, NanoBrand.Ember.g, NanoBrand.Ember.b, 0.55f) : NanoBrand.Line;
+                    textCol = hover ? NanoBrand.PaperLight : NanoBrand.Paper;
+                }
 
-            Color border = hover ? new Color(1.0f, 0.85f, 0.35f, 0.85f) : new Color(0.45f, 0.38f, 0.28f, 0.65f);
-            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 1), GetColorTexture(border));
-            GUI.DrawTexture(new Rect(rect.x, rect.yMax - 1, rect.width, 1), GetColorTexture(border));
-            GUI.DrawTexture(new Rect(rect.x, rect.y, 1, rect.height), GetColorTexture(border));
-            GUI.DrawTexture(new Rect(rect.xMax - 1, rect.y, 1, rect.height), GetColorTexture(border));
-
-            Color textCol = hover ? Color.white : new Color(0.92f, 0.90f, 0.82f);
-            DrawShadowLabel(rect, text, MinimapLabelStyle, textCol, Color.black);
+                NanoSurface.FillRounded(rect, bg, 5f);
+                NanoSurface.StrokeRounded(rect, border, 1f, 5f);
+                NanoSurface.DrawCrispLabel(rect, text, _wfMonoCenterStyle, textCol, 0.3f);
+            }
 
             if (Event.current.type == EventType.MouseDown && hover && Event.current.button == 0)
             {
@@ -1549,6 +1657,7 @@ namespace Aether.Mods.Wayfinder
         {
             Camera cam = CachedCamera != null ? CachedCamera : Camera.main;
             if (cam == null) return;
+            EnsureWayfinderCraftStyles();
 
             Vector3 camPos = cam.transform.position;
 
@@ -1569,25 +1678,33 @@ namespace Aether.Mods.Wayfinder
                 sy = Mathf.Clamp(sy, 40f, Screen.height - 40f);
 
                 Color wpCol = GetWaypointColor(wp.ColorIndex);
-                string label = $"{wp.Name} [{dist:F0}m]";
-                float iconW = wp.IsDeath ? 16f : 0f;
-                float pillW = Mathf.Max(84f, label.Length * 7.2f + 18f + iconW);
-                Rect pillRect = new Rect(sx - pillW * 0.5f, sy - 12f, pillW, 22f);
+                string label = $"{wp.Name}  {dist:F0}m";
+                _wfMeasure.text = label;
+                float textW = _wfMonoSmallStyle.CalcSize(_wfMeasure).x;
+                float iconW = wp.IsDeath ? 18f : 12f;
+                float pillW = Mathf.Max(80f, textW + iconW + 16f);
+                Rect pillRect = new Rect(sx - pillW * 0.5f, sy - 11f, pillW, 22f);
 
-                GUI.DrawTexture(new Rect(pillRect.x - 1, pillRect.y - 1, pillRect.width + 2, pillRect.height + 2), GetColorTexture(wpCol));
-                GUI.DrawTexture(pillRect, GetColorTexture(new Color(0.06f, 0.06f, 0.08f, 0.84f)));
+                NanoSurface.FillRounded(pillRect, new Color(0.055f, 0.044f, 0.035f, 0.88f), 6f);
+                NanoSurface.StrokeRounded(pillRect, new Color(wpCol.r, wpCol.g, wpCol.b, 0.72f), 1f, 6f);
+
+                float tx = pillRect.x + 6f;
                 if (wp.IsDeath)
                 {
                     Texture2D skull = GetWaypointDeathSkullTexture();
                     if (skull != null)
                     {
-                        GUI.DrawTexture(new Rect(pillRect.x + 4f, pillRect.y + 4f, 14f, 14f), skull);
-                        DrawShadowLabel(new Rect(pillRect.x + 19f, pillRect.y, pillRect.width - 23f, pillRect.height),
-                            label, SmallStyle, wpCol, Color.black);
-                        continue;
+                        GUI.DrawTexture(new Rect(pillRect.x + 5f, pillRect.y + 4f, 14f, 14f), skull);
+                        tx += 17f;
                     }
                 }
-                DrawShadowLabel(pillRect, label, SmallStyle, wpCol, Color.black);
+                else
+                {
+                    NanoSurface.DrawRhombus(new Rect(pillRect.x + 6f, pillRect.y + 7.5f, 7f, 7f), wpCol, true);
+                    tx += 11f;
+                }
+                NanoSurface.DrawCrispLabel(new Rect(tx, pillRect.y, pillRect.xMax - tx - 5f, pillRect.height),
+                    label, _wfMonoSmallStyle, NanoBrand.PaperLight, 0.4f);
             }
         }
 
@@ -1647,56 +1764,74 @@ namespace Aether.Mods.Wayfinder
             lx = Mathf.Clamp(lx, mapRect.xMin + 4f, mapRect.xMax - labelW - 4f);
             ly = Mathf.Clamp(ly, mapRect.yMin + 4f, mapRect.yMax - 22f);
 
-            Rect pill = new Rect(lx, ly, labelW, 18f);
-            GUI.DrawTexture(new Rect(pill.x - 1f, pill.y - 1f, pill.width + 2f, pill.height + 2f),
-                GetColorTexture(color));
-            GUI.DrawTexture(pill, GetColorTexture(new Color(0.05f, 0.05f, 0.07f, 0.88f)));
+            Rect pill = new Rect(lx, ly, labelW, 19f);
+            NanoSurface.FillRounded(pill, new Color(0.055f, 0.044f, 0.035f, 0.90f), 5f);
+            NanoSurface.StrokeRounded(pill, new Color(color.r, color.g, color.b, 0.72f), 1f, 5f);
 
-            float textX = pill.x + 4f;
+            float textX = pill.x + 5f;
             if (isDeath)
             {
                 Texture2D skull = GetWaypointDeathSkullTexture();
                 if (skull != null)
                 {
-                    GUI.DrawTexture(new Rect(pill.x + 4f, pill.y + 2f, 14f, 14f), skull);
+                    GUI.DrawTexture(new Rect(pill.x + 4f, pill.y + 2.5f, 14f, 14f), skull);
                     textX += 16f;
                 }
             }
 
-            DrawShadowLabel(new Rect(textX, pill.y, pill.xMax - textX - 4f, pill.height),
-                label, ToolStyle, color, Color.black);
+            NanoSurface.DrawCrispLabel(new Rect(textX, pill.y, pill.xMax - textX - 4f, pill.height),
+                label, _wfMonoSmallStyle, color, 0.35f);
         }
 
         // =====================================================================
         //        EXPANDABLE FULLSCREEN WAYFINDER & WAYPOINTS
         // =====================================================================
-        internal void DrawFullscreenWayfinderGUI()
+        internal void DrawFullscreenWayfinderGUI(float anim = 1f)
         {
+            EnsureWayfinderCraftStyles();
+            bool es = IsSpanish();
+
             Rect fullScreen = new Rect(0, 0, Screen.width, Screen.height);
-            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0f, 0f, 0f, 0.72f)));
+            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0.02f, 0.015f, 0.012f, 0.74f * anim)));
 
             float scale = FullscreenMapScale != null ? FullscreenMapScale.Value : 0.90f;
-            float winWidth = Mathf.Clamp(Screen.width * scale, 720f, Screen.width - 20f);
-            float winHeight = Mathf.Clamp(Screen.height * scale, 520f, Screen.height - 20f);
+            float winWidth = Mathf.Clamp(Screen.width * scale, 760f, Screen.width - 20f);
+            float winHeight = Mathf.Clamp(Screen.height * scale, 540f, Screen.height - 20f);
             float winX = (Screen.width - winWidth) * 0.5f;
             float winY = (Screen.height - winHeight) * 0.5f;
             Rect winRect = new Rect(winX, winY, winWidth, winHeight);
 
-            DrawWoodPanel(winRect, 1.0f);
+            using (NanoMotion.BeginModal(winRect, anim))
+            {
+            string activeTheme = MinimapTheme != null ? MinimapTheme.Value : "Aether";
+            DrawWayfinderSurface(winRect, activeTheme, 0.98f, 14f);
 
-            // Header
-            string headerTitle = Tr("WAYFINDER  •  TERRAIN, CAVES & WAYPOINTS (M)", "WAYFINDER  •  TERRENO, CUEVAS Y COORDENADAS (M)");
-            DrawShadowLabel(new Rect(winX + 24, winY + 10, winWidth - 140, 28), headerTitle, MenuHeaderStyle, new Color(0.60f, 1.0f, 0.25f), Color.black);
+            // Integrated Top Bar (open cube + Gloock wordmark + live world metadata + Export PNG + Close)
+            float topBarH = 50f;
+            float hx = winX + 16f;
+            if (NanoBrand.Cube != null)
+                hx += NanoBrand.DrawCube(hx, winY + 14f, 21f) + 10f;
+            NanoSurface.DrawCrispLabel(new Rect(hx, winY + 9f, 118f, 32f), "wayfinder", _wfTitleStyle, NanoBrand.Paper, 0.45f);
+            hx += 112f;
+            NanoSurface.FillRounded(new Rect(hx, winY + 17f, 1f, 16f), NanoBrand.Line, 0.5f);
+            hx += 12f;
 
-            // Export PNG sits between the title and the close button.
-            DrawExportWayfinderButton(new Rect(winX + winWidth - 116f, winY + 10f, 64f, 28f));
+            string worldLabel = string.IsNullOrEmpty(WorldManager.loadedWorldName) ? "?" : WorldManager.loadedWorldName;
+            string mapKey = WayfinderKey != null ? WayfinderKey.Value.ToString() : "M";
+            string headerMeta = $"{worldLabel}  ·  {waypoints.Count} " + (es ? "marcadores" : "waypoints") + $"  ·  {mapKey}";
+            NanoSurface.DrawCrispLabel(new Rect(hx, winY + 15f, Mathf.Max(80f, winX + winWidth - hx - 160f), 20f),
+                headerMeta, _wfMetaStyle, NanoBrand.Mute, 0.3f);
 
-            Rect closeBtnRect = new Rect(winX + winWidth - 48, winY + 10, 34, 28);
-            if (DrawNativeWoodButton(closeBtnRect, "X", false, new Color(1.0f, 0.55f, 0.55f, 1.0f)))
+            DrawExportWayfinderButton(new Rect(winX + winWidth - 144f, winY + 10f, 92f, 28f));
+
+            Rect closeBtnRect = new Rect(winX + winWidth - 44f, winY + 10f, 30f, 28f);
+            if (NanoSurface.DrawActionButton(closeBtnRect, "×", false))
             {
                 SetWayfinderOpen(false);
                 return;
             }
+
+            NanoSurface.FillRounded(new Rect(winX + 14f, winY + topBarH, winWidth - 28f, 1f), NanoBrand.Line, 0.5f);
 
             Camera cam = CachedCamera != null ? CachedCamera : Camera.main;
             Vector3 playerPos = cam != null ? cam.transform.position : Vector3.zero;
@@ -1705,102 +1840,92 @@ namespace Aether.Mods.Wayfinder
             Vector3 renderCenter = new Vector3(playerPos.x + mapPanBlocksX, playerPos.y, playerPos.z + mapPanBlocksZ);
 
             // Layout dimensions: Left Map & Right Waypoints
-            float rightW = Mathf.Clamp(winWidth * 0.40f, 320f, 440f);
+            float rightW = Mathf.Clamp(winWidth * 0.38f, 328f, 430f);
             float mapX = winX + 16f;
             float rightX = winX + winWidth - rightW - 16f;
-            float mapAvailableW = rightX - mapX - 16f;
+            float mapAvailableW = rightX - mapX - 14f;
 
             // Dedicated Layer & Render Toolbar strips ABOVE map canvas
-            float toolbarY = winY + 44f;
-            float toolbarH = 64f;
+            float toolbarY = winY + topBarH + 10f;
+            float toolbarH = 66f;
 
-            float mapY = toolbarY + toolbarH + 6f;
+            float mapY = toolbarY + toolbarH + 8f;
             float bottomBarH = 32f;
-            float mapAvailableH = winHeight - (mapY - winY) - bottomBarH - 20f;
+            float mapAvailableH = winHeight - (mapY - winY) - bottomBarH - 22f;
             float mapCanvasSize = Mathf.Min(mapAvailableW, mapAvailableH);
             Rect mapCanvasRect = new Rect(mapX, mapY, mapCanvasSize, mapCanvasSize);
 
             // =================================================================
-            // 1. LAYER & RENDER TOOLBARS
+            // 1. LAYER & RENDER TOOLBARS (NanoSurface Segmented Bars)
             // =================================================================
             string layerMode = MapLayerMode != null ? MapLayerMode.Value : "Auto";
             string renderMode = MapRenderMode != null ? MapRenderMode.Value : "Day";
 
-            // Row 1: Layer modes [Auto] [Surface] [Cave] [Interior] [Slice] + Badge when there is room
-            for (int lm = 0; lm < MapLayerModeIds.Length; lm++)
-            {
-                string mName = MapLayerModeIds[lm];
-                bool isSel = (layerMode == mName);
-                if (DrawNativeWoodButton(new Rect(mapX + lm * 62f, toolbarY, 58f, 30f), mName, isSel))
-                {
-                    MapLayerMode.Value = mName;
-                    if (mName == "Slice") SetSliceY(MapSliceY.Value);
-                }
-            }
-
             bool inCaveSliceMode = layerMode == "Cave" || layerMode == "Interior" || layerMode == "Slice"
                 || (layerMode == "Auto" && MapCave);
 
-            // The layer badge needs 446 px of toolbar plus its own 116 px. On 1280x720 and
-            // smaller the canvas is narrower, so the selected layer button is the indicator.
-            if (mapCanvasSize >= 562f)
+            bool showLayerChip = mapCanvasSize >= 460f;
+            float layerSegW = showLayerChip ? Mathf.Min(356f, mapCanvasSize - 130f) : mapCanvasSize;
+            if (NanoSurface.DrawSegmented(new Rect(mapX, toolbarY, layerSegW, 28f),
+                    es ? LayerSegmentsEs : LayerSegmentsEn, layerMode, out string nextLayer))
             {
-                string badgeText = layerMode == "Slice"
-                    ? $"▼ SLICE Y:{currentSliceY}"
-                    : layerMode == "Interior"
-                        ? $"▼ INTERIOR Y:{Mathf.RoundToInt(playerPos.y)}"
-                        : (layerMode == "Cave" ? "▼ CAVE LAYER"
-                            : (layerMode == "Auto" && MapCave ? (IsIndoors ? "▼ INTERIOR" : "▼ CAVE LAYER")
-                                : "▲ SURFACE"));
-                Rect badgeR = new Rect(mapX + mapCanvasSize - 116f, toolbarY, 116f, 30f);
-                GUI.DrawTexture(badgeR, GetColorTexture(inCaveSliceMode ? new Color(0.40f, 0.15f, 0.15f, 0.90f) : new Color(0.15f, 0.40f, 0.20f, 0.90f)));
-                DrawShadowLabel(badgeR, badgeText, BadgeStyle, Color.white, Color.black);
+                MapLayerMode.Value = nextLayer;
+                if (nextLayer == "Slice") SetSliceY(MapSliceY.Value);
             }
 
-            // Row 2: Render Modes [Day] [Night] [Topo] [Biome] + [# Grid] (+ zoom if it fits)
-            float renderBarY = toolbarY + 34f;
-            for (int rt = 0; rt < MapRenderModeIds.Length; rt++)
+            if (showLayerChip)
             {
-                string rName = MapRenderModeIds[rt];
-                bool isSel = (renderMode == rName);
-                if (DrawNativeWoodButton(new Rect(mapX + rt * 66f, renderBarY, 62f, 26f), rName, isSel))
-                {
-                    MapRenderMode.Value = rName;
-                }
+                string badgeText = layerMode == "Slice"
+                    ? $"▼ Y:{currentSliceY}"
+                    : layerMode == "Interior"
+                        ? $"▼ INT Y:{Mathf.RoundToInt(playerPos.y)}"
+                        : (layerMode == "Cave" ? (es ? "▼ CUEVA" : "▼ CAVE")
+                            : (layerMode == "Auto" && MapCave ? (IsIndoors ? "▼ INTERIOR" : (es ? "▼ CUEVA" : "▼ CAVE"))
+                                : (es ? "▲ SUPERFICIE" : "▲ SURFACE")));
+                Rect badgeR = new Rect(mapX + mapCanvasSize - 118f, toolbarY + 3f, 118f, 22f);
+                Color chipFill = inCaveSliceMode ? new Color(0.22f, 0.11f, 0.06f, 0.94f) : new Color(0.07f, 0.16f, 0.11f, 0.94f);
+                Color chipBorder = inCaveSliceMode ? new Color(0.76f, 0.34f, 0.10f, 0.85f) : new Color(0.24f, 0.52f, 0.36f, 0.85f);
+                Color chipInk = inCaveSliceMode ? NanoBrand.EmberSoft : NanoBrand.Ok;
+                NanoSurface.DrawChip(badgeR, badgeText, _wfChipStyle, chipFill, chipBorder, chipInk, 6f);
+            }
+
+            // Row 2: Render Modes [Day | Night | Topo | Biome] + [# Grid] + [- 100% +]
+            float renderBarY = toolbarY + 34f;
+            float renderSegW = Mathf.Min(256f, mapCanvasSize - 90f);
+            if (NanoSurface.DrawSegmented(new Rect(mapX, renderBarY, renderSegW, 26f),
+                    es ? RenderSegmentsEs : RenderSegmentsEn, renderMode, out string nextRender))
+            {
+                MapRenderMode.Value = nextRender;
             }
 
             int gridOn = GetMapGridStyle();
-            // Short labels: the button is 80 px wide and "# Regions"/"# Apagada" clip.
             string gridLabel = gridOn == 1 ? "# Chunk"
                 : gridOn == 2 ? "# Region"
-                : gridOn == 3 ? "# Both"
+                : gridOn == 3 ? (es ? "# Ambos" : "# Both")
                 : "# Off";
-            if (DrawNativeWoodButton(new Rect(mapX + 270f, renderBarY, 80f, 26f), gridLabel, gridOn != 0))
+            if (NanoSurface.DrawActionButton(new Rect(mapX + renderSegW + 8f, renderBarY, 78f, 26f), gridLabel, gridOn != 0))
             {
                 SetMapGridStyle((gridOn + 1) & 3);
             }
 
-            // Interactive zoom buttons; the bottom bar keeps a copy for narrow windows.
-            if (mapCanvasSize >= 470f)
+            if (mapCanvasSize >= 460f)
             {
-                if (DrawNativeWoodButton(new Rect(mapX + 355f, renderBarY, 28f, 26f), "-"))
-                {
+                float zx = mapX + mapCanvasSize - 106f;
+                if (NanoSurface.DrawActionButton(new Rect(zx, renderBarY, 26f, 26f), "−", false))
                     fullscreenZoom = WayfinderMath.ClampZoom(fullscreenZoom * 0.80f);
-                }
-                string zoomPercentStr = $"{Mathf.RoundToInt(fullscreenZoom * 100f)}%";
-                DrawShadowLabel(new Rect(mapX + 386f, renderBarY + 3f, 50f, 22f), zoomPercentStr, ToolStyle, Color.white, Color.black);
-                if (DrawNativeWoodButton(new Rect(mapX + 438f, renderBarY, 28f, 26f), "+"))
-                {
+                NanoSurface.DrawCrispLabel(new Rect(zx + 28f, renderBarY, 50f, 26f),
+                    $"{Mathf.RoundToInt(fullscreenZoom * 100f)}%", _wfMonoCenterStyle, NanoBrand.Paper, 0.3f);
+                if (NanoSurface.DrawActionButton(new Rect(zx + 80f, renderBarY, 26f, 26f), "+", false))
                     fullscreenZoom = WayfinderMath.ClampZoom(fullscreenZoom * 1.25f);
-                }
             }
 
             // =================================================================
             // 2/3. TERRAIN VIA CHUNK ATLAS: draw the visible chunk grid. Zoom only changes
             // pxPerBlock, so there is no re-render, no partial upload and no sweep.
             // =================================================================
-            DrawDarkSlotBox(new Rect(mapX - 4, mapY - 4, mapCanvasSize + 8, mapCanvasSize + 8));
-            GUI.DrawTexture(mapCanvasRect, GetColorTexture(new Color(0.04f, 0.06f, 0.08f, 0.98f)));
+            NanoSurface.DrawDebossedSlot(new Rect(mapX - 4f, mapY - 4f, mapCanvasSize + 8f, mapCanvasSize + 8f),
+                new Color(0.036f, 0.028f, 0.022f, 0.96f), NanoBrand.Line, 9f);
+            GUI.DrawTexture(mapCanvasRect, GetColorTexture(new Color(0.04f, 0.052f, 0.068f, 0.98f)));
 
             float viewWorldSpan = 128f / fullscreenZoom;
             float pxPerBlock = mapCanvasSize / viewWorldSpan;
@@ -1997,23 +2122,19 @@ namespace Aether.Mods.Wayfinder
             // 5. BOTTOM MAP STATUS TOOLBAR
             // =================================================================
             float barY = mapY + mapCanvasSize + 8f;
-            if (DrawNativeWoodButton(new Rect(mapX, barY, 74f, 28f), "Zoom +"))
-            {
+            if (NanoSurface.DrawActionButton(new Rect(mapX, barY, 64f, 28f), "Zoom +", false))
                 fullscreenZoom = WayfinderMath.ClampZoom(fullscreenZoom * 1.35f);
-            }
-            if (DrawNativeWoodButton(new Rect(mapX + 78f, barY, 74f, 28f), "Zoom -"))
-            {
+            if (NanoSurface.DrawActionButton(new Rect(mapX + 68f, barY, 64f, 28f), "Zoom −", false))
                 fullscreenZoom = WayfinderMath.ClampZoom(fullscreenZoom * 0.75f);
-            }
-            if (DrawNativeWoodButton(new Rect(mapX + 156f, barY, 114f, 28f), Tr("Center Player", "Centrar Jugador")))
+            if (NanoSurface.DrawActionButton(new Rect(mapX + 136f, barY, 82f, 28f), es ? "Centrar" : "Center", false))
             {
                 mapPanBlocksX = 0f;
                 mapPanBlocksZ = 0f;
             }
 
             string biomeAtLoc = hoveringMap
-                ? BiomeHelper.GetBiomeName(world, hoverWorldX, sampledY, hoverWorldZ, IsSpanish())
-                : BiomeHelper.GetBiomeName(world, Mathf.RoundToInt(playerPos.x), Mathf.RoundToInt(playerPos.y), Mathf.RoundToInt(playerPos.z), IsSpanish());
+                ? BiomeHelper.GetBiomeName(world, hoverWorldX, sampledY, hoverWorldZ, es)
+                : BiomeHelper.GetBiomeName(world, Mathf.RoundToInt(playerPos.x), Mathf.RoundToInt(playerPos.y), Mathf.RoundToInt(playerPos.z), es);
 
             string coordInfo;
             if (hoveringMap)
@@ -2035,103 +2156,104 @@ namespace Aether.Mods.Wayfinder
                 }
                 int chunkX = hoverWorldX >> 5;
                 int chunkZ = hoverWorldZ >> 5;
-                int inChunkX = hoverWorldX & 31;
-                int inChunkZ = hoverWorldZ & 31;
-                coordInfo = $"{blockName}  •  X:{hoverWorldX} Y:{sampledY} Z:{hoverWorldZ}  •  Chunk: [{chunkX}, {chunkZ}] ({inChunkX}, {inChunkZ})  •  {biomeAtLoc}";
+                coordInfo = $"{blockName}  ·  X:{hoverWorldX} Y:{sampledY} Z:{hoverWorldZ}  ·  [{chunkX},{chunkZ}]  ·  {biomeAtLoc}";
             }
             else
             {
                 int pChunkX = Mathf.FloorToInt(playerPos.x) >> 5;
                 int pChunkZ = Mathf.FloorToInt(playerPos.z) >> 5;
-                int pInChunkX = Mathf.FloorToInt(playerPos.x) & 31;
-                int pInChunkZ = Mathf.FloorToInt(playerPos.z) & 31;
-                coordInfo = $"{Tr("Player", "Jugador")}: X:{playerPos.x:F0} Y:{playerPos.y:F0} Z:{playerPos.z:F0}  •  Chunk: [{pChunkX}, {pChunkZ}] ({pInChunkX}, {pInChunkZ})  •  {biomeAtLoc}";
+                coordInfo = $"{(es ? "Jugador" : "Player")}: X:{playerPos.x:F0} Y:{playerPos.y:F0} Z:{playerPos.z:F0}  ·  [{pChunkX},{pChunkZ}]  ·  {biomeAtLoc}";
             }
 
-            Rect coordBg = new Rect(mapX + 276f, barY, mapCanvasSize - 276f, 28f);
-            DrawDarkSlotBox(coordBg);
-            DrawShadowLabel(new Rect(coordBg.x + 6f, coordBg.y + 3f, coordBg.width - 12f, 22f), coordInfo, ToolStyle, new Color(0.95f, 0.92f, 0.80f), Color.black);
+            Rect coordBg = new Rect(mapX + 224f, barY, Mathf.Max(80f, mapCanvasSize - 224f), 28f);
+            NanoSurface.DrawDebossedSlot(coordBg, new Color(0.038f, 0.030f, 0.024f, 0.94f), NanoBrand.Line, 7f);
+            NanoSurface.DrawCrispLabel(new Rect(coordBg.x + 8f, coordBg.y, coordBg.width - 16f, coordBg.height),
+                coordInfo, _wfMonoSmallStyle, NanoBrand.Paper, 0.3f);
 
             // =================================================================
-            // 6. RIGHT PANEL: WAYPOINTS & DISPLAY SIZE CONTROLS
+            // 6. RIGHT PANEL: WAYPOINTS & DISPLAY CONTROLS (Aether Ink Recessed)
             // =================================================================
-            float rightH = winHeight - 64f;
+            float rightH = winHeight - topBarH - 24f;
             Rect rightBg = new Rect(rightX, toolbarY, rightW, rightH);
-            GUI.DrawTexture(rightBg, GetColorTexture(new Color(0.08f, 0.05f, 0.03f, 0.52f)));
+            NanoSurface.DrawDebossedSlot(rightBg, new Color(0.040f, 0.032f, 0.026f, 0.92f), NanoBrand.Line, 10f);
 
             float rx = rightX + 12f;
             float rw = rightW - 24f;
+            float ry = toolbarY + 10f;
 
             bool isEditing = editingWaypoint != null;
             string formTitle = isEditing
-                ? Tr("EDIT WAYPOINT", "EDITAR WAYPOINT")
-                : Tr("ADD WAYPOINT / COORDS", "AGREGAR COORDENADAS / WAYPOINT");
-            DrawShadowLabel(new Rect(rx, toolbarY + 4f, rw - 140f, 22f), formTitle, SectionTitleStyle,
-                isEditing ? new Color(0.40f, 0.85f, 1.0f) : new Color(1.0f, 0.85f, 0.25f), Color.black);
-
+                ? (es ? "Editar waypoint" : "Edit waypoint")
+                : (es ? "Nuevo waypoint" : "New waypoint");
+            float headerRightX = isEditing ? (rx + rw - 122f) : (rx + rw - 58f);
+            NanoSurface.DrawCrispLabel(new Rect(rx, ry, Mathf.Max(80f, headerRightX - rx - 6f), 22f),
+                formTitle.ToUpperInvariant(), _wfMonoSmallStyle, isEditing ? NanoBrand.EmberSoft : NanoBrand.Mute, 0.25f);
             if (isEditing)
             {
-                if (DrawNativeWoodButton(new Rect(rx + rw - 128f, toolbarY + 2f, 62f, 24f), Tr("New", "Nuevo")))
+                if (NanoSurface.DrawActionButton(new Rect(rx + rw - 122f, ry - 1f, 58f, 22f), es ? "Nuevo" : "New", false))
                     CancelWaypointEdit();
-                if (DrawNativeWoodButton(new Rect(rx + rw - 62f, toolbarY + 2f, 62f, 24f), Tr("Cancel", "Cancelar"), false,
-                        new Color(1f, 0.55f, 0.55f, 1f)))
+                if (NanoSurface.DrawActionButton(new Rect(rx + rw - 60f, ry - 1f, 60f, 22f), es ? "Cancelar" : "Cancel", false))
                     CancelWaypointEdit();
             }
-            else if (DrawNativeWoodButton(new Rect(rx + rw - 62f, toolbarY + 2f, 62f, 24f), Tr("New", "Nuevo")))
+            else if (NanoSurface.DrawActionButton(new Rect(rx + rw - 58f, ry - 1f, 58f, 22f), es ? "Limpiar" : "Clear", false))
             {
                 CancelWaypointEdit();
             }
+            ry += 26f;
 
-            DrawShadowLabel(new Rect(rx, toolbarY + 28f, 52f, 22f), Tr("Name:", "Nombre:"), ToolStyle, Color.white, Color.black);
-            newWpName = GUI.TextField(new Rect(rx + 54f, toolbarY + 28f, rw - 168f, 22f), newWpName ?? "", 28, TextFieldStyle);
-
-            if (DrawNativeWoodButton(new Rect(rx + rw - 110f, toolbarY + 26f, 110f, 26f), Tr("My Pos", "Mi Posición")))
+            NanoSurface.DrawCrispLabel(new Rect(rx, ry, 48f, 24f), es ? "Nombre" : "Name", _wfLabelStyle, NanoBrand.Mute, 0.25f);
+            newWpName = DrawWayfinderTextField(new Rect(rx + 50f, ry, rw - 146f, 24f), newWpName ?? "", 28);
+            if (NanoSurface.DrawActionButton(new Rect(rx + rw - 92f, ry, 92f, 24f), es ? "Mi posición" : "My Pos", false))
             {
                 newWpX = Mathf.RoundToInt(playerPos.x).ToString();
                 newWpY = GetStandingY(world, playerPos).ToString();
                 newWpZ = Mathf.RoundToInt(playerPos.z).ToString();
             }
+            ry += 30f;
 
-            float fieldW = (rw - 84f) / 3f;
-            DrawShadowLabel(new Rect(rx, toolbarY + 54f, 18f, 22f), "X:", ToolStyle, new Color(1f, 0.55f, 0.55f), Color.black);
-            newWpX = GUI.TextField(new Rect(rx + 18f, toolbarY + 54f, fieldW, 22f), newWpX ?? "0", 8, TextFieldStyle);
+            float fieldW = (rw - 72f) / 3f;
+            NanoSurface.DrawCrispLabel(new Rect(rx, ry, 16f, 24f), "X", _wfMonoSmallStyle, NanoBrand.Bad, 0.25f);
+            newWpX = DrawWayfinderTextField(new Rect(rx + 16f, ry, fieldW, 24f), newWpX ?? "0", 8);
 
             float yStart = rx + 24f + fieldW;
-            DrawShadowLabel(new Rect(yStart, toolbarY + 54f, 18f, 22f), "Y:", ToolStyle, new Color(0.55f, 1f, 0.55f), Color.black);
-            newWpY = GUI.TextField(new Rect(yStart + 18f, toolbarY + 54f, fieldW, 22f), newWpY ?? "64", 8, TextFieldStyle);
+            NanoSurface.DrawCrispLabel(new Rect(yStart, ry, 16f, 24f), "Y", _wfMonoSmallStyle, NanoBrand.Ok, 0.25f);
+            newWpY = DrawWayfinderTextField(new Rect(yStart + 16f, ry, fieldW, 24f), newWpY ?? "64", 8);
 
             float zStart = yStart + 24f + fieldW;
-            DrawShadowLabel(new Rect(zStart, toolbarY + 54f, 18f, 22f), "Z:", ToolStyle, new Color(0.55f, 0.80f, 1f), Color.black);
-            newWpZ = GUI.TextField(new Rect(zStart + 18f, toolbarY + 54f, fieldW, 22f), newWpZ ?? "0", 8, TextFieldStyle);
+            NanoSurface.DrawCrispLabel(new Rect(zStart, ry, 16f, 24f), "Z", _wfMonoSmallStyle, new Color(0.56f, 0.78f, 0.94f), 0.25f);
+            newWpZ = DrawWayfinderTextField(new Rect(zStart + 16f, ry, fieldW, 24f), newWpZ ?? "0", 8);
+            ry += 30f;
 
+            // Squircle color swatches + Save button
             for (int c = 0; c < WaypointColors.Length; c++)
             {
-                Rect colRect = new Rect(rx + c * 28f, toolbarY + 82f, 22f, 22f);
+                Rect colRect = new Rect(rx + c * 26f, ry + 3f, 20f, 20f);
                 bool sel = (c == newWpColorIndex);
-                GUI.DrawTexture(new Rect(colRect.x - (sel ? 2 : 1), colRect.y - (sel ? 2 : 1), colRect.width + (sel ? 4 : 2), colRect.height + (sel ? 4 : 2)), GetColorTexture(sel ? Color.white : Color.black));
-                GUI.DrawTexture(colRect, GetColorTexture(WaypointColors[c]));
-                if (GUI.Button(colRect, GUIContent.none, GUIStyle.none))
+                if (Event.current.type == EventType.Repaint)
                 {
-                    newWpColorIndex = c;
+                    NanoSurface.FillRounded(colRect, WaypointColors[c], 5f);
+                    if (sel)
+                        NanoSurface.StrokeRounded(new Rect(colRect.x - 2f, colRect.y - 2f, colRect.width + 4f, colRect.height + 4f), NanoBrand.PaperLight, 1.5f, 7f);
+                    else
+                        NanoSurface.StrokeRounded(colRect, new Color(0f, 0f, 0f, 0.55f), 1f, 5f);
                 }
+                if (GUI.Button(colRect, GUIContent.none, GUIStyle.none))
+                    newWpColorIndex = c;
             }
 
             string saveLabel = isEditing
-                ? Tr("✓ Apply Changes", "✓ Aplicar Cambios")
-                : Tr("+ Save Coords", "+ Guardar Coords");
-            if (DrawNativeWoodButton(new Rect(rx + 176f, toolbarY + 80f, rw - 176f, 28f), saveLabel, true))
+                ? (es ? "Aplicar cambios" : "Apply Changes")
+                : (es ? "+ Guardar" : "+ Save");
+            if (NanoSurface.DrawActionButton(new Rect(rx + 162f, ry, rw - 162f, 26f), saveLabel, true))
             {
                 bool okX = int.TryParse(newWpX, out int px);
                 bool okY = int.TryParse(newWpY, out int py);
                 bool okZ = int.TryParse(newWpZ, out int pz);
-                bool coordsValid = okX && okY && okZ;
-
-                if (!coordsValid)
+                if (!(okX && okY && okZ))
                 {
-                    // A typo used to silently create a waypoint at (0,0,0); fall back to the player.
                     Log.LogWarning("[Wayfinder] Waypoint coords must be whole numbers; using the player's position instead.");
                     px = Mathf.RoundToInt(playerPos.x);
-                    py = Mathf.RoundToInt(playerPos.y);
+                    py = GetStandingY(world, playerPos);
                     pz = Mathf.RoundToInt(playerPos.z);
                 }
                 string finalName = string.IsNullOrWhiteSpace(newWpName) ? $"Waypoint {waypoints.Count + 1}" : newWpName.Trim();
@@ -2155,116 +2277,64 @@ namespace Aether.Mods.Wayfinder
                 newWpName = $"Waypoint {waypoints.Count + 1}";
                 newWpColorIndex = (newWpColorIndex + 1) % WaypointColors.Length;
             }
+            ry += 34f;
 
-            string beaconLabel = ShowWorldWaypoints.Value
-                ? Tr("3D World Markers: ON", "Marcadores 3D en Mundo: SÍ")
-                : Tr("3D World Markers: OFF", "Marcadores 3D en Mundo: NO");
-            if (DrawNativeWoodButton(new Rect(rx, toolbarY + 112f, rw, 26f), beaconLabel, ShowWorldWaypoints.Value))
-            {
-                ShowWorldWaypoints.Value = !ShowWorldWaypoints.Value;
-            }
-
+            // 3D Markers & Beams toggles side by side
+            float halfRw = (rw - 6f) * 0.5f;
+            ShowWorldWaypoints.Value = NanoSurface.DrawToggleRow(
+                new Rect(rx, ry, halfRw, 28f), es ? "Marcadores 3D" : "3D Markers", ShowWorldWaypoints.Value);
             if (ShowWaypointBeacons != null)
             {
-                bool beamsOn = ShowWaypointBeacons.Value;
-                string beamsLabel = beamsOn
-                    ? Tr("3D Waypoint Beams: ON", "Haces 3D de Waypoints: SÍ")
-                    : Tr("3D Waypoint Beams: OFF", "Haces 3D de Waypoints: NO");
-                if (DrawNativeWoodButton(new Rect(rx, toolbarY + 142f, rw, 26f), beamsLabel, beamsOn))
-                    ShowWaypointBeacons.Value = !beamsOn;
+                ShowWaypointBeacons.Value = NanoSurface.DrawToggleRow(
+                    new Rect(rx + halfRw + 6f, ry, halfRw, 28f), es ? "Haces 3D" : "3D Beams", ShowWaypointBeacons.Value);
             }
+            ry += 34f;
 
-            // Display Size Sliders
-            float sizeY = toolbarY + 176f;
-            DrawShadowLabel(new Rect(rx, sizeY, rw, 20f), Tr("DISPLAY RESIZE CONTROLS", "CONTROLES DE TAMAÑO"), SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+            // Custom NanoSurface Display Sliders (zero ugly GUI.HorizontalSlider)
+            float newMiniSize = NanoSurface.DrawSlider(new Rect(rx, ry, rw, 22f),
+                es ? "Minimapa" : "Minimap", MinimapSize.Value, 110f, 340f, $"{MinimapSize.Value:F0} px", 2f, 76f);
+            if (Mathf.Abs(newMiniSize - MinimapSize.Value) > 0.5f) MinimapSize.Value = newMiniSize;
+            ry += 26f;
 
-            sizeY += 22f;
-            string miniSizeLabel = $"Minimap: {MinimapSize.Value:F0}px";
-            DrawShadowLabel(new Rect(rx, sizeY, 128f, 20f), miniSizeLabel, ToolStyle, Color.white, Color.black);
-            if (DrawNativeWoodButton(new Rect(rx + 130f, sizeY, 24f, 20f), "-"))
-            {
-                float ns = Mathf.Clamp(MinimapSize.Value - 10f, 110f, 340f);
-                MinimapSize.Value = ns;
-                if (MinimapSize != null) MinimapSize.Value = ns;
-            }
-            float newMiniSize = GUI.HorizontalSlider(new Rect(rx + 157f, sizeY + 3f, rw - 188f, 18f), MinimapSize.Value, 110f, 340f);
-            if (Mathf.Abs(newMiniSize - MinimapSize.Value) > 0.5f)
-            {
-                MinimapSize.Value = newMiniSize;
-                if (MinimapSize != null) MinimapSize.Value = newMiniSize;
-            }
-            if (DrawNativeWoodButton(new Rect(rx + rw - 24f, sizeY, 24f, 20f), "+"))
-            {
-                float ns = Mathf.Clamp(MinimapSize.Value + 10f, 110f, 340f);
-                MinimapSize.Value = ns;
-                if (MinimapSize != null) MinimapSize.Value = ns;
-            }
+            float newScale = NanoSurface.DrawSlider(new Rect(rx, ry, rw, 22f),
+                es ? "Ventana" : "Window", FullscreenMapScale.Value, 0.65f, 1.0f, $"{FullscreenMapScale.Value * 100f:F0}%", 0.01f, 76f);
+            if (Mathf.Abs(newScale - FullscreenMapScale.Value) > 0.005f) FullscreenMapScale.Value = newScale;
+            ry += 28f;
 
-            sizeY += 22f;
-            string fullScaleLabel = $"J Window: {(FullscreenMapScale.Value * 100f):F0}%";
-            DrawShadowLabel(new Rect(rx, sizeY, 130f, 20f), fullScaleLabel, ToolStyle, Color.white, Color.black);
-            float newScale = GUI.HorizontalSlider(new Rect(rx + 134f, sizeY + 3f, rw - 134f, 18f), FullscreenMapScale.Value, 0.65f, 1.0f);
-            if (Mathf.Abs(newScale - FullscreenMapScale.Value) > 0.01f)
-            {
-                FullscreenMapScale.Value = newScale;
-            }
-
-            // Slice depth lives here so it stays usable on narrow windows where the top
-            // toolbar no longer has room for the Y controls.
             if (layerMode == "Slice")
             {
-                sizeY += 24f;
-                DrawShadowLabel(new Rect(rx, sizeY, 18f, 20f), "Y:", ToolStyle, new Color(1f, 0.85f, 0.25f), Color.black);
-                if (DrawNativeWoodButton(new Rect(rx + 20f, sizeY, 42f, 20f), "-10")) SetSliceY(currentSliceY - 10);
-                DrawShadowLabel(new Rect(rx + 66f, sizeY, 56f, 20f), currentSliceY.ToString(), ToolStyle, Color.white, Color.black);
-                if (DrawNativeWoodButton(new Rect(rx + 126f, sizeY, 42f, 20f), "+10")) SetSliceY(currentSliceY + 10);
-                if (DrawNativeWoodButton(new Rect(rx + 174f, sizeY, 70f, 20f), Tr("My Y", "Mi Y")))
+                NanoSurface.DrawCrispLabel(new Rect(rx, ry, 24f, 22f), "Y:", _wfMonoSmallStyle, NanoBrand.Ember, 0.25f);
+                if (NanoSurface.DrawActionButton(new Rect(rx + 24f, ry, 42f, 22f), "−10", false)) SetSliceY(currentSliceY - 10);
+                NanoSurface.DrawCrispLabel(new Rect(rx + 68f, ry, 52f, 22f), currentSliceY.ToString(), _wfMonoCenterStyle, NanoBrand.PaperLight, 0.3f);
+                if (NanoSurface.DrawActionButton(new Rect(rx + 122f, ry, 42f, 22f), "+10", false)) SetSliceY(currentSliceY + 10);
+                if (NanoSurface.DrawActionButton(new Rect(rx + 170f, ry, 68f, 22f), es ? "Mi Y" : "My Y", false))
                     SetSliceY(Mathf.RoundToInt(playerPos.y));
+                ry += 28f;
             }
 
-            // Map-data status: proves which world is being written and how much is explored.
-            sizeY += 24f;
-            string worldName = string.IsNullOrEmpty(WorldManager.loadedWorldName) ? "?" : WorldManager.loadedWorldName;
+            // Persistence status bar
             int knownRegions = SurfaceMapStore != null ? SurfaceMapStore.KnownRegionCount : 0;
             long surfaceCells = SurfaceMapStore != null ? SurfaceMapStore.KnownCellCount : 0;
             long caveCells = CaveMapStore != null ? CaveMapStore.KnownCellCount : 0;
             bool anyPersistence = SurfaceMapStore != null || CaveMapStore != null;
-            string regionWord = knownRegions == 1 ? Tr("region", "región") : Tr("regions", "regiones");
             string mapData = anyPersistence
-                ? Tr($"Map: {knownRegions} {regionWord} · {surfaceCells:N0} surface · {caveCells:N0} cave",
-                     $"Mapa: {knownRegions} {regionWord} · {surfaceCells:N0} superficie · {caveCells:N0} cueva")
-                : Tr("Map persistence: OFF", "Persistencia del mapa: NO");
-            DrawShadowLabel(new Rect(rx, sizeY, rw - 96f, 20f), mapData, AuthorStyle, new Color(0.75f, 0.95f, 0.80f), Color.black);
-            if (anyPersistence)
+                ? $"{knownRegions} reg · {surfaceCells:N0} sup · {caveCells:N0} cue"
+                : (es ? "Persistencia desactivada" : "Map persistence off");
+            NanoSurface.DrawCrispLabel(new Rect(rx, ry, rw - (anyPersistence ? 82f : 0f), 20f), mapData, _wfMonoSmallStyle, NanoBrand.Mute, 0.25f);
+            if (anyPersistence && NanoSurface.DrawActionButton(new Rect(rx + rw - 78f, ry - 1f, 78f, 22f), es ? "Guardar" : "Save map", false))
             {
-                if (DrawNativeWoodButton(new Rect(rx + rw - 90f, sizeY, 90f, 20f), Tr("Save map", "Guardar mapa")))
-                {
-                    try { SurfaceMapStore?.FlushAll(); } catch { }
-                    try { CaveMapStore?.FlushAll(); } catch { }
-                }
+                try { SurfaceMapStore?.FlushAll(); } catch { }
+                try { CaveMapStore?.FlushAll(); } catch { }
             }
-            sizeY += 18f;
-            DrawShadowLabel(new Rect(rx, sizeY, rw, 18f),
-                $"{Tr("World", "Mundo")}: {worldName}  ·  {waypoints.Count} {Tr("waypoints", "marcadores")}",
-                AuthorStyle, new Color(0.80f, 0.85f, 0.95f), Color.black);
+            ry += 24f;
 
-            if (anyPersistence)
-            {
-                sizeY += 16f;
-                string legend = CaveMapStore != null
-                    ? Tr("Black = unexplored. Surface and caves are saved.",
-                         "Negro = sin explorar. Superficie y cuevas se guardan.")
-                    : Tr("Black = unexplored. Surface is saved; Cave/Slice are live.",
-                         "Negro = sin explorar. Superficie se guarda; Cueva/Slice en vivo.");
-                DrawShadowLabel(new Rect(rx, sizeY, rw, 16f), legend,
-                    AuthorStyle, new Color(0.62f, 0.68f, 0.78f), Color.black);
-            }
+            NanoSurface.FillRounded(new Rect(rx, ry, rw, 1f), NanoBrand.Line, 0.5f);
+            ry += 8f;
 
-            // Saved Waypoints List
-            float wpHeadY = sizeY + 24f;
-            DrawShadowLabel(new Rect(rx, wpHeadY, rw - 172f, 22f),
-                $"{Tr("SAVED WAYPOINTS", "COORDENADAS GUARDADAS")} ({waypoints.Count})",
-                SectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+            // Saved Waypoints Header
+            NanoSurface.DrawCrispLabel(new Rect(rx, ry, rw - 156f, 22f),
+                (es ? $"WAYPOINTS ({waypoints.Count})" : $"WAYPOINTS ({waypoints.Count})"),
+                _wfMonoSmallStyle, NanoBrand.Mute, 0.25f);
 
             bool allEnabled = waypoints.Count > 0;
             for (int i = 0; i < waypoints.Count; i++)
@@ -2272,59 +2342,82 @@ namespace Aether.Mods.Wayfinder
                 if (!waypoints[i].Enabled) { allEnabled = false; break; }
             }
 
-            string sortLabel = waypointSortByDistance
-                ? Tr("Sort: Dist", "Orden: Dist")
-                : Tr("Sort: Name", "Orden: Nombre");
-            if (DrawNativeWoodButton(new Rect(rx + rw - 168f, wpHeadY, 80f, 22f), sortLabel))
+            string sortLabel = waypointSortByDistance ? (es ? "Dist" : "Dist") : (es ? "Nombre" : "Name");
+            if (NanoSurface.DrawActionButton(new Rect(rx + rw - 148f, ry - 1f, 68f, 22f), sortLabel, false))
             {
                 waypointSortByDistance = !waypointSortByDistance;
                 SortWaypoints(playerPos);
             }
-            string allLabel = allEnabled ? Tr("All OFF", "Todo NO") : Tr("All ON", "Todo SÍ");
-            if (DrawNativeWoodButton(new Rect(rx + rw - 84f, wpHeadY, 84f, 22f), allLabel, allEnabled))
+            string allLabel = allEnabled ? (es ? "Todo NO" : "All OFF") : (es ? "Todo SÍ" : "All ON");
+            if (NanoSurface.DrawActionButton(new Rect(rx + rw - 76f, ry - 1f, 76f, 22f), allLabel, allEnabled))
                 ToggleAllWaypoints();
 
-            float wpListY = wpHeadY + 24f;
-            Rect wpListRect = new Rect(rx, wpListY, rw, rightH - (wpListY - toolbarY) - 10f);
-            float wpTotalH = Mathf.Max(wpListRect.height, waypoints.Count * 52f);
+            float wpListY = ry + 26f;
+            float wpListH = Mathf.Max(60f, rightBg.yMax - wpListY - 10f);
+            Rect wpListRect = new Rect(rx, wpListY, rw, wpListH);
+            float wpTotalH = waypoints.Count * 52f;
 
-            wpScrollPos = GUI.BeginScrollView(wpListRect, wpScrollPos, new Rect(0, 0, rw - 20f, wpTotalH));
+            wpScrollPos = NanoSurface.BeginScrollView(wpListRect, wpScrollPos, wpTotalH, out float wpRowW);
 
             for (int i = 0; i < waypoints.Count; i++)
             {
                 var wp = waypoints[i];
-                Rect rowRect = new Rect(0, i * 52f, rw - 20f, 46f);
-                DrawDarkSlotBox(rowRect, wp.Enabled, wp == editingWaypoint);
-
+                Rect rowRect = new Rect(0, i * 52f, wpRowW, 46f);
+                bool isSel = (wp == editingWaypoint);
+                bool hov = rowRect.Contains(Event.current.mousePosition);
                 Color wpCol = GetWaypointColor(wp.ColorIndex);
-                GUI.DrawTexture(new Rect(rowRect.x + 6, rowRect.y + 8, 10, 30), GetColorTexture(wpCol));
 
-                float xX = rowRect.width - 34f;
-                float xE = xX - 38f;
-                float xOn = xE - 46f;
-                float textW = Mathf.Max(50f, xOn - 28f);
+                if (Event.current.type == EventType.Repaint)
+                {
+                    Color rBg = isSel
+                        ? new Color(0.15f, 0.115f, 0.088f, 0.96f)
+                        : (hov ? new Color(0.105f, 0.082f, 0.064f, 0.92f) : new Color(0.068f, 0.054f, 0.044f, 0.86f));
+                    Color rBd = isSel ? new Color(NanoBrand.Ember.r, NanoBrand.Ember.g, NanoBrand.Ember.b, 0.62f) : NanoBrand.Line;
+                    NanoSurface.FillRounded(rowRect, rBg, 7f);
+                    NanoSurface.StrokeRounded(rowRect, rBd, 1f, 7f);
 
-                // Clicking the name or coordinates is the Wayfinder "Find" action.
-                Rect findRect = new Rect(rowRect.x + 22, rowRect.y + 3, textW, 40);
-                if (GUI.Button(findRect, GUIContent.none, GUIStyle.none))
+                    // Clean rhombus / death skull sigil (zero decorative vertical side stripes!)
+                    if (wp.IsDeath)
+                    {
+                        Texture2D skull = GetWaypointDeathSkullTexture();
+                        if (skull != null)
+                            GUI.DrawTexture(new Rect(rowRect.x + 8f, rowRect.y + 15f, 15f, 15f), skull);
+                        else
+                            NanoSurface.DrawRhombus(new Rect(rowRect.x + 10f, rowRect.y + 18f, 9f, 9f), wpCol, wp.Enabled);
+                    }
+                    else
+                    {
+                        NanoSurface.DrawRhombus(new Rect(rowRect.x + 10f, rowRect.y + 18f, 9f, 9f), wpCol, wp.Enabled);
+                    }
+                }
+
+                float xX = rowRect.width - 28f;
+                float xE = xX - 30f;
+                float xOn = xE - 38f;
+                float textX = rowRect.x + 28f;
+                float textW = Mathf.Max(50f, xOn - textX - 4f);
+
+                // Clicking the name or coordinates pans/centers on this waypoint
+                if (GUI.Button(new Rect(textX, rowRect.y + 3f, textW, 40f), GUIContent.none, GUIStyle.none))
                     FindWaypointOnMap(wp);
 
                 float dist = Vector3.Distance(playerPos, new Vector3(wp.X, wp.Y, wp.Z));
-                DrawShadowLabel(new Rect(rowRect.x + 22, rowRect.y + 4, textW, 20), $"{wp.Name}  [{dist:F0}m]", ModNameStyle, wp.Enabled ? wpCol : Color.grey, Color.black);
-                DrawShadowLabel(new Rect(rowRect.x + 22, rowRect.y + 23, textW, 18), $"X: {wp.X}   Y: {wp.Y}   Z: {wp.Z}", AuthorStyle, Color.white, Color.black);
+                NanoSurface.DrawCrispLabel(new Rect(textX, rowRect.y + 5f, textW, 18f),
+                    $"{wp.Name}  ·  {dist:F0}m", _wfRowTitleStyle, wp.Enabled ? NanoBrand.PaperLight : NanoBrand.Mute, 0.35f);
+                NanoSurface.DrawCrispLabel(new Rect(textX, rowRect.y + 24f, textW, 16f),
+                    $"X {wp.X}  Y {wp.Y}  Z {wp.Z}", _wfRowSubStyle, NanoBrand.Mute, 0.25f);
 
-                string visTxt = wp.Enabled ? Tr("ON", "SÍ") : Tr("OFF", "NO");
-                if (DrawNativeWoodButton(new Rect(xOn, rowRect.y + 7, 40, 30), visTxt, wp.Enabled))
+                string visTxt = wp.Enabled ? (es ? "SÍ" : "ON") : (es ? "NO" : "OFF");
+                if (NanoSurface.DrawActionButton(new Rect(xOn, rowRect.y + 10f, 34f, 26f), visTxt, wp.Enabled))
                 {
                     wp.Enabled = !wp.Enabled;
                     SaveWaypoints();
                 }
 
-                if (DrawNativeWoodButton(new Rect(xE, rowRect.y + 7, 32, 30), "E", wp == editingWaypoint,
-                        new Color(1.0f, 0.85f, 0.35f, 1.0f)))
+                if (NanoSurface.DrawActionButton(new Rect(xE, rowRect.y + 10f, 26f, 26f), "✎", isSel))
                     BeginEditWaypoint(wp);
 
-                if (DrawNativeWoodButton(new Rect(xX, rowRect.y + 7, 32, 30), "X", false, new Color(1f, 0.5f, 0.5f)))
+                if (NanoSurface.DrawActionButton(new Rect(xX, rowRect.y + 10f, 24f, 26f), "×", false))
                 {
                     if (editingWaypoint == wp)
                     {
@@ -2337,12 +2430,13 @@ namespace Aether.Mods.Wayfinder
                 }
             }
 
-            GUI.EndScrollView();
+            NanoSurface.EndScrollView();
 
-            if (Event.current.type == EventType.MouseDown && (Time.unscaledTime - ModalOpenedTimestamp > 0.35f) && !winRect.Contains(Event.current.mousePosition))
+            if (isWayfinderOpen && Event.current.type == EventType.MouseDown && (Time.unscaledTime - ModalOpenedTimestamp > 0.35f) && !winRect.Contains(Event.current.mousePosition))
             {
                 SetWayfinderOpen(false);
                 Event.current.Use();
+            }
             }
         }
 

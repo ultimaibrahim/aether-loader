@@ -499,7 +499,10 @@ namespace Aether.Mods.Wayfinder
 
                 // Draw only; the actual trigger is the MouseDown path above, so Repaint/Layout
                 // never start the heavy scan and a click cannot double-fire on MouseUp.
-                DrawNativeWoodButton(rect, label);
+                if (Event.current != null && Event.current.type == EventType.Repaint)
+                {
+                    NanoSurface.DrawActionButton(rect, label, false);
+                }
                 return clicked;
             }
             catch (Exception ex)

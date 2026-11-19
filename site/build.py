@@ -45,7 +45,7 @@ X = {
    load='cargador listo · mods elegidos: {n} de {t} (ejemplo)', shot='captura del juego', repo='Repositorio', docs_h='Docs', ldesc='Cargador de mods para Block Story',
    nf_h='Página no encontrada', nf_p='Esa dirección no existe. Prueba desde el inicio.', nf_b='Ir al inicio', more='Ver novedades',
    desc_home='Aether es un cargador de mods para Block Story. Instala el cargador y elige solo los mods que quieras.',
-   desc_show='Los cuatro mods oficiales de Aether: Lens, Wayfinder, Blueprint y Dusk, con sus teclas.',
+   desc_show='Los cinco mods oficiales de Aether: Lens, Wayfinder, Blueprint, Dusk y Canvas, con sus teclas.',
    desc_docs='Cómo crear un mod para Block Story con Aether, desde cero y sin experiencia previa.',
    desc_dl='Descarga Aether, el cargador de mods para Block Story.', desc_faq='Preguntas frecuentes sobre Aether.',
    desc_nov='Novedades y versiones de Aether.', prev='Anterior', next='Siguiente'),
@@ -54,7 +54,7 @@ X = {
    load='loader ready · chosen mods: {n} of {t} (example)', shot='in-game screenshot', repo='Repository', docs_h='Docs', ldesc='A mod loader for Block Story',
    nf_h='Page not found', nf_p='That address does not exist. Try from the start.', nf_b='Go home', more='See news',
    desc_home='Aether is a mod loader for Block Story. Install the loader and pick only the mods you want.',
-   desc_show='The four official Aether mods: Lens, Wayfinder, Blueprint and Dusk, with their keys.',
+   desc_show='The five official Aether mods: Lens, Wayfinder, Blueprint, Dusk and Canvas, with their keys.',
    desc_docs='How to create a Block Story mod with Aether, from scratch and with no prior experience.',
    desc_dl='Download Aether, the mod loader for Block Story.', desc_faq='Frequently asked questions about Aether.',
    desc_nov='News and releases of Aether.', prev='Previous', next='Next'),
@@ -75,9 +75,11 @@ SPRITE = ('<svg xmlns="http://www.w3.org/2000/svg" class="sprite" width="0" heig
   '<symbol id="s-way" viewBox="0 0 100 112"><polygon points="%s" fill="#6BBF55" class="i-ink"/>' % pts(TOP) + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink') + '<path d="M50 34 L56 46 L50 52 L44 46 Z" class="i-lid"/></symbol>'
   '<symbol id="s-blue" viewBox="0 0 100 112"><polygon points="%s" fill="none" stroke="#E8A93C" stroke-width="2.6" stroke-dasharray="5 4" stroke-linejoin="round"/>' % pts([(50, 24), (86, 44), (86, 82), (50, 102), (14, 82), (14, 44)])
   + ''.join('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#E8A93C" stroke-width="2.6" stroke-dasharray="5 4"/>' % (a[0], a[1], b[0], b[1]) for a, b in [((14, 44), (50, 62)), ((50, 62), (86, 44)), ((50, 62), (50, 102))]) + '</symbol>'
-  '<symbol id="s-dusk" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 's-dk i-ink') + '<polygon points="%s" fill="#E8643C" class="i-ink"/></symbol></svg>' % pts(RIGHT))
+  '<symbol id="s-dusk" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 's-dk i-ink') + '<polygon points="%s" fill="#E8643C" class="i-ink"/></symbol>' % pts(RIGHT)
+  + '<symbol id="s-canvas" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
+  + '<path d="M22 36 H34 M22 36 V48 M78 36 H66 M78 36 V48 M22 92 H34 M22 92 V80 M78 92 H66 M78 92 V80" fill="none" stroke="#FF8A3D" stroke-width="3.2" stroke-linecap="round"/></symbol></svg>')
 def ico(i, cls='', w=None): return '<svg class="%s" aria-hidden="true" focusable="false"%s><use href="#%s"/></svg>' % (cls, '' if not w else ' width="%s"' % w, i)
-MODS = [('lens', 's-lens'), ('way', 's-way'), ('blue', 's-blue'), ('dusk', 's-dusk')]  # orden del contenido: MN
+MODS = [('lens', 's-lens'), ('way', 's-way'), ('blue', 's-blue'), ('dusk', 's-dusk'), ('canvas', 's-canvas')]  # orden del contenido: MN
 def mod_names(): return {k: name for k, name in D['MN']}
 
 def has_img(name): return os.path.exists(os.path.join(ROOT, 'img', name + '.jpg'))

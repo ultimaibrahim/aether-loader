@@ -12,6 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Aether.Nano\Aether.Nano.csproj" Private="false" />
+    <EmbeddedResource Include="icon.png" />
   </ItemGroup>
   <Import Project="..\..\GameReferences.props" />
 </Project>

@@ -87,23 +87,50 @@ namespace BlockStoryLens
         private static readonly Dictionary<string, (GUIContent Content, float Height)> richTooltipCache =
             new Dictionary<string, (GUIContent, float)>(StringComparer.Ordinal);
 
-        // Static option tables for the settings tabs: these used to be allocated on every OnGUI
-        // pass (Layout + Repaint) while the menu was open (M1).
-        private static readonly (string Id, string NameEn, string NameEs)[] HudPresetOptions =
+        // Static option tables for the settings tabs: allocated once (zero per-frame OnGUI churn).
+        private static readonly Aether.Nano.NanoSegmentOption<string>[] HudPresetSegmentsEn =
         {
-            ("ModernModpack", "Modern Modpack", "Modern Modpack"),
-            ("CompactLeft", "Compact Left", "Compacto Izq."),
-            ("BottomHUD", "Bottom HUD", "HUD Inferior"),
-            ("VanillaClassic", "Vanilla Classic", "Vanilla Clásico")
+            new Aether.Nano.NanoSegmentOption<string>("ModernModpack", "Modern"),
+            new Aether.Nano.NanoSegmentOption<string>("CompactLeft", "Compact Left"),
+            new Aether.Nano.NanoSegmentOption<string>("BottomHUD", "Bottom HUD"),
+            new Aether.Nano.NanoSegmentOption<string>("VanillaClassic", "Vanilla")
+        };
+        private static readonly Aether.Nano.NanoSegmentOption<string>[] HudPresetSegmentsEs =
+        {
+            new Aether.Nano.NanoSegmentOption<string>("ModernModpack", "Modern"),
+            new Aether.Nano.NanoSegmentOption<string>("CompactLeft", "Izquierda"),
+            new Aether.Nano.NanoSegmentOption<string>("BottomHUD", "Inferior"),
+            new Aether.Nano.NanoSegmentOption<string>("VanillaClassic", "Vanilla")
         };
 
-        private static readonly (string Id, string NameEn, string NameEs)[] UiThemeOptions =
+        private static readonly Aether.Nano.NanoSegmentOption<string>[] UiThemeRow1En =
         {
-            ("NativeWood", "Native Carved Wood", "Madera Tallada"),
-            ("AncientStone", "Ancient Stone Slate", "Pizarra de Piedra"),
-            ("DwarvenGold", "Dwarven Gold & Bronze", "Oro y Bronce Enano"),
-            ("ArcaneGlass", "Arcane Crystal Glass", "Cristal Arcano")
+            new Aether.Nano.NanoSegmentOption<string>("Aether", "Aether Ink", Aether.Nano.NanoBrand.Ember),
+            new Aether.Nano.NanoSegmentOption<string>("NativeWood", "Carved Wood", new Color(0.89f, 0.66f, 0.29f)),
+            new Aether.Nano.NanoSegmentOption<string>("AncientStone", "Stone Slate", new Color(0.54f, 0.72f, 0.84f))
         };
+        private static readonly Aether.Nano.NanoSegmentOption<string>[] UiThemeRow1Es =
+        {
+            new Aether.Nano.NanoSegmentOption<string>("Aether", "Tinta Aether", Aether.Nano.NanoBrand.Ember),
+            new Aether.Nano.NanoSegmentOption<string>("NativeWood", "Madera", new Color(0.89f, 0.66f, 0.29f)),
+            new Aether.Nano.NanoSegmentOption<string>("AncientStone", "Pizarra", new Color(0.54f, 0.72f, 0.84f))
+        };
+        private static readonly Aether.Nano.NanoSegmentOption<string>[] UiThemeRow2En =
+        {
+            new Aether.Nano.NanoSegmentOption<string>("DwarvenGold", "Antique Gold", new Color(0.84f, 0.61f, 0.23f)),
+            new Aether.Nano.NanoSegmentOption<string>("ArcaneGlass", "Amethyst Glass", new Color(0.62f, 0.51f, 0.77f))
+        };
+        private static readonly Aether.Nano.NanoSegmentOption<string>[] UiThemeRow2Es =
+        {
+            new Aether.Nano.NanoSegmentOption<string>("DwarvenGold", "Oro Antiguo", new Color(0.84f, 0.61f, 0.23f)),
+            new Aether.Nano.NanoSegmentOption<string>("ArcaneGlass", "Cristal Amatista", new Color(0.62f, 0.51f, 0.77f))
+        };
+
+        private static GUIStyle _menuRowTitleStyle, _menuRowCompactStyle, _menuRowMetaStyle, _menuTabStyle;
+        private static GUIStyle _menuDetailTitleStyle, _menuDetailMetaStyle, _menuDetailDescStyle;
+        private static GUIStyle _menuChipStyle, _menuInitialStyle;
+        private static GUIStyle _tipTitleStyle, _tipMetaStyle, _tipBodyStyle, _tipChipStyle;
+        private static readonly GUIContent _menuMeasure = new GUIContent();
 
 
         // Styles
@@ -135,6 +162,9 @@ namespace BlockStoryLens
             public string DescEn;
             public string DescEs;
             public string IconItemName;
+            public Texture2D IconTexture;
+            public string IconHint;
+            public bool UseAetherCube;
             public Color AccentColor;
             public bool IsActive;
 
@@ -641,12 +671,57 @@ namespace BlockStoryLens
                 Log.LogWarning($"[Aether] Native mod catalog could not read LoadedMods: {ex.Message}");
             }
 
-            // Third-party mods Aether does not load through [AetherMod]: BepInEx plugins, hosted or started by BepInEx.
+            // Third-party & Nano mods Aether does not load through [AetherMod]: BepInEx plugins, hosted or started by BepInEx.
+            // Ordered cleanly by origin tier (By Aether -> Nano -> Third-party) so official mods stay right near the top.
             try
             {
+                var extList = new List<Aether.Loader.Hosting.ExternalMod>(Aether.Loader.Hosting.ExternalModCatalog.Snapshot());
+                extList.Sort((a, b) =>
+                {
+                    int tierA = OriginSortTier(a);
+                    int tierB = OriginSortTier(b);
+                    int cmp = tierA.CompareTo(tierB);
+                    if (cmp != 0) return cmp;
+                    return string.Compare(
+                        Aether.Loader.Hosting.ExternalModCatalog.DisplayName(a.Name),
+                        Aether.Loader.Hosting.ExternalModCatalog.DisplayName(b.Name),
+                        StringComparison.OrdinalIgnoreCase);
+                });
+
                 int order = registeredMods.Count;
-                foreach (var ext in Aether.Loader.Hosting.ExternalModCatalog.Snapshot())
+                foreach (var ext in extList)
                     registeredMods.Add(BuildExternalEntry(ext, order++));
+
+                // Safety net: any NanoPage registered outside ExternalModCatalog still appears in the menu.
+                var pages = Aether.Nano.NanoPages.All;
+                for (int p = 0; p < pages.Count; p++)
+                {
+                    var page = pages[p];
+                    if (page == null || string.IsNullOrEmpty(page.Id)) continue;
+                    bool alreadyListed = false;
+                    for (int r = 0; r < registeredMods.Count; r++)
+                    {
+                        if (string.Equals(registeredMods[r].Id, page.Id, StringComparison.OrdinalIgnoreCase))
+                        {
+                            alreadyListed = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyListed)
+                    {
+                        var synthetic = new Aether.Loader.Hosting.ExternalMod
+                        {
+                            Id = page.Id,
+                            Name = string.IsNullOrWhiteSpace(page.Name) ? page.Id : page.Name,
+                            Version = string.IsNullOrWhiteSpace(page.Version) ? "1.0.0" : page.Version,
+                            Author = page.Author ?? string.Empty,
+                            Description = page.Description ?? string.Empty,
+                            Source = "Aether Nano",
+                            AssemblyName = page.Draw?.Method?.DeclaringType?.Assembly?.GetName().Name ?? string.Empty
+                        };
+                        registeredMods.Add(BuildExternalEntry(synthetic, order++));
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -757,7 +832,10 @@ namespace BlockStoryLens
                 Author = author,
                 DescEn = desc,
                 DescEs = desc,
-                IconItemName = primary.Id != null ? primary.IconItemName : "Book",
+                IconItemName = primary.Id != null ? primary.IconItemName : string.Empty,
+                IconHint = meta.Icon ?? string.Empty,
+                UseAetherCube = string.Equals(meta.Id, "aether", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(meta.Id, "aether_ui", StringComparison.OrdinalIgnoreCase),
                 AccentColor = primary.Id != null ? primary.AccentColor : new Color(0.35f, 0.70f, 1.0f),
                 IsActive = true,
                 SourceModId = meta.Id,
@@ -769,14 +847,30 @@ namespace BlockStoryLens
             };
         }
 
+        private static int OriginSortTier(Aether.Loader.Hosting.ExternalMod ext)
+        {
+            if (ext == null) return 3;
+            var origin = Aether.Loader.Hosting.ModOrigin.Of(ext.AssemblyName);
+            if (origin == Aether.Loader.Hosting.ModOriginKind.ByAether) return 0;
+            if (origin == Aether.Loader.Hosting.ModOriginKind.Nano || FindNanoPage(ext) != null) return 1;
+            return 2;
+        }
+
         private ModInfoEntry BuildExternalEntry(Aether.Loader.Hosting.ExternalMod ext, int loadOrder)
         {
-            string name = Aether.Loader.Hosting.ExternalModCatalog.DisplayName(ext.Name);
-            string author = string.IsNullOrWhiteSpace(ext.Author) ? Tr("Third party", "Terceros") : ext.Author;
-            string desc = string.IsNullOrWhiteSpace(ext.Description)
-                ? Tr("Third-party mod running next to Aether. It is not an Aether mod.",
-                     "Mod de terceros que corre junto a Aether. No es un mod de Aether.")
-                : ext.Description;
+            Aether.Nano.NanoPage page = FindNanoPage(ext);
+            string name = (page != null && !string.IsNullOrWhiteSpace(page.Name))
+                ? page.Name
+                : Aether.Loader.Hosting.ExternalModCatalog.DisplayName(ext.Name);
+            string author = (page != null && !string.IsNullOrWhiteSpace(page.Author))
+                ? page.Author
+                : (string.IsNullOrWhiteSpace(ext.Author) ? Tr("Third party", "Terceros") : ext.Author);
+            string desc = (page != null && !string.IsNullOrWhiteSpace(page.Description))
+                ? page.Description
+                : (string.IsNullOrWhiteSpace(ext.Description)
+                    ? Tr("Third-party mod running next to Aether. It is not an Aether mod.",
+                         "Mod de terceros que corre junto a Aether. No es un mod de Aether.")
+                    : ext.Description);
             return new ModInfoEntry
             {
                 Id = ext.Id,
@@ -786,7 +880,10 @@ namespace BlockStoryLens
                 Author = author,
                 DescEn = desc,
                 DescEs = desc,
-                IconItemName = "Book",
+                IconItemName = page != null ? (page.IconItemName ?? string.Empty) : string.Empty,
+                IconTexture = page != null ? page.Icon : null,
+                IconHint = string.Empty,
+                UseAetherCube = false,
                 AccentColor = new Color(0.95f, 0.65f, 0.25f),
                 IsActive = true,
                 SourceModId = string.Empty,
@@ -1025,60 +1122,83 @@ namespace BlockStoryLens
         private void DrawOriginBadge(Rect cardRect, ModInfoEntry mod)
         {
             string text;
-            Color fill, ink;
-            bool brand = false;
+            Color fill, border, ink;
             var origin = mod.External != null
                 ? Aether.Loader.Hosting.ModOrigin.Of(mod.External.AssemblyName)
                 : Aether.Loader.Hosting.ModOriginKind.Other;
-            if (mod.IsFeatureRow) { text = Tr("SUITE", "SUITE"); fill = new Color(0.55f, 0.42f, 0.22f, 0.90f); ink = Color.white; }
-            else if (mod.External == null) { text = Tr("LOADED", "CARGADO"); fill = new Color(0.18f, 0.68f, 0.25f, 0.95f); ink = Color.white; }
-            else if (origin == Aether.Loader.Hosting.ModOriginKind.ByAether) { text = Tr("BY AETHER", "POR AETHER"); fill = Aether.Nano.NanoBrand.EmberDeep; ink = Aether.Nano.NanoBrand.PaperLight; brand = true; }
-            else if (origin == Aether.Loader.Hosting.ModOriginKind.Nano) { text = "NANO"; fill = Aether.Nano.NanoBrand.Paper; ink = Aether.Nano.NanoBrand.EmberDeep; brand = true; }
-            else { text = Tr("HOSTED", "EXTERNO"); fill = new Color(0.80f, 0.50f, 0.15f, 0.95f); ink = Color.white; }
 
-            GUIStyle style = badgeStyle;
-            if (brand)
+            if (mod.IsFeatureRow)
             {
-                _badgeBrandStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 10, Color.white, TextAnchor.MiddleCenter);
-                style = _badgeBrandStyle;
+                text = Tr("SUITE", "SUITE");
+                fill = new Color(0.16f, 0.12f, 0.08f, 0.92f);
+                border = new Color(0.45f, 0.34f, 0.16f, 0.85f);
+                ink = Aether.Nano.NanoBrand.Warn;
             }
-            float w = Mathf.Max(60f, style.CalcSize(new GUIContent(text)).x + 14f);
-            var r = new Rect(cardRect.xMax - w - 6f, cardRect.y + 20f, w, 20f);
-            GUI.DrawTexture(r, GetColorTexture(fill));
-            if (brand)
+            else if (mod.External == null)
             {
-                Color prev = GUI.color;
-                style.normal.textColor = ink;
-                GUI.Label(r, text, style);
-                GUI.color = prev;
+                text = Tr("CORE", "NÚCLEO");
+                fill = new Color(0.07f, 0.16f, 0.11f, 0.94f);
+                border = new Color(0.24f, 0.52f, 0.36f, 0.85f);
+                ink = Aether.Nano.NanoBrand.Ok;
             }
-            else DrawShadowLabel(r, text, badgeStyle, ink, Color.black);
+            else if (origin == Aether.Loader.Hosting.ModOriginKind.ByAether)
+            {
+                text = Tr("BY AETHER", "POR AETHER");
+                fill = new Color(0.20f, 0.10f, 0.05f, 0.96f);
+                border = new Color(0.76f, 0.31f, 0.04f, 0.90f);
+                ink = Aether.Nano.NanoBrand.EmberSoft;
+            }
+            else if (origin == Aether.Loader.Hosting.ModOriginKind.Nano)
+            {
+                text = "NANO";
+                fill = new Color(0.14f, 0.11f, 0.088f, 0.94f);
+                border = new Color(0.36f, 0.29f, 0.23f, 0.85f);
+                ink = Aether.Nano.NanoBrand.Paper;
+            }
+            else
+            {
+                text = Tr("HOSTED", "EXTERNO");
+                fill = new Color(0.16f, 0.12f, 0.07f, 0.92f);
+                border = new Color(0.46f, 0.34f, 0.16f, 0.80f);
+                ink = Aether.Nano.NanoBrand.Warn;
+            }
+
+            _badgeBrandStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 9, Color.white, TextAnchor.MiddleCenter);
+            _menuMeasure.text = text;
+            float w = Mathf.Max(52f, _badgeBrandStyle.CalcSize(_menuMeasure).x + 12f);
+            var r = new Rect(cardRect.xMax - w - 8f, cardRect.y + (cardRect.height - 18f) * 0.5f, w, 18f);
+            Aether.Nano.NanoSurface.DrawChip(r, text, _badgeBrandStyle, fill, border, ink, 4f);
         }
 
         private static GUIStyle _aetherTitleStyle, _aetherMetaStyle;
 
         /// <summary>
-        /// The header of Aether's own windows on the game's wood (F10, F7): an ink plate with the open cube, the title in
-        /// Gloock in ember and a line of facts in mono. The wood stays the game's; the plate says whose window it is.
+        /// The header of Aether's windows (F10, F7): open cube, title in Gloock and live metadata in JetBrains Mono.
+        /// Drawn cleanly without any decorative top or side stripes.
         /// </summary>
         public static void DrawAetherHeader(Rect area, string title, string meta)
         {
-            _aetherTitleStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 22, Aether.Nano.NanoBrand.Ember);
-            _aetherMetaStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 12, Aether.Nano.NanoBrand.Mute);
-            // A small ink plate on the wood: Aether's card (ember rule on top), so the brand reads on the game's light wood.
-            const float pad = 12f, cubeH = 22f;
+            _aetherTitleStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 21, Aether.Nano.NanoBrand.Paper);
+            _aetherMetaStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 11, Aether.Nano.NanoBrand.Mute);
+            const float pad = 12f, cubeH = 21f;
             bool hasCube = Aether.Nano.NanoBrand.Cube != null;
-            float titleW = _aetherTitleStyle.CalcSize(new GUIContent(title)).x;
-            float metaW = string.IsNullOrEmpty(meta) ? 0f : _aetherMetaStyle.CalcSize(new GUIContent(meta)).x;
+            _menuMeasure.text = title;
+            float titleW = _aetherTitleStyle.CalcSize(_menuMeasure).x;
+            float metaW = 0f;
+            if (!string.IsNullOrEmpty(meta))
+            {
+                _menuMeasure.text = meta;
+                metaW = _aetherMetaStyle.CalcSize(_menuMeasure).x;
+            }
             float w = pad + (hasCube ? cubeH * 57f / 64f + 10f : 0f) + titleW + (metaW > 0f ? 14f + metaW : 0f) + pad;
             var plate = new Rect(area.x, area.y, Mathf.Min(w, area.width), area.height);
-            Aether.Nano.NanoBrand.DrawCard(plate);
+            Aether.Nano.NanoBrand.DrawCard(plate, plate.Contains(Event.current.mousePosition) ? 1f : 0.7f);
             float x = plate.x + pad;
-            if (hasCube) x += Aether.Nano.NanoBrand.DrawCube(x, plate.y + (plate.height - cubeH) / 2f + 1f, cubeH) + 10f;
-            GUI.Label(new Rect(x, plate.y + 1f, titleW + 2f, plate.height), title, _aetherTitleStyle);
+            if (hasCube) x += Aether.Nano.NanoBrand.DrawCube(x, plate.y + (plate.height - cubeH) / 2f, cubeH) + 10f;
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(x, plate.y, titleW + 2f, plate.height), title, _aetherTitleStyle, Aether.Nano.NanoBrand.Paper, 0.4f);
             x += titleW + 14f;
             if (metaW > 0f && x < plate.xMax)
-                GUI.Label(new Rect(x, plate.y + 2f, plate.xMax - x, plate.height), meta, _aetherMetaStyle);
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(x, plate.y + 1f, plate.xMax - x - 6f, plate.height), meta, _aetherMetaStyle, Aether.Nano.NanoBrand.Mute, 0.3f);
         }
 
         public static void DrawShadowLabel(Rect rect, string text, GUIStyle style, Color textColor, Color shadowColor)
@@ -1219,6 +1339,8 @@ namespace BlockStoryLens
             isKeybindsManagerOpen = false;
             isRecipeCardOpen = false;
             rebindingEntry = null;
+            Aether.Nano.NanoMotion.Snap("aether:mod_menu", false);
+            Aether.Nano.NanoMotion.Snap("aether:keybinds", false);
 
             ReleaseModalIsolation();
         }
@@ -1730,7 +1852,11 @@ namespace BlockStoryLens
         // =====================================================================
         private void OnGUI()
         {
-            GUI.depth = (isModMenuOpen || isWayfinderOpen || isKeybindsManagerOpen || isDraggingHudElements || showKeybindsModal) ? -100 : 10;
+            float modMenuAnim = Aether.Nano.NanoMotion.Sample("aether:mod_menu", isModMenuOpen);
+            bool modMenuDrawing = isModMenuOpen || modMenuAnim > 0.005f;
+            float keybindsAnim = Aether.Nano.NanoMotion.Sample("aether:keybinds", isKeybindsManagerOpen || showKeybindsModal);
+            bool keybindsDrawing = isKeybindsManagerOpen || showKeybindsModal || keybindsAnim > 0.005f;
+            GUI.depth = (modMenuDrawing || isWayfinderOpen || keybindsDrawing || isDraggingHudElements) ? -100 : 10;
             InitStyles();
 
             string currentScene = SceneManager.GetActiveScene().name;
@@ -1740,7 +1866,7 @@ namespace BlockStoryLens
             bool anyNativeWindowOpen = SafeIsWindowOpen(inv);
             bool isLoadingScreen = LoadingScreenState.IsLoadingOrMenuNotReady();
 
-            if (!isModMenuOpen && !isWayfinderOpen && !isDraggingHudElements && !isKeybindsManagerOpen)
+            if (!modMenuDrawing && !isWayfinderOpen && !isDraggingHudElements && !keybindsDrawing)
             {
                 // Main Menu OR Pause Menu: the Mods entry now lives in the native settings sidebar and in the
                 // bottom-left Aether badge; here we only keep the native cursor.
@@ -1771,17 +1897,17 @@ namespace BlockStoryLens
                 DrawHudDragModeGUI();
                 DrawNativeCursorOverlay();
             }
-            else if (isModMenuOpen)
+            else if (modMenuDrawing)
             {
-                EnforceNativeGameCursor();
-                DrawModMenuGUI();
-                DrawNativeCursorOverlay();
+                if (isModMenuOpen) EnforceNativeGameCursor();
+                DrawModMenuGUI(modMenuAnim);
+                if (isModMenuOpen) DrawNativeCursorOverlay();
             }
-            else if (isKeybindsManagerOpen || showKeybindsModal)
+            else if (keybindsDrawing)
             {
-                EnforceNativeGameCursor();
-                DrawKeybindManagerGUI();
-                DrawNativeCursorOverlay();
+                if (isKeybindsManagerOpen || showKeybindsModal) EnforceNativeGameCursor();
+                DrawKeybindManagerGUI(keybindsAnim);
+                if (isKeybindsManagerOpen || showKeybindsModal) DrawNativeCursorOverlay();
             }
 
             DrawBlueprintAndSodiumGUI();
@@ -1874,12 +2000,26 @@ namespace BlockStoryLens
             return null;
         }
 
+        private static void EnsureHoverTooltipStyles()
+        {
+            if (_tipTitleStyle != null) return;
+            _tipTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 17, Aether.Nano.NanoBrand.PaperLight);
+            _tipMetaStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute);
+            _tipBodyStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Body, 12, Aether.Nano.NanoBrand.Paper, TextAnchor.UpperLeft, true);
+            _tipChipStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 9, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+        }
+
         private void DrawHoveredItemRichTooltip()
         {
-            if (IsModalOpen || IsMouseOverBlueprintPanel()) return;
+            bool blocked = IsModalOpen || IsMouseOverBlueprintPanel() || Aether.Nano.NanoHud.CanvasEditorOpen;
+            InvGameItem item = blocked ? null : GetHoveredSlotItem();
+            bool hasItem = item != null && item.baseItem != null;
 
-            InvGameItem item = GetHoveredSlotItem();
-            if (item == null || item.baseItem == null) return;
+            float tipAnim = Aether.Nano.NanoMotion.Sample("aether:hover_tooltip", hasItem, 0.11f, 0.08f);
+            if (!hasItem || tipAnim <= 0.01f) return;
+
+            EnsureHoverTooltipStyles();
+            bool es = IsSpanish();
 
             InvBaseItem baseItem = item.baseItem;
             string itemName = item.itemName;
@@ -1891,49 +2031,25 @@ namespace BlockStoryLens
             int curDur = hasDurabilityBar ? item.topStack : 1;
             float durRatio = hasDurabilityBar ? Mathf.Clamp01((float)curDur / maxDur) : 1f;
 
-            const float boxW = 310f;
+            const float boxW = 316f;
+            const float pad = 12f;
 
-            // The tooltip markup was rebuilt (StringBuilder + Regex + CalcHeight) on every OnGUI
-            // pass, twice per frame while hovering. Cache it per item state + language (M4).
-            string tooltipKey = $"{baseItem.name}|{item.topStack}|{item.count}|{item.price}|{(IsSpanish() ? "es" : "en")}";
+            // Cache formatted body markup per item state + language (zero per-frame StringBuilder/Regex allocs)
+            string tooltipKey = $"v2|{baseItem.name}|{item.topStack}|{item.count}|{item.price}|{(es ? "es" : "en")}";
             if (!richTooltipCache.TryGetValue(tooltipKey, out var cachedTooltip))
             {
-                StringBuilder sb = new StringBuilder();
-
-                string slotInfo = (baseItem.slot != InvBaseItem.Slot.None && baseItem.slot != InvBaseItem.Slot._LastDoNotUse)
-                    ? $"  •  {Tr("Slot", "Ranura")}: <color=#66E0FF>{baseItem.slot}</color>"
-                    : "";
-                sb.Append($"<color=#CFC6B8>[{baseItem.category}{slotInfo}]</color>");
-
-                if (hasDurabilityBar)
-                {
-                    string durHex = durRatio > 0.55f ? "#55FF55" : (durRatio > 0.25f ? "#FFDD44" : "#FF5555");
-                    string durWord = Tr("Durability", "Durabilidad");
-                    sb.Append($"\n<b>{durWord}:</b> <color={durHex}>{curDur} / {maxDur} ({durRatio * 100f:F0}%)</color>");
-                }
-                else if (item.count > 1)
-                {
-                    sb.Append($"\n<b>{Tr("Amount", "Cantidad")}:</b> <color=#FFF0AA>{item.count}</color>");
-                }
-
                 string rawDesc = item.itemDesc;
+                string cleaned = string.Empty;
                 if (!string.IsNullOrEmpty(rawDesc))
                 {
                     int durIdx = rawDesc.IndexOf("\n[", StringComparison.Ordinal);
-                    if (durIdx >= 0)
-                        rawDesc = rawDesc.Substring(0, durIdx);
-                    string converted = Regex.Replace(rawDesc, @"\[([0-9a-fA-F]{6})\]", "<color=#$1>");
-                    converted = converted.Replace("[-]", "</color>");
-                    sb.Append("\n\n").Append(converted.Trim());
+                    if (durIdx >= 0) rawDesc = rawDesc.Substring(0, durIdx);
+                    cleaned = Regex.Replace(rawDesc, @"\[([0-9a-fA-F]{6})\]", "<color=#$1>");
+                    cleaned = cleaned.Replace("[-]", "</color>").Trim();
                 }
 
-                if (item.price > 0)
-                {
-                    sb.Append($"\n\n<color=#FFD700>{Tr("Value", "Valor")}: {item.price} {Tr("Diamonds", "Diamantes")}</color>");
-                }
-
-                var content = new GUIContent(sb.ToString());
-                float height = richTooltipStyle.CalcHeight(content, boxW - 24f);
+                var content = new GUIContent(cleaned);
+                float height = string.IsNullOrEmpty(cleaned) ? 0f : _tipBodyStyle.CalcHeight(content, boxW - pad * 2f);
 
                 if (richTooltipCache.Count >= 96) richTooltipCache.Clear();
                 cachedTooltip = (content, height);
@@ -1942,10 +2058,13 @@ namespace BlockStoryLens
 
             GUIContent bodyContent = cachedTooltip.Content;
             float bodyH = cachedTooltip.Height;
-            float headerH = 52f;
-            float durBarExtra = hasDurabilityBar ? 14f : 0f;
-            float footerH = 22f;
-            float boxH = headerH + durBarExtra + bodyH + footerH + 18f;
+            bool hasBody = bodyH > 1f;
+
+            float headerH = 54f;
+            float durSectionH = hasDurabilityBar ? 26f : 0f;
+            float bodySectionH = hasBody ? (bodyH + 12f) : 0f;
+            float footerH = 28f;
+            float boxH = pad + headerH + durSectionH + bodySectionH + footerH + 6f;
 
             Vector2 mousePos = Input.mousePosition;
             float x = mousePos.x + 22f;
@@ -1959,30 +2078,92 @@ namespace BlockStoryLens
             if (y < 12f) y = 12f;
 
             Rect boxRect = new Rect(x, y, boxW, boxH);
-            DrawWoodPanel(boxRect, 0.98f);
-            GUI.DrawTexture(new Rect(x + 6, y + 6, boxW - 12, boxH - 12), GetColorTexture(new Color(0.08f, 0.05f, 0.03f, 0.72f)));
 
-            Rect slotRect = new Rect(x + 12, y + 10, 44, 44);
-            DrawInvSlot(slotRect);
-            DrawItemIcon(new Rect(slotRect.x + 4, slotRect.y + 4, 36, 36), baseItem, item.color);
-
-            DrawShadowLabel(new Rect(x + 64, y + 14, boxW - 76, 34), itemName, titleStyle, new Color(0.65f, 1.0f, 0.30f), Color.black);
-
-            float curY = y + 58f;
-            if (hasDurabilityBar)
+            using (Aether.Nano.NanoMotion.BeginSlide(tipAnim, 0f, 5f))
             {
-                Rect barBg = new Rect(x + 14, curY, boxW - 28, 8);
-                GUI.DrawTexture(barBg, GetColorTexture(new Color(0.18f, 0.06f, 0.06f, 0.95f)));
-                Color barCol = durRatio > 0.55f
-                    ? new Color(0.20f, 0.85f, 0.25f, 0.95f)
-                    : (durRatio > 0.25f ? new Color(0.95f, 0.80f, 0.15f, 0.95f) : new Color(0.95f, 0.22f, 0.20f, 0.95f));
-                GUI.DrawTexture(new Rect(x + 14, curY, (boxW - 28) * durRatio, 8), GetColorTexture(barCol));
-                curY += 14f;
-            }
+                // Floating crystal-ink squircle surface (crystal translucency reserved for floating layers!)
+                Aether.Nano.NanoSurface.DrawCardSurface(
+                    boxRect,
+                    new Color(0.092f, 0.074f, 0.058f, 0.93f),
+                    new Color(0.045f, 0.037f, 0.029f, 0.95f),
+                    new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.42f),
+                    Aether.Nano.NanoBrand.Ember,
+                    new Color(1f, 0.96f, 0.90f, 0.14f),
+                    11f, 1f, 0f, 0f);
 
-            GUI.Label(new Rect(x + 14, curY, boxW - 28, bodyH + 4f), bodyContent, richTooltipStyle);
-            DrawShadowLabel(new Rect(x + 14, y + boxH - 26f, boxW - 26f, 18f),
-                Aether.Loader.Hosting.ExternalModCatalog.ResolveItemOwner(baseItem.name) ?? "Block Story", subStyle, new Color(0.55f, 0.90f, 1.0f), Color.black);
+                // Item icon recessed slot + editorial title + category/slot subtitle
+                Rect slotRect = new Rect(x + pad, y + pad, 44f, 44f);
+                Aether.Nano.NanoSurface.DrawDebossedSlot(slotRect, new Color(0.042f, 0.034f, 0.027f, 0.94f), Aether.Nano.NanoBrand.Line, 8f);
+                DrawItemIcon(new Rect(slotRect.x + 4f, slotRect.y + 4f, 36f, 36f), baseItem, item.color);
+
+                float tx = slotRect.xMax + 10f;
+                float tw = boxRect.xMax - tx - pad;
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(tx, y + pad + 1f, tw, 24f),
+                    itemName, _tipTitleStyle, Aether.Nano.NanoBrand.PaperLight, 0.4f);
+
+                string subtitle = baseItem.category.ToString();
+                if (baseItem.slot != InvBaseItem.Slot.None && baseItem.slot != InvBaseItem.Slot._LastDoNotUse)
+                    subtitle += $"  ·  {baseItem.slot}";
+                else if (!hasDurabilityBar && item.count > 1)
+                    subtitle += $"  ·  ×{item.count}";
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(tx, y + pad + 26f, tw, 16f),
+                    subtitle, _tipMetaStyle, Aether.Nano.NanoBrand.Mute, 0.25f);
+
+                float curY = y + pad + headerH;
+
+                // Beveled durability bar + tabular numeric readout
+                if (hasDurabilityBar)
+                {
+                    Color barCol = durRatio > 0.55f
+                        ? Aether.Nano.NanoBrand.Ok
+                        : (durRatio > 0.25f ? Aether.Nano.NanoBrand.Warn : Aether.Nano.NanoBrand.Bad);
+                    float barW = boxW - pad * 2f - 104f;
+                    Aether.Nano.NanoSurface.DrawProgressBar(
+                        new Rect(x + pad, curY + 4f, Mathf.Max(60f, barW), 9f),
+                        durRatio, 0f,
+                        new Color(0.04f, 0.032f, 0.026f, 0.92f),
+                        Aether.Nano.NanoBrand.Line,
+                        barCol, Color.clear, 4f);
+
+                    string durText = $"{curDur}/{maxDur} ({durRatio * 100f:F0}%)";
+                    Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(x + pad + barW + 8f, curY, 96f, 17f),
+                        durText, _tipMetaStyle, barCol, 0.3f);
+                    curY += durSectionH;
+                }
+
+                // Item description body
+                if (hasBody)
+                {
+                    Aether.Nano.NanoSurface.FillRounded(new Rect(x + pad, curY, boxW - pad * 2f, 1f), Aether.Nano.NanoBrand.Line, 0.5f);
+                    curY += 7f;
+                    GUI.Label(new Rect(x + pad, curY, boxW - pad * 2f, bodyH + 4f), bodyContent, _tipBodyStyle);
+                    curY += bodyH + 5f;
+                }
+
+                // Footer: subtle divider + value chip (left) + owner mod chip (right)
+                float footerY = boxRect.yMax - footerH;
+                Aether.Nano.NanoSurface.FillRounded(new Rect(x + pad, footerY - 2f, boxW - pad * 2f, 1f), Aether.Nano.NanoBrand.Line, 0.5f);
+
+                if (item.price > 0)
+                {
+                    string priceText = $"◆ {item.price}";
+                    _menuMeasure.text = priceText;
+                    float pw = Mathf.Max(46f, _tipChipStyle.CalcSize(_menuMeasure).x + 12f);
+                    Aether.Nano.NanoSurface.DrawChip(new Rect(x + pad, footerY + 4f, pw, 18f), priceText, _tipChipStyle,
+                        new Color(0.14f, 0.11f, 0.055f, 0.90f),
+                        new Color(Aether.Nano.NanoBrand.Warn.r, Aether.Nano.NanoBrand.Warn.g, Aether.Nano.NanoBrand.Warn.b, 0.50f),
+                        Aether.Nano.NanoBrand.Warn, 5f);
+                }
+
+                string owner = Aether.Loader.Hosting.ExternalModCatalog.ResolveItemOwner(baseItem.name) ?? "Block Story";
+                bool isThirdParty = !string.Equals(owner, "Block Story", StringComparison.OrdinalIgnoreCase);
+                _menuMeasure.text = owner;
+                float ow = Mathf.Min(boxW * 0.55f, Mathf.Max(58f, _tipChipStyle.CalcSize(_menuMeasure).x + 14f));
+                Aether.Nano.NanoSurface.DrawChip(new Rect(boxRect.xMax - pad - ow, footerY + 4f, ow, 18f), owner, _tipChipStyle,
+                    isThirdParty ? new Color(0.18f, 0.10f, 0.05f, 0.92f) : new Color(0.08f, 0.064f, 0.050f, 0.90f),
+                    isThirdParty ? new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.60f) : Aether.Nano.NanoBrand.Line,
+                    isThirdParty ? Aether.Nano.NanoBrand.EmberSoft : Aether.Nano.NanoBrand.Mute, 5f);
+            }
         }
 
         // =====================================================================
@@ -1996,38 +2177,98 @@ namespace BlockStoryLens
         private static Aether.Nano.NanoPage FindNanoPage(Aether.Loader.Hosting.ExternalMod ext)
             => Aether.Nano.NanoPages.Find(ext.Id) ?? Aether.Nano.NanoPages.Find(ext.Name);
 
-        /// <summary>Enable switch and settings button for a third-party mod, when the mod exposes them.</summary>
-        private void DrawExternalModControls(Aether.Loader.Hosting.ExternalMod ext, float width)
+        private static void EnsureModMenuStyles()
         {
-            DrawShadowLabel(new Rect(10, 236, width - 24, 22), Tr("THIRD-PARTY MOD", "MOD DE TERCEROS"),
-                sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+            if (_menuRowTitleStyle != null) return;
+            _menuRowTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 13, Aether.Nano.NanoBrand.Paper);
+            _menuRowCompactStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 12, Aether.Nano.NanoBrand.Paper);
+            _menuTabStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.BodySemi, 12, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+            _menuRowMetaStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute);
+            _menuDetailTitleStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 22, Aether.Nano.NanoBrand.Paper);
+            _menuDetailMetaStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 11, Aether.Nano.NanoBrand.Mute);
+            _menuDetailDescStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Body, 13, new Color(0.92f, 0.88f, 0.78f, 0.90f), TextAnchor.UpperLeft, true);
+            _menuChipStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 10, Aether.Nano.NanoBrand.Mute, TextAnchor.MiddleCenter);
+            _menuInitialStyle = Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 19, Aether.Nano.NanoBrand.Paper, TextAnchor.MiddleCenter);
+        }
 
-            float y = 262f;
+        private void DrawModMenuShell(Rect winRect)
+        {
+            string uiTheme = HudCustomizerModule.UiDesignTheme != null ? HudCustomizerModule.UiDesignTheme.Value : "Aether";
+            if (string.Equals(uiTheme, "NativeWood", StringComparison.OrdinalIgnoreCase))
+            {
+                DrawWoodPanel(winRect, 1.0f);
+                return;
+            }
+
+            Color bgTop, bgBot, border, spec;
+            switch (uiTheme)
+            {
+                case "AncientStone":
+                    bgTop = new Color(0.085f, 0.100f, 0.125f, 0.97f);
+                    bgBot = new Color(0.048f, 0.058f, 0.075f, 0.98f);
+                    border = new Color(0.24f, 0.29f, 0.36f, 0.95f);
+                    spec = new Color(0.86f, 0.92f, 0.98f, 0.12f);
+                    break;
+                case "DwarvenGold":
+                    bgTop = new Color(0.110f, 0.082f, 0.042f, 0.97f);
+                    bgBot = new Color(0.058f, 0.042f, 0.020f, 0.98f);
+                    border = new Color(0.42f, 0.31f, 0.14f, 0.95f);
+                    spec = new Color(1.0f, 0.90f, 0.66f, 0.15f);
+                    break;
+                case "ArcaneGlass":
+                    bgTop = new Color(0.088f, 0.072f, 0.125f, 0.93f);
+                    bgBot = new Color(0.044f, 0.036f, 0.068f, 0.95f);
+                    border = new Color(0.32f, 0.26f, 0.44f, 0.85f);
+                    spec = new Color(0.88f, 0.84f, 0.98f, 0.15f);
+                    break;
+                case "Aether":
+                default:
+                    bgTop = new Color(0.090f, 0.072f, 0.056f, 0.97f);
+                    bgBot = new Color(0.047f, 0.039f, 0.031f, 0.98f);
+                    border = Aether.Nano.NanoBrand.Line;
+                    spec = new Color(0.98f, 0.93f, 0.85f, 0.11f);
+                    break;
+            }
+
+            Aether.Nano.NanoSurface.DrawCardSurface(winRect, bgTop, bgBot, border, Aether.Nano.NanoBrand.Ember, spec, 14f, 1f, 0f, 0f);
+        }
+
+        /// <summary>Enable switch and settings button for a third-party mod, when the mod exposes them.</summary>
+        private void DrawExternalModControls(Aether.Loader.Hosting.ExternalMod ext, float width, float startY)
+        {
+            float pad = 12f;
+            float colW = Mathf.Max(220f, width - pad * 2f);
+            float y = Aether.Nano.NanoSurface.DrawSectionHeader(new Rect(pad, startY, colW, 28f), startY,
+                Tr("Third-party mod", "Mod de terceros"), ext.Source);
+
             if (ext.GetEnabled != null && ext.SetEnabled != null)
             {
                 bool on = true;
                 try { on = ext.GetEnabled(); } catch { }
-                string label = on ? Tr("Enabled (click to disable)", "Activado (clic para desactivar)")
-                                  : Tr("Disabled (click to enable)", "Desactivado (clic para activar)");
-                if (DrawNativeWoodButton(new Rect(12, y, 300, 32), label, on))
+                bool next = Aether.Nano.NanoSurface.DrawToggleRow(
+                    new Rect(pad, y, Mathf.Min(340f, colW), 32f),
+                    on ? Tr("Enabled", "Activado") : Tr("Disabled", "Desactivado"),
+                    on);
+                if (next != on)
                 {
-                    try { ext.SetEnabled(!on); } catch { }
+                    try { ext.SetEnabled(next); } catch { }
                 }
                 y += 40f;
             }
 
             if (ext.OpenConfig != null &&
-                DrawNativeWoodButton(new Rect(12, y, 300, 32), Tr("Open mod settings", "Abrir ajustes del mod"), false))
+                Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad, y, Mathf.Min(240f, colW), 32f), Tr("Open mod settings", "Abrir ajustes del mod"), false))
             {
                 SetModMenuOpen(false);
                 try { ext.OpenConfig(); } catch { }
                 return;
             }
 
-            DrawShadowLabel(new Rect(10, y + 44, width - 28, 60),
+            if (ext.OpenConfig != null) y += 42f;
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, y, colW, 48f),
                 Tr("Loaded by " + ext.Source + ". Aether lists it here; its own settings stay in the mod.",
                    "Cargado por " + ext.Source + ". Aether lo lista aquí; sus ajustes siguen en el mod."),
-                descStyle, new Color(0.96f, 0.94f, 0.88f), Color.black);
+                _menuDetailDescStyle, Aether.Nano.NanoBrand.Mute, 0.3f);
         }
 
         private float lastCatalogRefresh;
@@ -2038,65 +2279,102 @@ namespace BlockStoryLens
         private const string MottoEn = "Everything is open, everything is for everyone, and we all rely on each other.";
         private const string MottoEs = "Todo es libre, todo es para todos y todos dependemos de todos.";
 
-        private void DrawModMenuGUI()
+        private void DrawModMenuGUI(float anim = 1f)
         {
+            EnsureModMenuStyles();
+
             // Hosted plugins start on frame 0 and can come and go; keep the list current while the menu is open.
-            if (Time.unscaledTime - lastCatalogRefresh > 2f)
+            if (isModMenuOpen && Time.unscaledTime - lastCatalogRefresh > 2f)
             {
                 lastCatalogRefresh = Time.unscaledTime;
                 RefreshModCatalog();
             }
 
             Rect fullScreen = new Rect(0, 0, Screen.width, Screen.height);
-            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0f, 0f, 0f, 0.70f)));
+            GUI.DrawTexture(fullScreen, GetColorTexture(new Color(0.02f, 0.015f, 0.012f, 0.74f * anim)));
 
-            float winWidth = Mathf.Min(1000f, Screen.width - 40f);
-            float winHeight = Mathf.Min(640f, Screen.height - 40f);
+            float winWidth = Mathf.Min(1020f, Screen.width - 40f);
+            float winHeight = Mathf.Min(660f, Screen.height - 40f);
             float winX = (Screen.width - winWidth) * 0.5f;
             float winY = (Screen.height - winHeight) * 0.5f;
             Rect winRect = new Rect(winX, winY, winWidth, winHeight);
 
-            DrawWoodPanel(winRect, 1.0f);
+            using (Aether.Nano.NanoMotion.BeginModal(winRect, anim))
+            {
+            DrawModMenuShell(winRect);
 
-            // Header
-            Rect headerRect = new Rect(winX + 24, winY + 10, winWidth - 230, 36);
+            // Integrated top bar (no decorative top stripe)
+            float topBarH = 54f;
+            Rect headerHit = new Rect(winX + 16f, winY + 9f, winWidth - 220f, 36f);
             bool showMotto = Time.unscaledTime < mottoUntil;
-            DrawAetherHeader(headerRect, Tr("Mods", "Mods"), showMotto
+            string metaText = showMotto
                 ? Tr(MottoEn, MottoEs)
-                : Tr($"{RealModCount()} loaded  ·  aether {AetherBootstrap.PluginVersion}", $"{RealModCount()} cargados  ·  aether {AetherBootstrap.PluginVersion}"));
-            if (GUI.Button(headerRect, GUIContent.none, GUIStyle.none))
+                : Tr($"{RealModCount()} loaded  ·  aether {AetherBootstrap.PluginVersion}", $"{RealModCount()} cargados  ·  aether {AetherBootstrap.PluginVersion}");
+
+            float hx = headerHit.x + 2f;
+            const float cubeH = 22f;
+            if (Aether.Nano.NanoBrand.Cube != null)
+                hx += Aether.Nano.NanoBrand.DrawCube(hx, headerHit.y + (headerHit.height - cubeH) * 0.5f, cubeH) + 10f;
+
+            string titleWord = "aether";
+            _aetherTitleStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Display, 21, Aether.Nano.NanoBrand.Paper);
+            _aetherMetaStyle ??= Aether.Nano.NanoBrand.Style(Aether.Nano.NanoBrand.Mono, 11, Aether.Nano.NanoBrand.Mute);
+            _menuMeasure.text = titleWord;
+            float wordW = _aetherTitleStyle.CalcSize(_menuMeasure).x;
+            bool headerHover = headerHit.Contains(Event.current.mousePosition);
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hx, headerHit.y, wordW + 4f, headerHit.height),
+                titleWord, _aetherTitleStyle, headerHover ? Aether.Nano.NanoBrand.Ember : Aether.Nano.NanoBrand.Paper, 0.4f);
+            hx += wordW + 12f;
+            Aether.Nano.NanoSurface.FillRounded(new Rect(hx, headerHit.y + 10f, 1f, 16f), Aether.Nano.NanoBrand.Line, 0.5f);
+            hx += 12f;
+            Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hx, headerHit.y + 1f, Mathf.Max(40f, headerHit.xMax - hx), headerHit.height),
+                metaText, _aetherMetaStyle, showMotto ? Aether.Nano.NanoBrand.EmberSoft : Aether.Nano.NanoBrand.Mute, 0.3f);
+
+            if (GUI.Button(headerHit, GUIContent.none, GUIStyle.none))
             {
                 mottoClicks = Time.unscaledTime - mottoLastClick < 1.5f ? mottoClicks + 1 : 1;
                 mottoLastClick = Time.unscaledTime;
                 if (mottoClicks >= 7) { mottoClicks = 0; mottoUntil = Time.unscaledTime + 6f; }
             }
 
-            Rect dragHudBtnRect = new Rect(winX + winWidth - 190f, winY + 12f, 130f, 32f);
-            if (DrawNativeWoodButton(dragHudBtnRect, Tr("✥ Drag HUD", "✥ Arrastrar HUD"), false, new Color(0.40f, 0.85f, 1.0f, 1.0f)))
+            Rect dragHudBtnRect = new Rect(winX + winWidth - 188f, winY + 12f, 134f, 30f);
+            if (Aether.Nano.NanoSurface.DrawActionButton(dragHudBtnRect, Tr("Edit HUD", "Editar HUD"), false))
             {
-                SetDraggingHudElements(true);
+                if (Aether.Nano.NanoHud.OpenCanvasEditor != null)
+                {
+                    SetModMenuOpen(false);
+                    Aether.Nano.NanoHud.OpenCanvasEditor();
+                }
+                else
+                {
+                    SetDraggingHudElements(true);
+                }
                 return;
             }
 
-            Rect closeBtnRect = new Rect(winX + winWidth - 54, winY + 12, 38, 32);
-            if (DrawNativeWoodButton(closeBtnRect, "X", false, new Color(1.0f, 0.55f, 0.55f, 1.0f)))
+            Rect closeBtnRect = new Rect(winX + winWidth - 46f, winY + 12f, 32f, 30f);
+            if (Aether.Nano.NanoSurface.DrawActionButton(closeBtnRect, "×", false))
             {
                 SetModMenuOpen(false);
                 return;
             }
 
-            // Left Sidebar: Mod Cards List
-            float leftW = 310f;
-            float contentY = winY + 52f;
-            float contentH = winHeight - 66f;
+            // Clean 1px hairline below top bar
+            Aether.Nano.NanoSurface.FillRounded(new Rect(winX + 14f, winY + topBarH, winWidth - 28f, 1f), Aether.Nano.NanoBrand.Line, 0.5f);
 
-            Rect leftPanelBg = new Rect(winX + 14, contentY, leftW, contentH);
-            GUI.DrawTexture(leftPanelBg, GetColorTexture(new Color(0.08f, 0.05f, 0.03f, 0.55f)));
+            // Body layout: Left recessed mod sidebar + Right recessed detail/settings column
+            float leftW = 316f;
+            float contentY = winY + topBarH + 10f;
+            float contentH = winHeight - topBarH - 24f;
 
-            Rect listRect = new Rect(winX + 18, contentY + 6, leftW - 8, contentH - 12);
-            float totalListH = registeredMods.Count * 66f;
+            Rect leftPanelBg = new Rect(winX + 14f, contentY, leftW, contentH);
+            Aether.Nano.NanoSurface.DrawDebossedSlot(leftPanelBg, new Color(0.038f, 0.030f, 0.024f, 0.88f), Aether.Nano.NanoBrand.Line, 10f);
 
-            scrollListPos = GUI.BeginScrollView(listRect, scrollListPos, new Rect(0, 0, leftW - 28, totalListH));
+            Rect listRect = new Rect(leftPanelBg.x + 6f, leftPanelBg.y + 6f, leftW - 12f, contentH - 12f);
+            float cardStep = 62f;
+            float totalListH = registeredMods.Count * cardStep;
+
+            scrollListPos = Aether.Nano.NanoSurface.BeginScrollView(listRect, scrollListPos, totalListH, out float rowW);
 
             for (int i = 0; i < registeredMods.Count; i++)
             {
@@ -2105,46 +2383,75 @@ namespace BlockStoryLens
                 string modTitle = IsSpanish() ? mod.NameEs : mod.NameEn;
                 string listTitle = CompactListTitle(mod.Id, modTitle);
 
-                Rect cardRect = new Rect(0, i * 66f, leftW - 28, 60f);
+                Rect cardRect = new Rect(0f, i * cardStep, rowW, 56f);
                 if (GUI.Button(cardRect, GUIContent.none, GUIStyle.none))
                 {
                     SelectModRow(i);
                 }
 
-                bool hovered = cardRect.Contains(Event.current.mousePosition);
-                DrawDarkSlotBox(cardRect, isSelected, hovered);
-
-                Rect logoSlot = new Rect(cardRect.x + 8, cardRect.y + 8, 44, 44);
-                DrawInvSlot(logoSlot);
-                InvBaseItem iconItem = SafeFindItemByName(mod.IconItemName);
-                if (!DrawItemIcon(new Rect(logoSlot.x + 4, logoSlot.y + 4, 36, 36), iconItem))
+                if (Event.current.type == EventType.Repaint)
                 {
-                    DrawShadowLabel(logoSlot, string.IsNullOrEmpty(listTitle) ? "?" : listTitle.Substring(0, 1), woodBtnTextStyle, mod.AccentColor, Color.black);
+                    bool hovered = cardRect.Contains(Event.current.mousePosition);
+                    if (isSelected)
+                    {
+                        Aether.Nano.NanoSurface.FillRoundedGradient(cardRect,
+                            new Color(0.155f, 0.120f, 0.094f, 0.98f),
+                            new Color(0.100f, 0.078f, 0.062f, 0.98f), 9f);
+                        Aether.Nano.NanoSurface.FillRounded(new Rect(cardRect.x + 7f, cardRect.y + 1f, cardRect.width - 14f, 1f),
+                            new Color(1f, 0.95f, 0.88f, 0.10f), 0.5f);
+                        Aether.Nano.NanoSurface.StrokeRounded(cardRect,
+                            new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.55f), 1f, 9f);
+                    }
+                    else
+                    {
+                        Color bg = hovered
+                            ? new Color(0.115f, 0.090f, 0.072f, 0.92f)
+                            : new Color(0.070f, 0.056f, 0.045f, 0.78f);
+                        Color bd = hovered ? new Color(0.28f, 0.22f, 0.17f, 0.90f) : Aether.Nano.NanoBrand.Line;
+                        Aether.Nano.NanoSurface.FillRounded(cardRect, bg, 9f);
+                        Aether.Nano.NanoSurface.StrokeRounded(cardRect, bd, 1f, 9f);
+                    }
+
+                    // Debossed squircle logo slot (custom PNG icon -> Aether Cube -> game item -> monogram)
+                    Rect logoSlot = new Rect(cardRect.x + 8f, cardRect.y + 8f, 40f, 40f);
+                    DrawModLogoSlot(logoSlot, mod, listTitle, isSelected, false);
+
+                    // Active state sign (filled Ember rhombus, zero side/top stripes)
+                    float textX = cardRect.x + 56f;
+                    float textMaxW = cardRect.width - 134f;
+                    float nameX = textX;
+                    if (isSelected)
+                    {
+                        Aether.Nano.NanoSurface.DrawRhombus(new Rect(nameX, cardRect.y + 15f, 7f, 7f), Aether.Nano.NanoBrand.Ember, true);
+                        nameX += 11f;
+                    }
+
+                    GUIStyle rowNameStyle = (listTitle != null && listTitle.Length > 18) ? _menuRowCompactStyle : _menuRowTitleStyle;
+                    Aether.Nano.NanoSurface.DrawCrispLabel(
+                        new Rect(nameX, cardRect.y + 8f, Mathf.Max(40f, textX + textMaxW - nameX), 20f),
+                        listTitle, rowNameStyle, isSelected ? Aether.Nano.NanoBrand.PaperLight : Aether.Nano.NanoBrand.Paper, 0.4f);
+
+                    int moduleCount = mod.FeatureIds != null ? mod.FeatureIds.Length : 0;
+                    string versionLine = $"v{mod.Version}";
+                    if (moduleCount > 1)
+                        versionLine += Tr($" · {moduleCount} mods", $" · {moduleCount} mód.");
+                    Aether.Nano.NanoSurface.DrawCrispLabel(
+                        new Rect(textX, cardRect.y + 30f, textMaxW, 16f),
+                        versionLine, _menuRowMetaStyle, Aether.Nano.NanoBrand.Mute, 0.3f);
+
+                    DrawOriginBadge(cardRect, mod);
                 }
-
-                GUIStyle rowNameStyle = (listTitle != null && listTitle.Length > 20) ? compactNameStyle : modNameStyle;
-                DrawShadowLabel(new Rect(cardRect.x + 58, cardRect.y + 8, cardRect.width - 126, 22), listTitle, rowNameStyle, isSelected ? new Color(0.75f, 1.0f, 0.35f) : Color.white, Color.black);
-
-                int moduleCount = mod.FeatureIds != null ? mod.FeatureIds.Length : 0;
-                string versionLine = $"v{mod.Version}";
-                // The row label is ~140 px wide: a long "v0.1.0-alpha • 1 module(s)" wrapped onto a second line and
-                // smeared over the first. Only show the count when it says something (more than one module).
-                if (moduleCount > 1)
-                    versionLine += Tr($" • {moduleCount} mods", $" • {moduleCount} mód.");
-                DrawShadowLabel(new Rect(cardRect.x + 58, cardRect.y + 30, cardRect.width - 126, 18), versionLine, authorStyle, new Color(0.90f, 0.84f, 0.72f), Color.black);
-
-                DrawOriginBadge(cardRect, mod);
             }
 
-            GUI.EndScrollView();
+            Aether.Nano.NanoSurface.EndScrollView();
 
             // Right Panel: Mod Details & Interactive Settings
-            float rightX = winX + leftW + 26f;
-            float rightW = winWidth - (leftW + 40f);
+            float rightX = leftPanelBg.xMax + 10f;
+            float rightW = winX + winWidth - 14f - rightX;
             Rect rightPanelBg = new Rect(rightX, contentY, rightW, contentH);
-            GUI.DrawTexture(rightPanelBg, GetColorTexture(new Color(0.08f, 0.05f, 0.03f, 0.55f)));
+            Aether.Nano.NanoSurface.DrawDebossedSlot(rightPanelBg, new Color(0.040f, 0.032f, 0.026f, 0.88f), Aether.Nano.NanoBrand.Line, 10f);
 
-            Rect rightRect = new Rect(rightX + 8, contentY + 8, rightW - 16, contentH - 16);
+            Rect rightRect = new Rect(rightPanelBg.x + 6f, rightPanelBg.y + 6f, rightW - 12f, contentH - 12f);
 
             if (selectedModIndex >= 0 && selectedModIndex < registeredMods.Count)
             {
@@ -2154,178 +2461,211 @@ namespace BlockStoryLens
 
                 bool hasModules = mod.FeatureIds != null && mod.FeatureIds.Length > 0;
                 bool hasModulePicker = mod.FeatureIds != null && mod.FeatureIds.Length > 1;
-                int moduleRows = hasModulePicker ? Mathf.CeilToInt(mod.FeatureIds.Length / 2f) : 0;
-                float settingsBaseY = hasModulePicker ? 260f + moduleRows * 32f + 8f : 236f;
+                float pickerH = hasModulePicker ? 46f : 0f;
+                float settingsBaseY = 178f + pickerH;
+
                 Aether.Nano.NanoPage nanoPage = mod.External != null ? FindNanoPage(mod.External) : null;
                 float panelHeight = nanoPage != null
                     ? nanoPage.ContentHeight
                     : selectedFeatureId == HealthFeatureId
-                    ? 1300f
+                    ? 1240f
                     : 640f;
-                float detailContentHeight = Mathf.Max(820f, settingsBaseY + panelHeight);
+                float detailContentHeight = Mathf.Max(contentH - 16f, settingsBaseY + panelHeight);
 
-                scrollDetailPos = GUI.BeginScrollView(rightRect, scrollDetailPos, new Rect(0, 0, rightRect.width - 20, detailContentHeight));
-
-                Rect bigLogo = new Rect(10, 8, 56, 56);
-                DrawInvSlot(bigLogo);
-                InvBaseItem iconItem = SafeFindItemByName(mod.IconItemName);
-                if (!DrawItemIcon(new Rect(bigLogo.x + 6, bigLogo.y + 6, 44, 44), iconItem))
+                scrollDetailPos = Aether.Nano.NanoSurface.BeginScrollView(rightRect, scrollDetailPos, detailContentHeight, out float innerW);
+                try
                 {
-                    DrawShadowLabel(bigLogo, string.IsNullOrEmpty(modTitle) ? "?" : modTitle.Substring(0, 1), menuHeaderStyle, mod.AccentColor, Color.black);
-                }
 
-                DrawShadowLabel(new Rect(76, 10, rightRect.width - 90, 26), modTitle, menuTitleStyle, new Color(0.65f, 1.0f, 0.30f), Color.black);
-                string metaLine = $"{Tr("Version", "Versión")}: {mod.Version}   |   {Tr("Author", "Autor")}: {mod.Author}";
-                DrawShadowLabel(new Rect(76, 36, rightRect.width - 90, 20), metaLine, authorStyle, new Color(0.90f, 0.84f, 0.72f), Color.black);
+                // Hero header for selected mod
+                float pad = 12f;
+                Rect bigLogo = new Rect(pad, 10f, 52f, 52f);
+                DrawModLogoSlot(bigLogo, mod, modTitle, true, true);
 
-                string idLine = $"{Tr("ID", "ID")}: {mod.Id}";
-                if (mod.LoadOrder > 0)
-                    idLine += $"   |   {Tr("Load order", "Orden de carga")}: #{mod.LoadOrder}";
-                if (!string.IsNullOrEmpty(mod.Dependencies))
-                    idLine += $"   |   {Tr("Depends", "Depende")}: {mod.Dependencies}";
-                DrawShadowLabel(new Rect(76, 56, rightRect.width - 90, 18), idLine, authorStyle, new Color(0.80f, 0.88f, 1.0f), Color.black);
+                float hTextX = bigLogo.xMax + 14f;
+                float hTextW = Mathf.Max(120f, innerW - hTextX - pad);
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hTextX, 9f, hTextW, 28f), modTitle, _menuDetailTitleStyle, Aether.Nano.NanoBrand.Paper, 0.45f);
 
+                string metaLine = $"v{mod.Version}  ·  {mod.Author}";
+                if (mod.LoadOrder > 0) metaLine += $"  ·  #{mod.LoadOrder}";
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(hTextX, 39f, hTextW, 18f), metaLine, _menuDetailMetaStyle, Aether.Nano.NanoBrand.Mute, 0.3f);
+
+                // Compact mono metadata chips (ID + Source file)
+                float chipX = pad;
+                float chipY = 72f;
+                chipX = DrawInfoChip(chipX, chipY, innerW - pad, mod.Id);
                 if (!string.IsNullOrEmpty(mod.SourcePath))
-                {
-                    DrawShadowLabel(new Rect(10, 74, rightRect.width - 24, 22),
-                        $"{Tr("Source", "Origen")}: {CompactSourcePath(mod.SourcePath)}", sourceStyle,
-                        new Color(0.72f, 0.76f, 0.82f), Color.black);
-                }
+                    chipX = DrawInfoChip(chipX, chipY, innerW - pad, CompactSourcePath(mod.SourcePath));
+                if (!string.IsNullOrEmpty(mod.Dependencies))
+                    DrawInfoChip(chipX, chipY, innerW - pad, Tr("Requires: ", "Req: ") + mod.Dependencies);
 
-                DrawShadowLabel(new Rect(10, 98, rightRect.width - 24, 22), Tr("DESCRIPTION", "DESCRIPCIÓN"), sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-                DrawShadowLabel(new Rect(10, 120, rightRect.width - 28, 108), modDesc, descStyle, new Color(0.96f, 0.94f, 0.88f), Color.black);
+                // Description
+                Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, 98f, innerW - pad * 2f, 62f),
+                    modDesc, _menuDetailDescStyle, new Color(0.92f, 0.88f, 0.78f, 0.90f), 0.3f);
 
-                // Built-in suite panels grouped under their owning real mod.
+                // Hairline divider
+                Aether.Nano.NanoSurface.FillRounded(new Rect(pad, 166f, innerW - pad * 2f, 1f), Aether.Nano.NanoBrand.Line, 0.5f);
+
+                // Built-in suite module tabs (horizontal squircle bar, zero green wood buttons)
                 if (hasModulePicker)
                 {
-                    DrawShadowLabel(new Rect(10, 236, rightRect.width - 24, 22), Tr("BUILT-IN MODULES", "MÓDULOS INTEGRADOS"), sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+                    float barY = 176f;
+                    float barW = innerW - pad * 2f;
+                    var barRect = new Rect(pad, barY, barW, 32f);
+                    if (Event.current.type == EventType.Repaint)
+                        Aether.Nano.NanoSurface.DrawDebossedSlot(barRect, new Color(0.055f, 0.044f, 0.036f, 0.90f), Aether.Nano.NanoBrand.Line, 8f);
 
-                    float chipW = (rightRect.width - 30f) * 0.5f;
-                    for (int f = 0; f < mod.FeatureIds.Length; f++)
+                    int count = mod.FeatureIds.Length;
+                    float segGap = 3f;
+                    float segW = (barW - 6f - segGap * (count - 1)) / Mathf.Max(1, count);
+                    for (int f = 0; f < count; f++)
                     {
                         if (!TryGetSuiteFeature(mod.FeatureIds[f], out ModInfoEntry feature)) continue;
-
                         bool isSel = string.Equals(selectedFeatureId, feature.Id, StringComparison.OrdinalIgnoreCase);
-                        float bx = 10f + (f % 2) * (chipW + 10f);
-                        float by = 260f + (f / 2) * 32f;
-                        if (DrawNativeWoodButton(new Rect(bx, by, chipW, 28f), Tr(feature.NameEn, feature.NameEs), isSel))
-                        {
+                        var segRect = new Rect(barRect.x + 3f + f * (segW + segGap), barRect.y + 3f, segW, barRect.height - 6f);
+                        bool hov = segRect.Contains(Event.current.mousePosition);
+                        if (GUI.Button(segRect, GUIContent.none, GUIStyle.none) && !isSel)
                             SelectModRow(selectedModIndex, feature.Id);
+
+                        if (Event.current.type == EventType.Repaint)
+                        {
+                            if (isSel)
+                            {
+                                Aether.Nano.NanoSurface.FillRoundedGradient(segRect,
+                                    new Color(0.19f, 0.148f, 0.115f, 0.98f),
+                                    new Color(0.125f, 0.098f, 0.076f, 0.98f), 6f);
+                                Aether.Nano.NanoSurface.StrokeRounded(segRect,
+                                    new Color(Aether.Nano.NanoBrand.Ember.r, Aether.Nano.NanoBrand.Ember.g, Aether.Nano.NanoBrand.Ember.b, 0.52f), 1f, 6f);
+                            }
+                            else if (hov)
+                            {
+                                Aether.Nano.NanoSurface.FillRounded(segRect, new Color(0.13f, 0.10f, 0.08f, 0.65f), 6f);
+                            }
+
+                            string tabLabel = Tr(feature.NameEn, feature.NameEs);
+                            Aether.Nano.NanoSurface.DrawCrispLabel(segRect, tabLabel,
+                                _menuTabStyle,
+                                isSel ? Aether.Nano.NanoBrand.PaperLight : (hov ? Aether.Nano.NanoBrand.Paper : Aether.Nano.NanoBrand.Mute), 0.3f);
                         }
                     }
                 }
                 else if (nanoPage != null)
                 {
                     // A mod built on Aether Nano: its settings page is drawn right here, like Aether's own mods.
-                    try { nanoPage.Draw(new Rect(0, 0, rightRect.width - 20, nanoPage.ContentHeight), 236f); }
+                    try { nanoPage.Draw(new Rect(0f, 0f, innerW, nanoPage.ContentHeight), settingsBaseY); }
                     catch (Exception ex) { Log.LogWarning($"[Aether] Settings page of {nanoPage.Name} failed: {ex.Message}"); }
                 }
                 else if (mod.External != null)
                 {
-                    DrawExternalModControls(mod.External, rightRect.width);
+                    DrawExternalModControls(mod.External, innerW, settingsBaseY);
                 }
                 else if (!hasModules)
                 {
-                    DrawShadowLabel(new Rect(10, 236, rightRect.width - 24, 22),
-                        Tr("NO CONFIGURABLE SETTINGS", "SIN AJUSTES CONFIGURABLES"),
-                        sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-                    DrawShadowLabel(new Rect(10, 262, rightRect.width - 28, 60),
+                    float ny = Aether.Nano.NanoSurface.DrawSectionHeader(new Rect(pad, settingsBaseY, innerW - pad * 2f, 28f), settingsBaseY,
+                        Tr("No configurable settings", "Sin ajustes configurables"));
+                    Aether.Nano.NanoSurface.DrawCrispLabel(new Rect(pad, ny, innerW - pad * 2f, 52f),
                         Tr("This mod is loaded and running. It does not register any native suite settings panel.",
                            "Este mod está cargado y en ejecución. No registra ningún panel de ajustes de la suite nativa."),
-                        descStyle, new Color(0.96f, 0.94f, 0.88f), Color.black);
+                        _menuDetailDescStyle, Aether.Nano.NanoBrand.Mute, 0.3f);
                 }
 
-                // Interactive Settings Section
+                // Interactive Settings Section for built-in Aether shell features
                 if (selectedFeatureId == "durability")
                 {
-                    float sy = settingsBaseY;
-                    DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22), Tr("REAL-TIME SETTINGS", "AJUSTES EN TIEMPO REAL"), sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+                    float colW = innerW - pad * 2f;
+                    float sy = Aether.Nano.NanoSurface.DrawSectionHeader(new Rect(pad, settingsBaseY, colW, 28f), settingsBaseY,
+                        Tr("Item tooltips & durability", "Tooltips y durabilidad"));
 
-                    string hoverText = HoverTooltipEnabled.Value
-                        ? Tr("Hover Tooltip: ENABLED", "Tooltip al pasar ratón: SÍ")
-                        : Tr("Hover Tooltip: DISABLED", "Tooltip al pasar ratón: NO");
-                    if (DrawNativeWoodButton(new Rect(12, sy + 26, 245, 34), hoverText, HoverTooltipEnabled.Value))
-                    {
-                        HoverTooltipEnabled.Value = !HoverTooltipEnabled.Value;
-                    }
-
-                    string durText = DurabilityEnabled.Value
-                        ? Tr("Durability Info: ENABLED", "Durabilidad Numérica: SÍ")
-                        : Tr("Durability Info: DISABLED", "Durabilidad Numérica: NO");
-                    if (DrawNativeWoodButton(new Rect(268, sy + 26, 235, 34), durText, DurabilityEnabled.Value))
-                    {
-                        DurabilityEnabled.Value = !DurabilityEnabled.Value;
-                    }
+                    float halfW = (colW - 8f) * 0.5f;
+                    HoverTooltipEnabled.Value = Aether.Nano.NanoSurface.DrawToggleRow(
+                        new Rect(pad, sy, halfW, 32f),
+                        Tr("Rich Hover Tooltip", "Tooltip al pasar ratón"),
+                        HoverTooltipEnabled.Value);
+                    DurabilityEnabled.Value = Aether.Nano.NanoSurface.DrawToggleRow(
+                        new Rect(pad + halfW + 8f, sy, halfW, 32f),
+                        Tr("Numeric Durability", "Durabilidad numérica"),
+                        DurabilityEnabled.Value);
                 }
                 else if (selectedFeatureId == "modmenu")
                 {
-                    float sy = settingsBaseY;
-                    DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22), Tr("HUD LAYOUT PRESETS", "PRESETS DE DISEÑO DE HUD"), sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
+                    bool es = IsSpanish();
+                    float colW = innerW - pad * 2f;
+                    float halfW = (colW - 8f) * 0.5f;
+                    float sy = Aether.Nano.NanoSurface.DrawSectionHeader(new Rect(pad, settingsBaseY, colW, 28f), settingsBaseY,
+                        es ? "Diseño del HUD" : "HUD layout", HudLayoutPreset.Value);
 
-                    sy += 26f;
-                    var presets = HudPresetOptions;
-                    for (int p = 0; p < presets.Length; p++)
+                    if (Aether.Nano.NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 30f),
+                            es ? HudPresetSegmentsEs : HudPresetSegmentsEn, HudLayoutPreset.Value, out string preset))
                     {
-                        var pEntry = presets[p];
-                        bool isSel = (HudLayoutPreset.Value == pEntry.Id);
-                        float bx = 12f + (p % 2) * 245f;
-                        float by = sy + (p / 2) * 34f;
-                        if (DrawNativeWoodButton(new Rect(bx, by, 235f, 30f), Tr(pEntry.NameEn, pEntry.NameEs), isSel))
-                        {
-                            ApplyHudPreset(pEntry.Id);
-                        }
+                        ApplyHudPreset(preset);
                     }
-                    sy += 74f;
+                    sy += 38f;
 
-                    // The game's own HUD pieces Aether can move (they used to sit on Wayfinder's page).
-                    string diaText = MoveDiamondsUnderXP.Value ? Tr("Diamonds Under XP: ON", "Diamantes bajo XP: SÍ") : Tr("Diamonds Under XP: OFF", "Diamantes bajo XP: NO");
-                    if (DrawNativeWoodButton(new Rect(12, sy, 240, 30), diaText, MoveDiamondsUnderXP.Value))
+                    bool nextDia = Aether.Nano.NanoSurface.DrawToggleRow(
+                        new Rect(pad, sy, halfW, 32f),
+                        es ? "Diamantes bajo XP" : "Diamonds Under XP",
+                        MoveDiamondsUnderXP.Value);
+                    if (nextDia != MoveDiamondsUnderXP.Value)
                     {
-                        MoveDiamondsUnderXP.Value = !MoveDiamondsUnderXP.Value;
+                        MoveDiamondsUnderXP.Value = nextDia;
                         HudLayoutPreset.Value = "Custom";
                     }
-                    string btnRowText = MoveTopRightButtonsToBottomRight.Value ? Tr("Top Buttons -> Bottom: ON", "Botones -> Abajo: SÍ") : Tr("Top Buttons -> Bottom: OFF", "Botones -> Abajo: NO");
-                    if (DrawNativeWoodButton(new Rect(262, sy, 240, 30), btnRowText, MoveTopRightButtonsToBottomRight.Value))
+
+                    bool nextBtns = Aether.Nano.NanoSurface.DrawToggleRow(
+                        new Rect(pad + halfW + 8f, sy, halfW, 32f),
+                        es ? "Botones arriba → abajo" : "Top Buttons → Bottom",
+                        MoveTopRightButtonsToBottomRight.Value);
+                    if (nextBtns != MoveTopRightButtonsToBottomRight.Value)
                     {
-                        MoveTopRightButtonsToBottomRight.Value = !MoveTopRightButtonsToBottomRight.Value;
+                        MoveTopRightButtonsToBottomRight.Value = nextBtns;
                         HudLayoutPreset.Value = "Custom";
                     }
-                    sy += 36f;
+                    sy += 44f;
 
-                    // UI Design Presets (Frame Style)
-                    DrawShadowLabel(new Rect(10, sy, rightRect.width - 24, 22), Tr("UI DESIGN THEME (GAME FRAME STYLE)", "ESTILO DE DISEÑO DE INTERFAZ"), sectionTitleStyle, new Color(1.0f, 0.85f, 0.25f), Color.black);
-                    sy += 26f;
-                    var uiThemes = UiThemeOptions;
-                    for (int u = 0; u < uiThemes.Length; u++)
+                    sy = Aether.Nano.NanoSurface.DrawSectionHeader(new Rect(pad, sy, colW, 28f), sy,
+                        es ? "Estilo de ventanas" : "Window style", HudCustomizerModule.UiDesignTheme.Value);
+
+                    if (Aether.Nano.NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 30f),
+                            es ? UiThemeRow1Es : UiThemeRow1En, HudCustomizerModule.UiDesignTheme.Value, out string t1))
                     {
-                        var ut = uiThemes[u];
-                        bool isSel = (HudCustomizerModule.UiDesignTheme.Value == ut.Id);
-                        float bx = 12f + (u % 2) * 245f;
-                        float by = sy + (u / 2) * 34f;
-                        if (DrawNativeWoodButton(new Rect(bx, by, 235f, 30f), Tr(ut.NameEn, ut.NameEs), isSel))
-                        {
-                            HudCustomizerModule.UiDesignTheme.Value = ut.Id;
-                            Config.Save();
-                        }
+                        HudCustomizerModule.UiDesignTheme.Value = t1;
+                        Aether.Nano.NanoThemes.Default = t1;
+                        Config.Save();
                     }
-                    sy += 76f;
+                    sy += 34f;
+                    if (Aether.Nano.NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 30f),
+                            es ? UiThemeRow2Es : UiThemeRow2En, HudCustomizerModule.UiDesignTheme.Value, out string t2))
+                    {
+                        HudCustomizerModule.UiDesignTheme.Value = t2;
+                        Aether.Nano.NanoThemes.Default = t2;
+                        Config.Save();
+                    }
+                    sy += 44f;
 
-                    // Action buttons
-                    if (DrawNativeWoodButton(new Rect(12, sy, 320, 34), Tr("⌨ Open Keybinds Manager", "⌨ Abrir Gestor de Teclas"), true, new Color(1.0f, 0.88f, 0.35f, 1.0f)))
+                    sy = Aether.Nano.NanoSurface.DrawSectionHeader(new Rect(pad, sy, colW, 28f), sy,
+                        es ? "Herramientas" : "Tools");
+
+                    float btn3W = (colW - 16f) / 3f;
+                    if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad, sy, btn3W, 32f),
+                            es ? "Editar posiciones HUD" : "Edit HUD Layout", true))
+                    {
+                        if (Aether.Nano.NanoHud.OpenCanvasEditor != null)
+                        {
+                            SetModMenuOpen(false);
+                            Aether.Nano.NanoHud.OpenCanvasEditor();
+                            return;
+                        }
+                        isModMenuOpen = false;
+                        isDraggingHudElements = true;
+                    }
+                    if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad + btn3W + 8f, sy, btn3W, 32f),
+                            es ? "Gestor de teclas (F7)" : "Keybinds (F7)", false))
                     {
                         SetModMenuOpen(false);
                         SetKeybindsManagerOpen(true);
                         return;
                     }
-                    sy += 40f;
-
-                    if (DrawNativeWoodButton(new Rect(12, sy, 320, 34), Tr("✥ Drag All HUD Interactively", "✥ Arrastrar Todo el HUD"), true))
-                    {
-                        isModMenuOpen = false;
-                        isDraggingHudElements = true;
-                    }
-                    sy += 40f;
-                    if (DrawNativeWoodButton(new Rect(12, sy, 320, 34), Tr("↺ Reset All HUD to Defaults", "↺ Restablecer Todo por Defecto"), false, new Color(1f, 0.65f, 0.5f)))
+                    if (Aether.Nano.NanoSurface.DrawActionButton(new Rect(pad + (btn3W + 8f) * 2f, sy, btn3W, 32f),
+                            es ? "Restablecer HUD" : "Reset HUD", false))
                     {
                         HudCustomizerModule.ResetAllHudToDefaults();
                     }
@@ -2359,14 +2699,136 @@ namespace BlockStoryLens
                     DrawModHealthPanel(rightRect, settingsBaseY);
                 }
 
-                GUI.EndScrollView();
+                }
+                finally
+                {
+                    Aether.Nano.NanoSurface.EndScrollView();
+                }
             }
 
-            if (Event.current.type == EventType.MouseDown && (Time.unscaledTime - modalOpenedTimestamp > 0.35f) && !winRect.Contains(Event.current.mousePosition))
+            if (isModMenuOpen && Event.current.type == EventType.MouseDown && (Time.unscaledTime - modalOpenedTimestamp > 0.35f) && !winRect.Contains(Event.current.mousePosition))
             {
                 SetModMenuOpen(false);
                 Event.current.Use();
             }
+            }
+        }
+
+        private static readonly Dictionary<string, Assembly> _loadedAsmByName = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
+
+        private static Assembly FindLoadedAssembly(string assemblyName, string sourcePath)
+        {
+            string key = !string.IsNullOrEmpty(assemblyName) ? assemblyName : (sourcePath ?? string.Empty);
+            if (string.IsNullOrEmpty(key)) return null;
+            if (_loadedAsmByName.TryGetValue(key, out Assembly cached)) return cached;
+
+            Assembly found = null;
+            try
+            {
+                string stem = !string.IsNullOrEmpty(assemblyName)
+                    ? assemblyName
+                    : Path.GetFileNameWithoutExtension(sourcePath);
+                foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (asm == null || asm.IsDynamic) continue;
+                    if (string.Equals(asm.GetName().Name, stem, StringComparison.OrdinalIgnoreCase))
+                    {
+                        found = asm;
+                        break;
+                    }
+                }
+            }
+            catch { }
+
+            _loadedAsmByName[key] = found;
+            return found;
+        }
+
+        private static Texture2D ResolveModIcon(ModInfoEntry mod)
+        {
+            if (mod.IconTexture != null) return mod.IconTexture;
+
+            if (mod.External != null)
+            {
+                Aether.Nano.NanoPage page = FindNanoPage(mod.External);
+                if (page != null && page.Icon != null) return page.Icon;
+                Assembly extAsm = FindLoadedAssembly(mod.External.AssemblyName, mod.SourcePath);
+                return Aether.Nano.NanoIcons.Resolve(extAsm, mod.SourcePath, mod.IconHint);
+            }
+
+            if (!mod.IsFeatureRow && !string.IsNullOrEmpty(mod.SourcePath))
+            {
+                Assembly modAsm = FindLoadedAssembly(null, mod.SourcePath);
+                return Aether.Nano.NanoIcons.Resolve(modAsm, mod.SourcePath, mod.IconHint);
+            }
+
+            return null;
+        }
+
+        private void DrawModLogoSlot(Rect slotRect, ModInfoEntry mod, string title, bool isSelected, bool isHero)
+        {
+            float slotRadius = isHero ? 10f : 7f;
+            Color bg = isHero ? new Color(0.055f, 0.044f, 0.034f, 0.94f) : new Color(0.045f, 0.036f, 0.028f, 0.92f);
+            Aether.Nano.NanoSurface.DrawDebossedSlot(slotRect, bg, Aether.Nano.NanoBrand.Line, slotRadius);
+
+            float inset = isHero ? 5f : 4f;
+            var inner = new Rect(slotRect.x + inset, slotRect.y + inset, slotRect.width - inset * 2f, slotRect.height - inset * 2f);
+
+            // 1. Custom mod PNG icon (NanoPage.Icon, embedded icon.png in DLL, or sidecar <Mod>.png)
+            Texture2D customIcon = ResolveModIcon(mod);
+            if (customIcon != null)
+            {
+                Aether.Nano.NanoIcons.Draw(inner, customIcon, isHero ? 6f : 4f);
+                return;
+            }
+
+            // 2. Aether brand cube for Aether Core & Aether UI Suite
+            if (mod.UseAetherCube && Aether.Nano.NanoBrand.Cube != null)
+            {
+                float ch = inner.height * 0.88f;
+                float cw = ch * Aether.Nano.NanoBrand.Cube.width / Mathf.Max(1f, Aether.Nano.NanoBrand.Cube.height);
+                Aether.Nano.NanoBrand.DrawCube(slotRect.x + (slotRect.width - cw) * 0.5f, slotRect.y + (slotRect.height - ch) * 0.5f, ch);
+                return;
+            }
+
+            // 3. Mod Health distinctive emblem (emerald nested rhombus)
+            if (string.Equals(mod.Id, HealthModId, StringComparison.OrdinalIgnoreCase))
+            {
+                float outer = isHero ? 20f : 15f;
+                float innerSz = isHero ? 10f : 7f;
+                Aether.Nano.NanoSurface.DrawRhombus(
+                    new Rect(slotRect.center.x - outer * 0.5f, slotRect.center.y - outer * 0.5f, outer, outer),
+                    Aether.Nano.NanoBrand.Ok, false);
+                Aether.Nano.NanoSurface.DrawRhombus(
+                    new Rect(slotRect.center.x - innerSz * 0.5f, slotRect.center.y - innerSz * 0.5f, innerSz, innerSz),
+                    Aether.Nano.NanoBrand.Ok, true);
+                return;
+            }
+
+            // 4. Optional Block Story item icon
+            if (!string.IsNullOrEmpty(mod.IconItemName))
+            {
+                InvBaseItem iconItem = SafeFindItemByName(mod.IconItemName);
+                if (DrawItemIcon(inner, iconItem))
+                    return;
+            }
+
+            // 5. Crisp Gloock monogram fallback
+            string initial = string.IsNullOrEmpty(title) ? "?" : title.Substring(0, 1).ToUpperInvariant();
+            GUIStyle monogramStyle = isHero ? _menuDetailTitleStyle : _menuInitialStyle;
+            Color ink = isSelected ? Aether.Nano.NanoBrand.Ember : Aether.Nano.NanoBrand.Paper;
+            Aether.Nano.NanoSurface.DrawCrispLabel(slotRect, initial, monogramStyle, ink, isHero ? 0.4f : 0.35f);
+        }
+
+        private static float DrawInfoChip(float x, float y, float maxX, string text)
+        {
+            if (string.IsNullOrEmpty(text)) return x;
+            _menuMeasure.text = text;
+            float w = Mathf.Min(maxX - x, _menuChipStyle.CalcSize(_menuMeasure).x + 14f);
+            if (w < 28f) return x;
+            Aether.Nano.NanoSurface.DrawChip(new Rect(x, y, w, 18f), text, _menuChipStyle,
+                new Color(0.075f, 0.060f, 0.048f, 0.92f), Aether.Nano.NanoBrand.Line, Aether.Nano.NanoBrand.Mute, 4f);
+            return x + w + 6f;
         }
     }
 

@@ -7,104 +7,210 @@ namespace Aether.Mods.Wayfinder
     /// <summary>Wayfinder's settings page (Nano shows it in Aether's F10 menu or in its own window).</summary>
     public sealed partial class WayfinderModule
     {
-        private static readonly (string Id, string NameEn, string NameEs)[] MinimapAnchorOptions =
+        private static readonly NanoSegmentOption<string>[] ShapeOptionsEn =
         {
-            ("TopRight", "Top-Right", "Arriba-Derecha"),
-            ("TopLeft", "Top-Left", "Arriba-Izquierda"),
-            ("BottomRight", "Bottom-Right", "Abajo-Derecha"),
-            ("BottomLeft", "Bottom-Left", "Abajo-Izquierda")
+            new NanoSegmentOption<string>("Square", "Square"),
+            new NanoSegmentOption<string>("Circle", "Circle")
+        };
+        private static readonly NanoSegmentOption<string>[] ShapeOptionsEs =
+        {
+            new NanoSegmentOption<string>("Square", "Cuadrado"),
+            new NanoSegmentOption<string>("Circle", "Círculo")
         };
 
-        private static readonly (string Id, string NameEn, string NameEs)[] MapThemeOptions =
+        private static readonly NanoSegmentOption<string>[] AnchorOptionsEn =
         {
-            ("NativeWood", "Carved Wood", "Madera"),
-            ("DarkObsidian", "Dark Obsidian", "Obsidiana"),
-            ("MinimalistGlass", "Crystal Glass", "Cristal"),
-            ("RoyalGold", "Royal Gold", "Oro Real")
+            new NanoSegmentOption<string>("TopRight", "Top-Right"),
+            new NanoSegmentOption<string>("TopLeft", "Top-Left"),
+            new NanoSegmentOption<string>("BottomRight", "Bottom-Right"),
+            new NanoSegmentOption<string>("BottomLeft", "Bottom-Left")
+        };
+        private static readonly NanoSegmentOption<string>[] AnchorOptionsEs =
+        {
+            new NanoSegmentOption<string>("TopRight", "Arr-Der"),
+            new NanoSegmentOption<string>("TopLeft", "Arr-Izq"),
+            new NanoSegmentOption<string>("BottomRight", "Aba-Der"),
+            new NanoSegmentOption<string>("BottomLeft", "Aba-Izq")
+        };
+
+        private static readonly NanoSegmentOption<string>[] MapThemeRow1En =
+        {
+            new NanoSegmentOption<string>("Aether", "Aether Ink", new Color(1.0f, 0.54f, 0.24f)),
+            new NanoSegmentOption<string>("NativeWood", "Carved Wood", new Color(0.68f, 0.48f, 0.28f)),
+            new NanoSegmentOption<string>("DarkObsidian", "Obsidian", new Color(0.56f, 0.62f, 0.72f))
+        };
+        private static readonly NanoSegmentOption<string>[] MapThemeRow1Es =
+        {
+            new NanoSegmentOption<string>("Aether", "Tinta Aether", new Color(1.0f, 0.54f, 0.24f)),
+            new NanoSegmentOption<string>("NativeWood", "Madera", new Color(0.68f, 0.48f, 0.28f)),
+            new NanoSegmentOption<string>("DarkObsidian", "Obsidiana", new Color(0.56f, 0.62f, 0.72f))
+        };
+
+        private static readonly NanoSegmentOption<string>[] MapThemeRow2En =
+        {
+            new NanoSegmentOption<string>("MinimalistGlass", "Crystal Glass", new Color(0.56f, 0.76f, 0.86f)),
+            new NanoSegmentOption<string>("RoyalGold", "Royal Gold", new Color(0.84f, 0.64f, 0.26f))
+        };
+        private static readonly NanoSegmentOption<string>[] MapThemeRow2Es =
+        {
+            new NanoSegmentOption<string>("MinimalistGlass", "Cristal", new Color(0.56f, 0.76f, 0.86f)),
+            new NanoSegmentOption<string>("RoyalGold", "Oro Real", new Color(0.84f, 0.64f, 0.26f))
         };
 
         public void DrawSettings(Rect area, float sy)
         {
-            Color gold = new Color(1.0f, 0.85f, 0.25f);
-            float w = area.width;
-            DrawShadowLabel(new Rect(10, sy, w - 24, 22), Tr("MINIMAP & MAP SETTINGS", "AJUSTES DEL MINIMAPA Y EL MAPA"), SectionTitleStyle, gold, Color.black);
-            sy += 26f;
+            bool es = IsSpanish();
+            float pad = 12f;
+            float colW = Mathf.Max(260f, area.width - pad * 2f);
+            float halfW = (colW - 8f) * 0.5f;
+            var col = new Rect(pad, sy, colW, area.height);
 
             string minimapKey = MinimapToggleKey != null ? MinimapToggleKey.Value.ToString() : "N";
             string mapKey = WayfinderKey != null ? WayfinderKey.Value.ToString() : "M";
-            if (DrawNativeWoodButton(new Rect(12, sy, 240, 32),
-                    MinimapEnabled.Value ? Tr($"Corner Minimap: ON ({minimapKey})", $"Minimapa Esquina: SÍ ({minimapKey})") : Tr($"Corner Minimap: OFF ({minimapKey})", $"Minimapa Esquina: NO ({minimapKey})"),
-                    MinimapEnabled.Value))
-                MinimapEnabled.Value = !MinimapEnabled.Value;
-            if (Aether.Nano.Nano.InGame && DrawNativeWoodButton(new Rect(262, sy, 240, 32), Tr($"Open Full Wayfinder ({mapKey})", $"Abrir Mapa Completo ({mapKey})"), true))
+
+            // --- Section 1: Quick controls ---
+            sy = NanoSurface.DrawSectionHeader(col, sy,
+                es ? "Minimapa y mapa" : "Minimap & map",
+                $"{minimapKey} · {mapKey}");
+
+            MinimapEnabled.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, halfW, 32f),
+                es ? $"Minimapa en esquina ({minimapKey})" : $"Corner Minimap ({minimapKey})",
+                MinimapEnabled.Value);
+
+            if (Aether.Nano.Nano.InGame)
             {
-                NanoHud.CloseHostMenus?.Invoke();
-                NanoWindow.Close();
-                SetWayfinderOpen(true);
+                if (NanoSurface.DrawActionButton(new Rect(pad + halfW + 8f, sy, halfW, 32f),
+                        es ? $"Abrir Mapa Completo ({mapKey})" : $"Open Fullscreen Map ({mapKey})", true))
+                {
+                    NanoHud.CloseHostMenus?.Invoke();
+                    NanoWindow.Close();
+                    SetWayfinderOpen(true);
+                    return;
+                }
             }
+            else if (NanoHud.OpenCanvasEditor != null || NanoHud.OpenHostEditor != null)
+            {
+                if (NanoSurface.DrawActionButton(new Rect(pad + halfW + 8f, sy, halfW, 32f),
+                        es ? "Editar posición en Canvas" : "Edit Position in Canvas", false))
+                {
+                    NanoHud.OpenEditor();
+                    return;
+                }
+            }
+            sy += 40f;
+
+            // --- Section 2: Appearance & layout ---
+            sy = NanoSurface.DrawSectionHeader(col, sy,
+                es ? "Apariencia y posición" : "Appearance & placement",
+                MinimapTheme.Value);
+
+            if (NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 28f),
+                    es ? ShapeOptionsEs : ShapeOptionsEn, MinimapShape.Value, out string nextShape))
+                MinimapShape.Value = nextShape;
+            sy += 34f;
+
+            if (NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 28f),
+                    es ? AnchorOptionsEs : AnchorOptionsEn, MinimapAnchor.Value, out string nextAnchor))
+                MinimapAnchor.Value = nextAnchor;
+            sy += 34f;
+
+            if (NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 28f),
+                    es ? MapThemeRow1Es : MapThemeRow1En, MinimapTheme.Value, out string t1))
+                MinimapTheme.Value = t1;
+            sy += 32f;
+
+            if (NanoSurface.DrawSegmented(new Rect(pad, sy, colW, 28f),
+                    es ? MapThemeRow2Es : MapThemeRow2En, MinimapTheme.Value, out string t2))
+                MinimapTheme.Value = t2;
             sy += 38f;
 
-            DrawShadowLabel(new Rect(12, sy, 110, 24), Tr("Shape:", "Forma:"), ToolStyle, Color.white, Color.black);
-            if (DrawNativeWoodButton(new Rect(124, sy, 110, 26), Tr("Square", "Cuadrado"), MinimapShape.Value == "Square")) MinimapShape.Value = "Square";
-            if (DrawNativeWoodButton(new Rect(244, sy, 110, 26), Tr("Circle", "Círculo"), MinimapShape.Value == "Circle")) MinimapShape.Value = "Circle";
-            sy += 34f;
+            float nextSize = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Tamaño del minimapa" : "Minimap size", MinimapSize.Value, 110f, 340f, $"{MinimapSize.Value:F0} px", 2f, 152f);
+            if (Mathf.Abs(nextSize - MinimapSize.Value) > 0.5f) MinimapSize.Value = nextSize;
+            sy += 30f;
 
-            DrawShadowLabel(new Rect(12, sy, 110, 24), Tr("Minimap Anchor:", "Anclaje:"), ToolStyle, Color.white, Color.black);
-            for (int i = 0; i < MinimapAnchorOptions.Length; i++)
+            float nextScale = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Escala mapa completo" : "Fullscreen map scale", FullscreenMapScale.Value, 0.65f, 1.0f, $"{FullscreenMapScale.Value * 100f:F0}%", 0.01f, 152f);
+            if (Mathf.Abs(nextScale - FullscreenMapScale.Value) > 0.005f) FullscreenMapScale.Value = nextScale;
+            sy += 30f;
+
+            float nextOx = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Desplazamiento X" : "Offset X", MinimapOffsetX.Value, -400f, 400f, $"{MinimapOffsetX.Value:F0} px", 1f, 152f);
+            if (Mathf.Abs(nextOx - MinimapOffsetX.Value) > 0.5f) MinimapOffsetX.Value = nextOx;
+            sy += 30f;
+
+            float nextOy = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Desplazamiento Y" : "Offset Y", MinimapOffsetY.Value, -400f, 400f, $"{MinimapOffsetY.Value:F0} px", 1f, 152f);
+            if (Mathf.Abs(nextOy - MinimapOffsetY.Value) > 0.5f) MinimapOffsetY.Value = nextOy;
+            sy += 38f;
+
+            // --- Section 3: Radar, overlays & persistence ---
+            sy = NanoSurface.DrawSectionHeader(col, sy,
+                es ? "Datos, marcadores y rendimiento" : "Data, markers & performance");
+
+            ShowMobsOnMinimap.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, halfW, 30f), es ? "Mobs en minimapa" : "Mobs on minimap", ShowMobsOnMinimap.Value);
+            ShowWaypointLabelsOnMinimap.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad + halfW + 8f, sy, halfW, 30f), es ? "Etiquetas de waypoints" : "Waypoint labels", ShowWaypointLabelsOnMinimap.Value);
+            sy += 36f;
+
+            ShowNativeRadarPois.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, halfW, 30f), es ? "POIs de radar" : "Radar POIs", ShowNativeRadarPois.Value);
+            ShowWorldWaypoints.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad + halfW + 8f, sy, halfW, 30f), es ? "Marcadores 3D en mundo" : "3D world markers", ShowWorldWaypoints.Value);
+            sy += 36f;
+
+            if (ShowWaypointBeacons != null)
             {
-                var o = MinimapAnchorOptions[i];
-                if (DrawNativeWoodButton(new Rect(124f + (i % 2) * 190f, sy + (i / 2) * 30f, 180f, 26f), Tr(o.NameEn, o.NameEs), MinimapAnchor.Value == o.Id))
-                    MinimapAnchor.Value = o.Id;
+                ShowWaypointBeacons.Value = NanoSurface.DrawToggleRow(
+                    new Rect(pad, sy, halfW, 30f), es ? "Haces 3D de waypoints" : "3D waypoint beams", ShowWaypointBeacons.Value);
             }
-            sy += 64f;
+            SaveExploredMap.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad + halfW + 8f, sy, halfW, 30f), es ? "Guardar mapa explorado" : "Save explored map", SaveExploredMap.Value);
+            sy += 36f;
 
-            DrawShadowLabel(new Rect(12, sy, 110, 24), Tr("Theme:", "Tema:"), ToolStyle, Color.white, Color.black);
-            for (int i = 0; i < MapThemeOptions.Length; i++)
+            ShowSurfaceAboveCaves.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad, sy, halfW, 30f), es ? "Superficie sobre cuevas" : "Surface above caves", ShowSurfaceAboveCaves.Value);
+            AlwaysMapSurface.Value = NanoSurface.DrawToggleRow(
+                new Rect(pad + halfW + 8f, sy, halfW, 30f), es ? "Mapear superficie bajo tierra" : "Map surface underground", AlwaysMapSurface.Value);
+            sy += 38f;
+
+            float nextMiniRef = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Refresco minimapa" : "Minimap refresh", MinimapRefreshSeconds.Value, 0.25f, 2.0f, $"{MinimapRefreshSeconds.Value:F2} s", 0.05f, 152f);
+            if (Mathf.Abs(nextMiniRef - MinimapRefreshSeconds.Value) > 0.005f) MinimapRefreshSeconds.Value = nextMiniRef;
+            sy += 30f;
+
+            float nextFullRef = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Refresco mapa completo" : "Full map refresh", FullscreenRefreshSeconds.Value, 0.20f, 2.0f, $"{FullscreenRefreshSeconds.Value:F2} s", 0.05f, 152f);
+            if (Mathf.Abs(nextFullRef - FullscreenRefreshSeconds.Value) > 0.005f) FullscreenRefreshSeconds.Value = nextFullRef;
+            sy += 30f;
+
+            float nextEntY = NanoSurface.DrawSlider(new Rect(pad, sy, colW, 24f),
+                es ? "Rango Y de entidades" : "Entity Y range", EntityVerticalRange.Value, 8f, 256f, $"{EntityVerticalRange.Value:F0} bl", 2f, 152f);
+            if (Mathf.Abs(nextEntY - EntityVerticalRange.Value) > 0.5f) EntityVerticalRange.Value = nextEntY;
+            sy += 38f;
+
+            // --- Footer action buttons ---
+            float actionX = pad;
+            if (NanoHud.OpenCanvasEditor != null || NanoHud.OpenHostEditor != null)
             {
-                var o = MapThemeOptions[i];
-                if (DrawNativeWoodButton(new Rect(124f + (i % 2) * 190f, sy + (i / 2) * 30f, 180f, 26f), Tr(o.NameEn, o.NameEs), MinimapTheme.Value == o.Id))
-                    MinimapTheme.Value = o.Id;
+                if (NanoSurface.DrawActionButton(new Rect(actionX, sy, halfW, 32f),
+                        es ? "Mover posición en Canvas" : "Move Position in Canvas", true))
+                {
+                    NanoHud.OpenEditor();
+                    return;
+                }
+                actionX += halfW + 8f;
             }
-            sy += 64f;
-
-            sy = Slider(w, sy, $"OffsetX: {MinimapOffsetX.Value:F0} px", MinimapOffsetX.Value, -400f, 400f, 0.5f, v => MinimapOffsetX.Value = v);
-            sy = Slider(w, sy, $"OffsetY: {MinimapOffsetY.Value:F0} px", MinimapOffsetY.Value, -400f, 400f, 0.5f, v => MinimapOffsetY.Value = v);
-            sy = Slider(w, sy, Tr($"Minimap Size: {MinimapSize.Value:F0} px", $"Tamaño del minimapa: {MinimapSize.Value:F0} px"), MinimapSize.Value, 110f, 340f, 0.5f, v => MinimapSize.Value = v, 220f);
-            sy = Slider(w, sy, Tr($"Wayfinder Scale: {FullscreenMapScale.Value * 100f:F0}%", $"Escala del mapa: {FullscreenMapScale.Value * 100f:F0}%"), FullscreenMapScale.Value, 0.65f, 1.0f, 0.01f, v => FullscreenMapScale.Value = v, 220f);
-
-            DrawShadowLabel(new Rect(10, sy, w - 24, 22), Tr("MAP DATA & PERFORMANCE", "DATOS DEL MAPA Y RENDIMIENTO"), SectionTitleStyle, gold, Color.black);
-            sy += 24f;
-            Toggle(new Rect(12, sy, 146, 28), ShowMobsOnMinimap, "Mobs: ON", "Mobs: OFF", "Mobs: SÍ", "Mobs: NO");
-            Toggle(new Rect(164, sy, 146, 28), ShowWaypointLabelsOnMinimap, "Labels: ON", "Labels: OFF", "Etiquetas: SÍ", "Etiquetas: NO");
-            Toggle(new Rect(316, sy, 146, 28), ShowNativeRadarPois, "Radar POIs: ON", "Radar POIs: OFF", "POIs Radar: SÍ", "POIs Radar: NO");
-            sy += 34f;
-            Toggle(new Rect(12, sy, 240, 28), SaveExploredMap, "Explored Map: ON", "Explored Map: OFF", "Mapa Explorado: SÍ", "Mapa Explorado: NO");
-            if (HasSurfaceStore && DrawNativeWoodButton(new Rect(262, sy, 200, 28), Tr("Save Map Now", "Guardar Mapa Ahora"))) SaveMapNow();
-            sy += 34f;
-            Toggle(new Rect(12, sy, 300, 28), ShowSurfaceAboveCaves, "Surface Above Caves: ON", "Surface Above Caves: OFF", "Superficie sobre Cuevas: SÍ", "Superficie sobre Cuevas: NO");
-            Toggle(new Rect(320, sy, 300, 28), AlwaysMapSurface, "Map Surface Underground: ON", "Map Surface Underground: OFF", "Mapear Superficie Bajo Tierra: SÍ", "Mapear Superficie Bajo Tierra: NO");
-            sy += 34f;
-            sy = Slider(w, sy, $"Minimap refresh: {MinimapRefreshSeconds.Value:F2}s", MinimapRefreshSeconds.Value, 0.25f, 2.0f, 0.01f, v => MinimapRefreshSeconds.Value = v, 190f);
-            sy = Slider(w, sy, $"Full map refresh: {FullscreenRefreshSeconds.Value:F2}s", FullscreenRefreshSeconds.Value, 0.20f, 2.0f, 0.01f, v => FullscreenRefreshSeconds.Value = v, 190f);
-            sy = Slider(w, sy, $"Entity Y range: {EntityVerticalRange.Value:F0}", EntityVerticalRange.Value, 8f, 256f, 0.5f, v => EntityVerticalRange.Value = v, 190f);
-
-            sy += 6f;
-            if (NanoHud.OpenHostEditor != null && DrawNativeWoodButton(new Rect(12, sy, 298, 32), Tr("✥ Drag Minimap Position", "✥ Arrastrar Posición Minimapa"), true))
-                NanoHud.OpenHostEditor();
-        }
-
-        private static void Toggle(Rect r, BepInEx.Configuration.ConfigEntry<bool> entry, string onEn, string offEn, string onEs, string offEs)
-        {
-            if (entry == null) return;
-            if (DrawNativeWoodButton(r, entry.Value ? Tr(onEn, onEs) : Tr(offEn, offEs), entry.Value)) entry.Value = !entry.Value;
-        }
-
-        private static float Slider(float w, float sy, string label, float value, float min, float max, float step, System.Action<float> set, float sliderX = 145f)
-        {
-            DrawShadowLabel(new Rect(14, sy, sliderX - 10f, 22), label, DescStyle, Color.white, Color.black);
-            float v = GUI.HorizontalSlider(new Rect(sliderX, sy + 4, w - sliderX - 20f, 20), value, min, max);
-            if (Mathf.Abs(v - value) > step) set(v);
-            return sy + 26f;
+            if (HasSurfaceStore)
+            {
+                if (NanoSurface.DrawActionButton(new Rect(actionX, sy, halfW, 32f),
+                        es ? "Guardar mapa ahora" : "Save Map Now", false))
+                {
+                    SaveMapNow();
+                }
+            }
         }
     }
 }

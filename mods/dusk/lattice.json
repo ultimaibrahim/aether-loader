@@ -1,5 +1,10 @@
 {
   "tagline": "Matte terrain, darker caves, handheld torchlight and presets.",
+  "icon": "images/icon.png",
+  "categories": [
+    "visual",
+    "world"
+  ],
   "accent": "ember",
   "hero": "compact",
   "pattern": "cells",

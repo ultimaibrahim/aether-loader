@@ -24,6 +24,11 @@
       "id": "dusk",
       "asset": "Aether.Mods.Dusk.dll",
       "name": "Aether Dusk"
+    },
+    {
+      "id": "canvas",
+      "asset": "Aether.Mods.Canvas.dll",
+      "name": "Aether Canvas"
     }
   ]
 }

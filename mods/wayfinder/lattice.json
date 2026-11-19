@@ -1,5 +1,11 @@
 {
   "tagline": "Corner and fullscreen map built from 32×32-block chunks, cave layers, waypoints and death points, PNG export.",
+  "icon": "images/icon.png",
+  "categories": [
+    "interface",
+    "world",
+    "qol"
+  ],
   "accent": "ember",
   "hero": "compact",
   "pattern": "cells",

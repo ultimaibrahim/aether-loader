@@ -103,8 +103,8 @@ deleted as dead duplicates (git history keeps them).
 | Tool check + native font | Live | Compare `Digger.diggerType` with the card; names use the game font |
 | Native hearts + green bar | Live | Toggle `Hearts`/`Bar`; verify the game heart sprites and the green HP bar text |
 | Native mob HP isolation | Live | Hide native HP; name/level must stay visible |
-| Motion tokens | Manual | Card reveal 140–180 ms ease-out, 5 px settle; no linear/bounce; `LensReduceMotion` still pending |
-| Style review | Manual | Contrast, sizes, badge shapes, no `OnGUI` allocations |
+| Motion tokens | Manual | Card reveal 150 ms cubic ease-out, 4 px settle, 110 ms target-loss grace; `ReduceMotion` config switch |
+| Style review | Manual | Aether Ink default theme, GPU squircle surface (`NanoSurface`), no side stripe, tabular mono coords/HP, no `OnGUI` allocations |
 | Real block atlas | Automated | `ArchitectureTests.IsometricRenderer_SamplesTheRealBlockAtlas` |
 | Native/mod source line | Live | Sand Stone shows blue `Block Story`; a registered custom block must show its mod name |
 | Best tool from strengths | Automated | `ArchitectureTests.LensBestTool_UsesBlockStrengthsNotNameHeuristics` |
@@ -124,7 +124,6 @@ deleted as dead duplicates (git history keeps them).
 | Material-camera cube render disabled | `UBuild/Earth` needs the full chunk context; standalone render was flat | Keep the direct atlas path; revisit only with a full chunk-ish render setup |
 | Entity card, inventory tooltip and language matrix still unverified | Those paths have no live check in this build | Run the remaining QA rows and record them |
 | Old `aether_lens.json` may remain on disk | Users may think it still works | Documented here; safe to delete |
-| `LensReduceMotion` not implemented | Motion tokens exist in the guide but there is no accessibility switch yet | Add a `Lens` config bool, default `false`; when on, all reveals/press animations are instant |
 | Native font may be a bitmap `UIFont` | Forcing it into `GUIStyle.font` can render tofu | Probe dynamic fonts only; if none, keep the default font and log once |
 
 ## 10. Refinement history

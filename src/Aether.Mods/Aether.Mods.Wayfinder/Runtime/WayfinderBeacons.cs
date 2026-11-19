@@ -604,21 +604,24 @@ namespace Aether.Mods.Wayfinder
             float pillY = Mathf.Clamp(pillTopY, 8f, screenHeight - 30f);
             Rect pill = new Rect(centerX - pillW * 0.5f, pillY, pillW, 20f);
 
-            GUI.DrawTexture(
-                new Rect(pill.x - 1f, pill.y - 1f, pill.width + 2f, pill.height + 2f),
-                GetColorTexture(wpCol));
-            GUI.DrawTexture(pill, GetColorTexture(new Color(0.05f, 0.05f, 0.07f, 0.86f)));
+            NanoSurface.FillRounded(pill, new Color(0.055f, 0.044f, 0.035f, 0.88f), 6f);
+            NanoSurface.StrokeRounded(pill, new Color(wpCol.r, wpCol.g, wpCol.b, 0.72f), 1f, 6f);
 
-            float textX = pill.x + 4f;
+            float textX = pill.x + 6f;
             if (isDeath && skull != null)
             {
-                GUI.DrawTexture(new Rect(pill.x + 4f, pill.y + 3f, 14f, 14f), skull);
+                GUI.DrawTexture(new Rect(pill.x + 5f, pill.y + 3f, 14f, 14f), skull);
                 textX += 17f;
+            }
+            else
+            {
+                NanoSurface.DrawRhombus(new Rect(pill.x + 6f, pill.y + 7f, 6f, 6f), wpCol, true);
+                textX += 10f;
             }
 
             DrawShadowLabel(
-                new Rect(textX, pill.y, pill.xMax - textX - 4f, pill.height),
-                name, SmallStyle, wpCol, Color.black);
+                new Rect(textX, pill.y, pill.xMax - textX - 5f, pill.height),
+                name, SmallStyle, NanoBrand.PaperLight, Color.black);
         }
 
         // =====================================================================

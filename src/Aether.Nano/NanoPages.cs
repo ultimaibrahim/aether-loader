@@ -13,6 +13,10 @@ namespace Aether.Nano
         public string Description = string.Empty;
         public string Author = string.Empty;
         public string Version = string.Empty;
+        /// <summary>Optional custom mod icon texture (PNG loaded via <see cref="NanoIcons"/> or created at runtime).</summary>
+        public Texture2D Icon;
+        /// <summary>Optional fallback Block Story item name to use as icon when <see cref="Icon"/> is null.</summary>
+        public string IconItemName = string.Empty;
         /// <summary>Draws the settings. The rect is the page area in local coordinates; the float is the first free y.</summary>
         public Action<Rect, float> Draw;
         /// <summary>The mod's config file, so a host can read or edit its settings by section and key.</summary>
@@ -33,6 +37,15 @@ namespace Aether.Nano
         public static void Register(NanoPage page)
         {
             if (page == null || string.IsNullOrEmpty(page.Id) || page.Draw == null) return;
+            if (page.Icon == null)
+            {
+                try
+                {
+                    var asm = page.Draw.Method?.DeclaringType?.Assembly;
+                    if (asm != null) page.Icon = NanoIcons.LoadFromAssembly(asm);
+                }
+                catch { }
+            }
             Pages.RemoveAll(p => string.Equals(p.Id, page.Id, StringComparison.OrdinalIgnoreCase));
             Pages.Add(page);
         }
@@ -54,14 +67,13 @@ namespace Aether.Nano
             return page.Config.TryGetEntry(section, key, out BepInEx.Configuration.ConfigEntry<T> entry) ? entry : null;
         }
 
-        /// <summary>Draws a page in a scroll view filling <paramref name="area"/> (used by Nano window and by Aether's menu).</summary>
+        /// <summary>Draws a page in a custom Aether scroll view filling <paramref name="area"/> (used by Nano window and by Aether's menu).</summary>
         public static Vector2 DrawScrolled(NanoPage page, Rect area, Vector2 scroll, float firstY = 10f)
         {
-            float w = area.width - 18f;
-            scroll = GUI.BeginScrollView(area, scroll, new Rect(0, 0, w, Mathf.Max(page.ContentHeight, area.height - 4f)));
+            scroll = NanoSurface.BeginScrollView(area, scroll, Mathf.Max(page.ContentHeight, area.height - 4f), out float w);
             try { page.Draw(new Rect(0, 0, w, page.ContentHeight), firstY); }
             catch (Exception ex) { Nano.Log.LogError($"Settings page '{page.Name}' failed: {ex.Message}"); }
-            finally { GUI.EndScrollView(); }
+            finally { NanoSurface.EndScrollView(); }
             return scroll;
         }
     }
