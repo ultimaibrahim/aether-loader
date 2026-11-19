@@ -211,11 +211,6 @@ namespace Aether.Mods.Wayfinder
 
         private static void DrawWayfinderSurface(Rect rect, string theme, float opacity = 0.96f, float radius = 10f)
         {
-            if (string.Equals(theme, "NativeWood", StringComparison.OrdinalIgnoreCase))
-            {
-                DrawThemedPanel(rect, theme, opacity);
-                return;
-            }
             NanoTheme pal = NanoThemes.Get(string.IsNullOrEmpty(theme) ? "Aether" : theme);
             Color bot = new Color(pal.InnerBgColor.r, pal.InnerBgColor.g, pal.InnerBgColor.b, Mathf.Clamp01(pal.InnerBgColor.a * opacity));
             Color top = Color.Lerp(bot, new Color(0.14f, 0.11f, 0.085f, bot.a), 0.35f);
@@ -257,6 +252,15 @@ namespace Aether.Mods.Wayfinder
             MinimapOffsetX = Config.Bind("Wayfinder", "OffsetX", 0f, new ConfigDescription("Horizontal pixel offset.", new AcceptableValueRange<float>(-400f, 400f)));
             MinimapOffsetY = Config.Bind("Wayfinder", "OffsetY", 0f, new ConfigDescription("Vertical pixel offset.", new AcceptableValueRange<float>(-400f, 400f)));
             MinimapTheme = Config.Bind("Wayfinder", "Theme", "Aether", "Minimap theme: Aether, NativeWood, DarkObsidian, MinimalistGlass, RoyalGold.");
+            var wfThemeMigrated = Config.Bind("Wayfinder", "AetherInkThemeMigrated", false,
+                "Internal: true once the pre-1.2.4 NativeWood default was migrated to Aether.");
+            if (!wfThemeMigrated.Value)
+            {
+                if (string.Equals(MinimapTheme.Value, "NativeWood", StringComparison.OrdinalIgnoreCase))
+                    MinimapTheme.Value = "Aether";
+                wfThemeMigrated.Value = true;
+                Config.Save();
+            }
             MapLayerMode = Config.Bind("Wayfinder", "LayerMode", "Auto",
                 "Terrain layer mode: Auto, Surface, Cave, Interior, Slice. Interior forces the current-Y slice with the explored surface dimmed (for icebergs, rooms and other structures).");
             MapRenderMode = Config.Bind("Wayfinder", "RenderMode", "Day", "Map render mode: Day, Night, Topo, Biome.");

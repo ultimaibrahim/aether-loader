@@ -4,6 +4,12 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+## 1.2.5-beta
+
+- **Existing config migration to Aether Ink & Squircle.** Installations upgrading from older releases that still had `NativeWood` saved in `com.ultimaibrahim.blockstory.suite.cfg`, `dev.ultimaibrahim.aether.wayfinder.cfg`, or `dev.ultimaibrahim.aether.lens.cfg` automatically migrate to the **Aether** theme once (`AetherInkThemeMigrated`), and the `F10` Mod Menu, `F7` Keybind Manager, and Wayfinder surfaces always use squircle `NanoSurface` cards instead of falling back to legacy wooden panels.
+- **Aether Wayfinder (1.1.3).** Enabling both 3D world waypoints (`ShowWorldWaypoints`) and vertical waypoint beacons (`ShowWaypointBeacons`) no longer draws two overlapping waypoint pills (`DrawWaypointBeacons3D` draws only the vertical light column while `DrawWorldWaypoints3D` draws the unified name + distance pill).
+- **In-place Nano upgrade.** Installing or updating a mod from the Catalog that carries or requires a newer **Aether Nano** (`1.0.3`) now upgrades `BepInEx/plugins/Aether/Aether.Nano.dll` in place even if the player updates mods before clicking "Update Aether".
+
 ## 1.2.4-beta
 
 - **Aether Canvas (1.1.2).** A new official mod on Aether Nano: a live WYSIWYG HUD layout editor (`F9`, or `Edit HUD` in `F10`) that moves and scales both Block Story's native NGUI HUD (`Stats`, `QuickSlotBar`, `ActionButtons`, `Buttons`, `Diamonds`, `Compass`) and every mod registered with `NanoHud`. It projects real screen-pixel widget contours, shows low-opacity authentic silhouettes and a mode notice for elements hidden by the active world mode (e.g. `Stats` in Creative Mode), supports snapping and profiles, and writes zero-cost event-driven layout snapshots (`Aether/logs/canvas-snapshot.txt`).

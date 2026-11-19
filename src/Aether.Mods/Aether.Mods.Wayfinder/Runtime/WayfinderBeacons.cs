@@ -471,10 +471,14 @@ namespace Aether.Mods.Wayfinder
                     }
                 }
 
-                // Far labels first, then the near beam labels on top. The nearest name wins
-                // when a far label happens to overlap it.
-                DrawFarBeaconLabels(farLabelCount, screenWidth, screenHeight);
-                DrawBeaconLabels(candidateCount, screenWidth, screenHeight);
+                // When 3D world waypoint pills (ShowWorldWaypoints) are enabled, DrawWorldWaypoints3D
+                // already renders the name + distance pill for every waypoint; only draw the fallback
+                // beacon labels when 3D world waypoint markers are turned off.
+                if (ShowWorldWaypoints == null || !ShowWorldWaypoints.Value)
+                {
+                    DrawFarBeaconLabels(farLabelCount, screenWidth, screenHeight);
+                    DrawBeaconLabels(candidateCount, screenWidth, screenHeight);
+                }
             }
             catch (Exception ex)
             {

@@ -8,7 +8,7 @@
     <AssemblyName>Aether.Nano</AssemblyName>
     <RootNamespace>Aether.Nano</RootNamespace>
     <Nullable>disable</Nullable>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
   </PropertyGroup>
   <ItemGroup>
     <!-- Brand assets for the in-game UI (NanoBrand): Latin-subset OFL fonts and the open cube. Loaded on first use. -->

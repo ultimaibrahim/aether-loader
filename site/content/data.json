@@ -11,7 +11,7 @@
    "tag": "Cargador de mods para Block Story",
    "dl": "Descargar",
    "dlsoon": "Descargar · pronto",
-   "meta": "v1.2.4-beta · probado en Linux y Windows 11 · Apache-2.0",
+   "meta": "v1.2.5-beta · probado en Linux y Windows 11 · Apache-2.0",
    "play": "Jugar",
    "playp": "Aether carga mods desde una carpeta. Se instala una vez y ahí sueltas los mods que quieras.",
    "playb": "Cómo instalar",
@@ -31,7 +31,7 @@
    "est": "Estado y límites",
    "estp": "Beta. Probado en Linux y Windows 11. Las APIs pueden cambiar.",
    "nov": "Novedades",
-   "novp": "1.2.4-beta · Aether Canvas (editor WYSIWYG del HUD en vivo) y rediseño Aether Ink & Squircle en toda la suite.",
+   "novp": "1.2.5-beta · Migración automática de configs viejas a Aether Ink & Squircle y fix de etiqueta doble en beacons de Wayfinder.",
    "foot1": "Aether es un proyecto de terceros. No es un producto oficial de Block Story ni está afiliado a sus desarrolladores.",
    "foot2": "Apache-2.0 · Un proyecto de Ultima Ibrahim",
    "lens": "Tarjeta del bloque o criatura que apuntas: nombre, mod de origen, vida y la herramienta para romperlo.",
@@ -106,6 +106,10 @@
    ],
    "novh": "Novedades",
    "novlist": [
+    [
+     "1.2.5-beta",
+     "Las instalaciones anteriores que tenían NativeWood guardado en sus archivos .cfg migran automáticamente al tema Aether (F10, F7, Wayfinder y Lens ya no muestran el fondo de madera legado). En Wayfinder 1.1.3, activar los haces de luz (beacons) junto con los waypoints 3D ya no dibuja dos etiquetas superpuestas. Actualizar mods desde el Catalog también actualiza Aether Nano (1.0.3) en sitio."
+    ],
     [
      "1.2.4-beta",
      "Nuevo mod oficial Aether Canvas (1.1.2): editor WYSIWYG del HUD en vivo (F9 o «Editar HUD» en F10) para mover y escalar la interfaz nativa de Block Story y cualquier mod sobre Aether Nano, con siluetas reales para elementos ocultos por el modo de juego y perfiles. Rediseño integral Aether Ink & Squircle en F10, F7, Hover Tooltip, sello del menú, Crash Guard y los cinco mods oficiales (1.1.2) sobre Aether Nano 1.0.2 (controles propios, scrollbars flotantes, animaciones suaves e íconos 128×128)."
@@ -184,7 +188,7 @@
    "tag": "A mod loader for Block Story",
    "dl": "Download",
    "dlsoon": "Download · soon",
-   "meta": "v1.2.4-beta · tested on Linux and Windows 11 · Apache-2.0",
+   "meta": "v1.2.5-beta · tested on Linux and Windows 11 · Apache-2.0",
    "play": "Play",
    "playp": "Aether loads mods from a folder. Install it once and drop in any mods you like.",
    "playb": "How to install",
@@ -204,7 +208,7 @@
    "est": "Status and limits",
    "estp": "Beta. Tested on Linux and Windows 11. APIs may change.",
    "nov": "News",
-   "novp": "1.2.4-beta · Aether Canvas (live WYSIWYG HUD editor) and Aether Ink & Squircle across the entire suite.",
+   "novp": "1.2.5-beta · Automatic migration of older configs to Aether Ink & Squircle and fix for duplicate beacon labels in Wayfinder.",
    "foot1": "Aether is a third-party project. It is not an official Block Story product and is not affiliated with its developers.",
    "foot2": "Apache-2.0 · A project by Ultima Ibrahim",
    "lens": "A card for the block or creature you aim at: name, source mod, health and the tool that breaks it.",
@@ -279,6 +283,10 @@
    ],
    "novh": "News",
    "novlist": [
+    [
+     "1.2.5-beta",
+     "Existing installations that still had NativeWood saved in their .cfg files automatically migrate to the Aether theme (F10, F7, Wayfinder and Lens no longer fall back to the legacy wooden panel). In Wayfinder 1.1.3, enabling waypoint beacons alongside 3D waypoints no longer draws two overlapping labels. Updating mods from the Catalog also upgrades Aether Nano (1.0.3) in place."
+    ],
     [
      "1.2.4-beta",
      "New official mod Aether Canvas (1.1.2): live WYSIWYG HUD layout editor (F9 or “Edit HUD” in F10) to move and scale Block Story's native interface and any mod built on Aether Nano, with authentic ghost previews for mode-hidden widgets and profiles. Full Aether Ink & Squircle overhaul across F10, F7, Rich Hover Tooltip, title seal, Crash Guard and all five official mods (1.1.2) on Aether Nano 1.0.2 (custom controls, floating scrollbars, smooth motion and 128×128 icons)."

@@ -24,8 +24,8 @@ namespace Aether.Nano
     /// <summary>The UI themes shared by Aether and the mods on Nano (NativeWood, AncientStone, DwarvenGold, ArcaneGlass...).</summary>
     public static class NanoThemes
     {
-        /// <summary>The theme used when a mod asks for none: NativeWood, or the player's choice in Aether's HUD settings.</summary>
-        public static string Default { get; set; } = "NativeWood";
+        /// <summary>The theme used when a mod asks for none: Aether Ink, or the player's choice in Aether's HUD settings.</summary>
+        public static string Default { get; set; } = "Aether";
 
         public static NanoTheme Get(string themeName = null)
         {
@@ -33,25 +33,6 @@ namespace Aether.Nano
 
             switch (th)
             {
-                case "Aether":
-                    return new NanoTheme
-                    {
-                        Id = "Aether",
-                        NameEn = "Aether Ink",
-                        NameEs = "Tinta Aether",
-                        FrameSprite = "WoodPanel",
-                        FrameTint = new Color(0.22f, 0.17f, 0.13f, 1.0f),
-                        BorderColor = new Color(0.18f, 0.14f, 0.11f, 0.96f),
-                        InnerBgColor = new Color(0.047f, 0.039f, 0.031f, 0.92f),
-                        ButtonNormalTint = new Color(0.14f, 0.11f, 0.09f, 0.96f),
-                        ButtonSelectedTint = NanoBrand.Ember,
-                        ButtonHoverTint = new Color(0.24f, 0.19f, 0.15f, 1.0f),
-                        TitleColor = NanoBrand.Paper,
-                        AccentColor = NanoBrand.Ember,
-                        TextColor = NanoBrand.Paper,
-                        ShadowColor = new Color(0.02f, 0.015f, 0.01f, 0.92f)
-                    };
-
                 case "AncientStone":
                     return new NanoTheme
                     {
@@ -186,7 +167,6 @@ namespace Aether.Nano
                     };
 
                 case "NativeWood":
-                default:
                     return new NanoTheme
                     {
                         Id = "NativeWood",
@@ -203,6 +183,26 @@ namespace Aether.Nano
                         AccentColor = new Color(0.89f, 0.66f, 0.29f),
                         TextColor = new Color(0.95f, 0.91f, 0.84f),
                         ShadowColor = new Color(0.03f, 0.02f, 0.01f, 0.92f)
+                    };
+
+                case "Aether":
+                default:
+                    return new NanoTheme
+                    {
+                        Id = "Aether",
+                        NameEn = "Aether Ink",
+                        NameEs = "Tinta Aether",
+                        FrameSprite = "WoodPanel",
+                        FrameTint = new Color(0.22f, 0.17f, 0.13f, 1.0f),
+                        BorderColor = new Color(0.18f, 0.14f, 0.11f, 0.96f),
+                        InnerBgColor = new Color(0.047f, 0.039f, 0.031f, 0.92f),
+                        ButtonNormalTint = new Color(0.14f, 0.11f, 0.09f, 0.96f),
+                        ButtonSelectedTint = NanoBrand.Ember,
+                        ButtonHoverTint = new Color(0.24f, 0.19f, 0.15f, 1.0f),
+                        TitleColor = NanoBrand.Paper,
+                        AccentColor = NanoBrand.Ember,
+                        TextColor = NanoBrand.Paper,
+                        ShadowColor = new Color(0.02f, 0.015f, 0.01f, 0.92f)
                     };
             }
         }

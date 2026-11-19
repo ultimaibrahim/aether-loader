@@ -101,6 +101,14 @@ namespace Aether.Mods.Lens
             LensOffsetX = Config.Bind("Lens", "OffsetX", 0f, new ConfigDescription("Horizontal pixel offset.", new AcceptableValueRange<float>(-500f, 500f)));
             LensOffsetY = Config.Bind("Lens", "OffsetY", 0f, new ConfigDescription("Vertical pixel offset.", new AcceptableValueRange<float>(-500f, 500f)));
             LensTheme = Config.Bind("Lens", "Theme", "Aether", "Visual design theme: Aether, NativeWood, DarkObsidian, MinimalistGlass, RoyalGold, CompactBar.");
+            var lensThemeMigrated = Config.Bind("Lens", "AetherInkThemeMigrated", false, "Internal: true once the pre-1.2.4 NativeWood default was migrated to Aether.");
+            if (!lensThemeMigrated.Value)
+            {
+                if (string.Equals(LensTheme.Value, "NativeWood", StringComparison.OrdinalIgnoreCase))
+                    LensTheme.Value = "Aether";
+                lensThemeMigrated.Value = true;
+                Config.Save();
+            }
             LensShowCoords = Config.Bind("Lens", "ShowCoordinates", false, "Show target block coordinates in Lens HUD.");
             Lens3DBlockIcon = Config.Bind("Lens", "3DBlockIcon", true, "Render placeable blocks as 3D isometric cubes in Lens WAILA HUD.");
             LensReduceMotion = Config.Bind("Lens", "ReduceMotion", false, "Disable reveal and target transition animations in Lens HUD.");

@@ -242,6 +242,15 @@ namespace BlockStoryLens
             // 7. UI Design Theme
             UiDesignTheme = config.Bind("UI", "DesignTheme", "Aether",
                 "Aether UI Design Preset: Aether, NativeWood, AncientStone, DwarvenGold, ArcaneGlass.");
+            var uiThemeMigrated = config.Bind("UI", "AetherInkThemeMigrated", false,
+                "Internal: true once the pre-1.2.4 NativeWood default was migrated to Aether.");
+            if (!uiThemeMigrated.Value)
+            {
+                if (string.Equals(UiDesignTheme.Value, "NativeWood", StringComparison.OrdinalIgnoreCase))
+                    UiDesignTheme.Value = "Aether";
+                uiThemeMigrated.Value = true;
+                config.Save();
+            }
 
             ClearCache();
         }
@@ -1116,7 +1125,7 @@ namespace BlockStoryLens
             UiDesignTheme.Value = "Aether";
             Aether.Nano.NanoThemes.Default = "Aether";
             if (SuitePlugin.LensAnchor != null) SuitePlugin.LensTheme.Value = "Aether";
-            if (SuitePlugin.MinimapTheme != null) SuitePlugin.MinimapTheme.Value = "NativeWood";
+            if (SuitePlugin.MinimapTheme != null) SuitePlugin.MinimapTheme.Value = "Aether";
             SuitePlugin.Instance?.Config.Save();
         }
     }

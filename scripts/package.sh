@@ -13,7 +13,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-$(grep -oP '(?<=<AetherVersion>)[^<]+' "$ROOT/Directory.Build.props" | head -1)}"
 RIDS="${RIDS:-linux-x64 win-x64}"
 # The official mods have their own version (their [BepInPlugin]); their zips are named with it, not with the loader's.
-MOD_VERSION="${MOD_VERSION:-1.1.2}"
+MOD_VERSION="${MOD_VERSION:-1.1.3}"
 for P in "$ROOT"/src/Aether.Mods/Aether.Mods.*/*Plugin.cs; do
   V="$(grep -oP '\[BepInPlugin\([^,]+,\s*"[^"]+",\s*"\K[^"]+' "$P" | head -1)"
   if [[ "$V" != "$MOD_VERSION" ]]; then echo "package.sh: $(basename "$P") declares $V, zips say $MOD_VERSION. Set MOD_VERSION or fix the plugin." >&2; exit 1; fi

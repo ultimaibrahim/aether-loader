@@ -2194,15 +2194,16 @@ namespace BlockStoryLens
         private void DrawModMenuShell(Rect winRect)
         {
             string uiTheme = HudCustomizerModule.UiDesignTheme != null ? HudCustomizerModule.UiDesignTheme.Value : "Aether";
-            if (string.Equals(uiTheme, "NativeWood", StringComparison.OrdinalIgnoreCase))
-            {
-                DrawWoodPanel(winRect, 1.0f);
-                return;
-            }
 
             Color bgTop, bgBot, border, spec;
             switch (uiTheme)
             {
+                case "NativeWood":
+                    bgTop = new Color(0.125f, 0.092f, 0.062f, 0.97f);
+                    bgBot = new Color(0.068f, 0.048f, 0.032f, 0.98f);
+                    border = new Color(0.42f, 0.30f, 0.18f, 0.95f);
+                    spec = new Color(1.0f, 0.92f, 0.78f, 0.13f);
+                    break;
                 case "AncientStone":
                     bgTop = new Color(0.085f, 0.100f, 0.125f, 0.97f);
                     bgBot = new Color(0.048f, 0.058f, 0.075f, 0.98f);

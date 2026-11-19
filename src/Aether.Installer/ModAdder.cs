@@ -58,11 +58,18 @@ public static class ModAdder
             plan.Notes.Add(new Check(CheckLevel.Warn, "SKIP", $"{bad.FileName}: not a managed .NET assembly, ignored."));
 
         // A Nano mod's zip carries Aether.Nano.dll for players without Aether; Aether already ships its own copy.
+        // If the incoming Nano is newer than Aether's bundled copy (e.g. a Catalog update before Aether itself was updated),
+        // upgrade Aether's bundled copy in place so the newly updated mod does not fail with MissingMethodException.
         string ownNano = Path.Combine(gameDir, InstallLayout.PluginsDir, "Aether", "Aether.Nano.dll");
         bool skippedOwn = false;
         foreach (ModInfo nano in infos.Where(i => i.Kind != ModKind.NotManaged && string.Equals(i.FileName, "Aether.Nano.dll", StringComparison.OrdinalIgnoreCase)).ToList())
             if (File.Exists(ownNano))
             {
+                string? ownVer = ModInspector.Inspect(ownNano).Version;
+                if (ownVer != null && nano.Version != null && Lattice.LatticeIndex.Compare(nano.Version, ownVer) > 0)
+                {
+                    try { File.Copy(nano.FilePath, ownNano, overwrite: true); } catch (IOException) { }
+                }
                 infos.Remove(nano); skippedOwn = true;
                 plan.Notes.Add(new Check(CheckLevel.Info, "INFO", "Aether.Nano.dll: Aether already has it, not copied."));
             }

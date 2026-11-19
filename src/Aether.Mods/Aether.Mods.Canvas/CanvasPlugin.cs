@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Aether.Mods.Canvas
 {
     /// <summary>Aether Canvas as a standalone BepInEx plugin on Aether Nano: no Aether required.</summary>
-    [BepInPlugin(Guid, "Aether Canvas", "1.1.2")]
+    [BepInPlugin(Guid, "Aether Canvas", "1.1.3")]
     [BepInDependency(Aether.Nano.Nano.Guid)]
     public sealed class CanvasPlugin : NanoMod
     {

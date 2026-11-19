@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Aether.Mods.Wayfinder
 {
     /// <summary>Aether Wayfinder as a BepInEx plugin on Aether Nano: no Aether needed.</summary>
-    [BepInPlugin(Guid, "Aether Wayfinder", "1.1.2")]
+    [BepInPlugin(Guid, "Aether Wayfinder", "1.1.3")]
     [BepInDependency(Aether.Nano.Nano.Guid)]
     public sealed class WayfinderPlugin : NanoMod
     {
