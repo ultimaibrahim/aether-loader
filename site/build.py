@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Genera el sitio estático de Aether en site/dist. Solo biblioteca estándar.
+"""Genera el sitio estático de Aether en site/dist (incluyendo el Mini Foro híbrido de Modding). Solo biblioteca estándar.
 
     python3 site/build.py            # ES en la raíz, EN bajo /en/
     python3 -m http.server -d site/dist 8765
 
-Contenido: site/content/data.json (textos ES/EN). Opciones: site/config.json.
-Capturas: soltar site/img/<nombre>.jpg (ver site/CAPTURAS.md); si no existe, se muestra un marcador.
+Contenido: site/content/data.json (textos ES/EN + 17 guías fijadas + categorías y consultorio del foro).
+Opciones: site/config.json.
 """
-import json, os, re, shutil
+import html as html_mod, json, os, re, shutil
 import legal
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -24,17 +24,16 @@ def size_of(rid, full):
     v = cfg.get('sizes', {}).get('%s-%s' % (rid, 'full' if full else 'light'))
     return ' (%s)' % v if v else ''
 def mod_url(key_name):
-    # With "mod_dll" the official mods are offered as the bare .dll (drag and drop into Aether/Mods); the zip stays in the release too.
     if cfg.get('mod_dll'): return dl_url('Aether.Mods.%s.dll' % key_name)
     return cfg.get('mod_urls', {}).get(key_name.lower()) or dl_url('aether-%s-%s.zip' % (key_name.lower(), cfg.get('mod_version', VER)))
 
 DL = {
  'es': dict(win='Windows', lin='Linux', light='Descargar', full='Versión completa', net_h='¿Cuál descargo?', net_p='La versión normal es pequeña y necesita el runtime gratuito de <b>.NET 9</b> (<a href="https://dotnet.microsoft.com/download/dotnet/9.0" rel="noopener">descárgalo desde la página oficial de Microsoft</a>, elige «Runtime»). Si prefieres no instalar nada, la <b>versión completa</b> lo trae todo, pero pesa más. En Windows, si falta .NET, el programa te lleva a descargarlo.', sums_note='Opcional, para usuarios avanzados: sumas de verificación (SHA-256) de los archivos:', note_w='Windows 10/11: descomprime y abre <code>aether-installer.exe</code>.',
-   light_l='Versión ligera (si ya tienes .NET 9)', note_l='Linux: descomprime y abre <code>aether-installer</code>. La versión ligera solo abre si ya tienes .NET 9; sin él no muestra ningún aviso, por eso aquí recomendamos la completa.', mods_h='2 · Mods oficiales',
+   light_l='Versión ligera (si ya tienes .NET 9)', note_l='Linux: descomprime y abre <code>aether-installer</code>. La versión ligera solo abre si ya tienes .NET 9; sin él no muestra ningún aviso, por eso aquí recomendamos la completa.', mods_h='2 · Mods de Aether',
    mods_p='Cada mod es un zip pequeño que trae <b>Aether Nano</b>, su única dependencia. Funciona con Aether (añádelo desde Aether Monitor, botón «Añadir mod…») o solo con BepInEx: copia las dos DLL del zip a <code>BepInEx/plugins</code>.',
    needs='Trae Aether Nano', needs_long='El zip trae Aether Nano: funciona con Aether o solo con BepInEx.', get='Descargar', open_h='3 · Abre el juego'),
  'en': dict(win='Windows', lin='Linux', light='Download', full='Full version', net_h='Which one do I download?', net_p='The regular version is small and needs the free <b>.NET 9</b> runtime (<a href="https://dotnet.microsoft.com/download/dotnet/9.0" rel="noopener">get it from Microsoft’s official page</a>, pick “Runtime”). If you would rather install nothing, the <b>full version</b> carries everything but is larger. On Windows, if .NET is missing, the program points you to it.', sums_note='Optional, for advanced users: checksums (SHA-256) of the files:', note_w='Windows 10/11: unzip and open <code>aether-installer.exe</code>.',
-   light_l='Light version (if you have .NET 9)', note_l='Linux: unzip and open <code>aether-installer</code>. The light version only opens if .NET 9 is installed; without it nothing shows up, so here we recommend the full one.', mods_h='2 · Official mods',
+   light_l='Light version (if you have .NET 9)', note_l='Linux: unzip and open <code>aether-installer</code>. The light version only opens if .NET 9 is installed; without it nothing shows up, so here we recommend the full one.', mods_h='2 · Aether mods',
    mods_p='Each mod is a small zip that carries <b>Aether Nano</b>, its only dependency. It runs with Aether (add it from Aether Monitor, “Add mod…” button) or with BepInEx alone: copy both DLLs from the zip into <code>BepInEx/plugins</code>.',
    needs='Carries Aether Nano', needs_long='The zip carries Aether Nano: it runs with Aether or with BepInEx alone.', get='Download', open_h='3 · Open the game'),
 }
@@ -42,31 +41,84 @@ DL = {
 X = {
  'es': dict(skip='Saltar al contenido', theme='Cambiar tema claro u oscuro', other='EN', other_name='English', copy='copiar',
    genkeys='Teclas de Aether en general: <span class="kc">F10</span> menú de mods · <span class="kc">F7</span> gestor de teclas · <span class="kc">F9</span> editor de HUD. Todas se cambian en F7.',
-   load='cargador listo · mods elegidos: {n} de {t} (ejemplo)', shot='captura del juego', repo='Repositorio', docs_h='Docs', ldesc='Cargador de mods para Block Story',
+   load='cargador listo · mods elegidos: {n} de {t} (ejemplo)', shot='captura del juego', repo='Repositorio', docs_h='Guía de Modding', ldesc='Cargador de mods para Block Story',
    nf_h='Página no encontrada', nf_p='Esa dirección no existe. Prueba desde el inicio.', nf_b='Ir al inicio', more='Ver novedades',
    desc_home='Aether es un cargador de mods para Block Story. Instala el cargador y elige solo los mods que quieras.',
-   desc_show='Los cinco mods oficiales de Aether: Lens, Wayfinder, Blueprint, Dusk y Canvas, con sus teclas.',
-   desc_docs='Cómo crear un mod para Block Story con Aether, desde cero y sin experiencia previa.',
+   desc_show='Los cinco mods de Aether: Lens, Wayfinder, Blueprint, Dusk y Canvas, con sus teclas.',
+   desc_docs='Guía completa de modding para Block Story en formato tablero: cómo funciona el juego por dentro, recetas compilables en BepInEx puro y Aether Nano, y casos técnicos resueltos.',
    desc_dl='Descarga Aether, el cargador de mods para Block Story.', desc_faq='Preguntas frecuentes sobre Aether.',
    desc_nov='Novedades y versiones de Aether.', prev='Anterior', next='Siguiente'),
  'en': dict(skip='Skip to content', theme='Toggle light or dark theme', other='ES', other_name='Español', copy='copy',
    genkeys='Aether keys in general: <span class="kc">F10</span> mod menu · <span class="kc">F7</span> keybind manager · <span class="kc">F9</span> HUD editor. All can be changed in F7.',
-   load='loader ready · chosen mods: {n} of {t} (example)', shot='in-game screenshot', repo='Repository', docs_h='Docs', ldesc='A mod loader for Block Story',
+   load='loader ready · chosen mods: {n} of {t} (example)', shot='in-game screenshot', repo='Repository', docs_h='Modding Guide', ldesc='A mod loader for Block Story',
    nf_h='Page not found', nf_p='That address does not exist. Try from the start.', nf_b='Go home', more='See news',
    desc_home='Aether is a mod loader for Block Story. Install the loader and pick only the mods you want.',
-   desc_show='The five official Aether mods: Lens, Wayfinder, Blueprint, Dusk and Canvas, with their keys.',
-   desc_docs='How to create a Block Story mod with Aether, from scratch and with no prior experience.',
+   desc_show='The five Aether mods: Lens, Wayfinder, Blueprint, Dusk and Canvas, with their keys.',
+   desc_docs='Block Story modding guide in forum-board format: how the game works inside, compilable recipes on pure BepInEx and Aether Nano, and solved technical cases.',
    desc_dl='Download Aether, the mod loader for Block Story.', desc_faq='Frequently asked questions about Aether.',
    desc_nov='News and releases of Aether.', prev='Previous', next='Next'),
 }
-ROUTES = {'inicio': '', 'showcase': 'showcase', 'docs': 'docs', 'dl': 'descargar', 'faq': 'preguntas', 'nov': 'novedades', 'terms': 'terminos', 'privacy': 'privacidad'}
+
+FORUM_T = {
+ 'es': dict(
+   title='Guía y Tablero de Modding',
+   sub='Guías fijadas y casos resueltos para crear mods de Block Story (tanto solo con BepInEx como con Aether Nano). Neutral, sin código descompilado del juego y alineado con la licencia de Big Cube Interactive.',
+   search_ph='Buscar guía, clase (NanoSurface, UIWidget, Digger, Harmony) o #etiqueta…  [/]',
+   issue_btn='Sugerir mejora en GitHub ↗',
+   board_back='← Tablero de la guía',
+   all_tab='Todos',
+   pins_tab='Guías fijadas',
+   comm_tab='Casos resueltos',
+   pin_badge='POR AETHER · FIJADO',
+   solved_badge='✓ RESUELTO',
+   solution_badge='✓ SOLUCIÓN VERIFICADA',
+   compiles_badge='COMPILA EN 1.2.5',
+   col_topic='Guía / Categoría',
+   col_act='Detalle',
+   snippets_lbl='bloques C#',
+   replies_lbl='soluciones',
+   reply_1='solución',
+   no_matches='Ningún tema coincide con ese filtro. Prueba otra palabra o limpia las etiquetas.',
+   clear_filter='Limpiar filtro',
+   sol_h='Solución verificada',
+   src_link='Ver ejemplo en el repo',
+   toc_h='En esta guía'
+ ),
+ 'en': dict(
+   title='Modding Guide & Index',
+   sub='Pinned guides and solved cases for building Block Story mods (with BepInEx alone or with Aether Nano). Neutral, zero decompiled game code, aligned with Big Cube Interactive’s modding license.',
+   search_ph='Search guides, classes (NanoSurface, UIWidget, Digger, Harmony) or #tag…  [/]',
+   issue_btn='Suggest an edit on GitHub ↗',
+   board_back='← Guide index',
+   all_tab='All',
+   pins_tab='Pinned guides',
+   comm_tab='Solved cases',
+   pin_badge='BY AETHER · PINNED',
+   solved_badge='✓ SOLVED',
+   solution_badge='✓ VERIFIED SOLUTION',
+   compiles_badge='BUILDS ON 1.2.5',
+   col_topic='Guide / Category',
+   col_act='Details',
+   snippets_lbl='C# blocks',
+   replies_lbl='solutions',
+   reply_1='solution',
+   no_matches='No topics match that filter. Try another keyword or clear the active tags.',
+   clear_filter='Clear filter',
+   sol_h='Verified solution',
+   src_link='View example in repo',
+   toc_h='In this guide'
+ )
+}
+
+ROUTES = {'inicio': '', 'showcase': 'showcase', 'docs': 'docs', 'foro': 'foro', 'dl': 'descargar', 'faq': 'preguntas', 'nov': 'novedades', 'terms': 'terminos', 'privacy': 'privacidad'}
 LEGAL_NAMES = {'es': {'terms': 'Términos de uso', 'privacy': 'Privacidad'}, 'en': {'terms': 'Terms of use', 'privacy': 'Privacy'}}
 
-# ---------- sprite (logo y signos) ----------
+# ---------- sprite (logo, 5 signos de mods y 5 signos geométricos de categoría del foro) ----------
 def pts(a): return ' '.join('%s,%s' % (x, y) for x, y in a)
 TOP = [(50, 24), (86, 44), (50, 62), (14, 44)]; LEFT = [(14, 44), (50, 62), (50, 102), (14, 82)]; RIGHT = [(50, 62), (86, 44), (86, 82), (50, 102)]
 LID = [(x, y - 16) for x, y in TOP]
 def poly(p, cls, extra=''): return '<polygon points="%s" class="%s"%s/>' % (pts(p), cls, extra)
+
 SPRITE = ('<svg xmlns="http://www.w3.org/2000/svg" class="sprite" width="0" height="0" aria-hidden="true" focusable="false"><defs>'
   '<radialGradient id="g-top" cx="50%" cy="60%" r="70%"><stop offset="0" stop-color="#FFD27A"/><stop offset=".55" stop-color="#FF7A1A"/><stop offset="1" stop-color="#B53A06"/></radialGradient></defs>'
   '<symbol id="i-cube" viewBox="0 0 100 112">' + poly(TOP, 'i-top') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink') + poly(LID, 'i-lid i-ink')
@@ -77,9 +129,22 @@ SPRITE = ('<svg xmlns="http://www.w3.org/2000/svg" class="sprite" width="0" heig
   + ''.join('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#E8A93C" stroke-width="2.6" stroke-dasharray="5 4"/>' % (a[0], a[1], b[0], b[1]) for a, b in [((14, 44), (50, 62)), ((50, 62), (86, 44)), ((50, 62), (50, 102))]) + '</symbol>'
   '<symbol id="s-dusk" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 's-dk i-ink') + '<polygon points="%s" fill="#E8643C" class="i-ink"/></symbol>' % pts(RIGHT)
   + '<symbol id="s-canvas" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
-  + '<path d="M22 36 H34 M22 36 V48 M78 36 H66 M78 36 V48 M22 92 H34 M22 92 V80 M78 92 H66 M78 92 V80" fill="none" stroke="#FF8A3D" stroke-width="3.2" stroke-linecap="round"/></symbol></svg>')
+  + '<path d="M22 36 H34 M22 36 V48 M78 36 H66 M78 36 V48 M22 92 H34 M22 92 V80 M78 92 H66 M78 92 V80" fill="none" stroke="#FF8A3D" stroke-width="3.2" stroke-linecap="round"/></symbol>'
+  # 5 signos geométricos de categoría del Mini Foro
+  + '<symbol id="s-cat-start" viewBox="0 0 100 112">' + poly(TOP, 'i-top') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
+  + '<polygon points="50,4 58,18 50,32 42,18" class="i-sp"/></symbol>'
+  + '<symbol id="s-cat-engine" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
+  + '<polygon points="50,36 70,47 50,58 30,47" fill="#38B6E0" stroke="currentColor" stroke-width="2"/><polygon points="50,58 70,47 70,71 50,82" fill="#2389AD"/><polygon points="30,47 50,58 50,82 30,71" fill="#7AD4F0"/></symbol>'
+  + '<symbol id="s-cat-recipes" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
+  + '<path d="M20 34 H34 M20 34 V48 M80 34 H66 M80 34 V48 M20 94 H34 M20 94 V80 M80 94 H66 M80 94 V80" fill="none" stroke="#E8A93C" stroke-width="3.4" stroke-linecap="round"/><polygon points="50,52 60,64 50,76 40,64" fill="#E8A93C"/></symbol>'
+  + '<symbol id="s-cat-publish" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
+  + '<polygon points="50,44 68,54 68,74 50,84 32,74 32,54" fill="#2E7D4F" stroke="#6FCF97" stroke-width="3"/><path d="M42 64 L48 70 L60 57" fill="none" stroke="#FBFAF8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>'
+  + '<symbol id="s-cat-comm" viewBox="0 0 100 112">' + poly(TOP, 's-top i-ink') + poly(LEFT, 'i-fl i-ink') + poly(RIGHT, 'i-fr i-ink')
+  + '<polygon points="40,46 56,62 40,78 24,62" fill="#FF8A3D" class="i-ink"/><polygon points="62,50 78,66 62,82 46,66" fill="#F2EDE6" class="i-ink"/></symbol>'
+  + '</svg>')
+
 def ico(i, cls='', w=None): return '<svg class="%s" aria-hidden="true" focusable="false"%s><use href="#%s"/></svg>' % (cls, '' if not w else ' width="%s"' % w, i)
-MODS = [('lens', 's-lens'), ('way', 's-way'), ('blue', 's-blue'), ('dusk', 's-dusk'), ('canvas', 's-canvas')]  # orden del contenido: MN
+MODS = [('lens', 's-lens'), ('way', 's-way'), ('blue', 's-blue'), ('dusk', 's-dusk'), ('canvas', 's-canvas')]
 def mod_names(): return {k: name for k, name in D['MN']}
 
 def has_img(name): return os.path.exists(os.path.join(ROOT, 'img', name + '.jpg'))
@@ -127,14 +192,46 @@ def head(p, title, desc, route_key):
 
 MENU_T = {
  'es': {'menu': 'Menú', 'explore': 'Explorar', 'project': 'Proyecto', 'legal': 'Legal', 'prefs': 'Preferencias', 'repo': 'Repositorio', 'releases': 'Versiones', 'changelog': 'Registro de cambios', 'issues': 'Reportar un problema',
-        'license': 'Licencia Apache-2.0', 'third': 'Avisos de terceros', 'security': 'Seguridad', 'contact': 'Contacto', 'main': 'Principal', 'close': 'Cerrar menú'},
+        'license': 'Licencia Apache-2.0', 'third': 'Avisos de terceros', 'security': 'Seguridad', 'contact': 'Contacto', 'main': 'Principal', 'close': 'Cerrar menú',
+        'faq': 'FAQ', 'faq_aria': 'Preguntas frecuentes (FAQ)', 'board_all': 'Tablero completo', 'proj_sub': 'Proyecto y Lattice', 'idx': 'Índice'},
  'en': {'menu': 'Menu', 'explore': 'Explore', 'project': 'Project', 'legal': 'Legal', 'prefs': 'Preferences', 'repo': 'Repository', 'releases': 'Releases', 'changelog': 'Changelog', 'issues': 'Report an issue',
-        'license': 'Apache-2.0 license', 'third': 'Third-party notices', 'security': 'Security', 'contact': 'Contact', 'main': 'Main', 'close': 'Close menu'},
+        'license': 'Apache-2.0 license', 'third': 'Third-party notices', 'security': 'Security', 'contact': 'Contact', 'main': 'Main', 'close': 'Close menu',
+        'faq': 'FAQ', 'faq_aria': 'Frequently asked questions (FAQ)', 'board_all': 'Full board', 'proj_sub': 'Project & Lattice', 'idx': 'Index'},
 }
 CONTACT = 'hello@ultimaibrahim.dev'
 
+def guide_menu_items(p):
+    """Returns (all_entry, category_entries) for the Modding Guide submenu."""
+    DOC, FORUM, T = D['DOCS'][p.lang], D['FORUM'], MENU_T[p.lang]
+    groups = DOC['g']
+    counts = {g[0]: len(g[1]) for g in groups}
+    cats = FORUM['categories'][p.lang]
+    comm_cnt = len(FORUM['community'][p.lang])
+    total = sum(counts.values()) + comm_cnt
+    # Match order of the 5 board categories using exact category ids
+    cat_cnts = {
+        'start': len(groups[0][1]) if len(groups) > 0 else 0,
+        'engine': len(groups[1][1]) if len(groups) > 1 else 0,
+        'recipes': len(groups[2][1]) if len(groups) > 2 else 0,
+        'publish': len(groups[3][1]) if len(groups) > 3 else 0,
+        'community': comm_cnt,
+    }
+    base = p.href(ROUTES['docs'])
+    entries = [(c['name'], base + '?cat=' + c['id'], cat_cnts.get(c['id'], 0)) for c in cats]
+    return (T['board_all'], base, total), entries
+
+def project_menu_items(p):
+    n, T = p.n, MENU_T[p.lang]
+    repo = cfg.get('repo_url', '').rstrip('/')
+    items = [(n['nav'][3], p.href(ROUTES['nov']), 'nov', False)]
+    if cfg.get('lattice_url'): items.append(('Lattice', cfg['lattice_url'], None, True))
+    if repo:
+        items += [(T['repo'], repo, None, True), (T['releases'], repo + '/releases', None, True),
+                  (T['changelog'], repo + '/blob/main/CHANGELOG.md', None, True), (T['issues'], repo + '/issues', None, True)]
+    return items
+
 def link_groups(p):
-    """The same links feed the dropdown menu and the footer, so they never drift apart."""
+    """Footer groups: Explore, Project, and Legal (Legal stays in footer only)."""
     n, T = p.n, MENU_T[p.lang]
     names = ['showcase', 'faq', 'nov', 'docs']
     labels = [n['nav'][0], n['nav'][2], n['nav'][3], n['nav'][4]]
@@ -145,26 +242,63 @@ def link_groups(p):
     project = []
     if repo:
         project = [(T['repo'], repo, None, True), (T['releases'], repo + '/releases', None, True), (T['changelog'], repo + '/blob/main/CHANGELOG.md', None, True), (T['issues'], repo + '/issues', None, True)]
-    legal = [(LEGAL_NAMES[p.lang]['terms'], p.href(ROUTES['terms']), 'terms', False), (LEGAL_NAMES[p.lang]['privacy'], p.href(ROUTES['privacy']), 'privacy', False)]
+    legal_links = [(LEGAL_NAMES[p.lang]['terms'], p.href(ROUTES['terms']), 'terms', False), (LEGAL_NAMES[p.lang]['privacy'], p.href(ROUTES['privacy']), 'privacy', False)]
     if repo:
-        legal += [(T['license'], repo + '/blob/main/LICENSE', None, True), (T['third'], repo + '/blob/main/THIRD_PARTY_NOTICES.md', None, True), (T['security'], repo + '/blob/main/SECURITY.md', None, True)]
-    return [(T['explore'], explore), (T['project'], project), (T['legal'], legal)]
+        legal_links += [(T['license'], repo + '/blob/main/LICENSE', None, True), (T['third'], repo + '/blob/main/THIRD_PARTY_NOTICES.md', None, True), (T['security'], repo + '/blob/main/SECURITY.md', None, True)]
+    return [(T['explore'], explore), (T['project'], project), (T['legal'], legal_links)]
 
 def top(p, active):
     n, x, T = p.n, p.x, MENU_T[p.lang]
-    h = ['<a class="skip" href="#main">%s</a>' % x['skip'], '<header class="top"><a class="brand" href="%s">%s<span>aether</span></a>' % (p.href(''), ico('i-cube'))]
-    h.append(p.dlbtn(n['dl'], n['dl'], url=None) if READY else '<a class="btn" href="%s">%s</a>' % (p.href(ROUTES['dl']), n['dl']))
-    h.append('<details class="menu" data-menu><summary class="tool" aria-label="%s">%s <span aria-hidden="true">▾</span></summary><div class="mpanel"><nav aria-label="%s">' % (T['menu'], T['menu'], T['main']))
-    for title, items in link_groups(p):
-        if not items: continue
-        h.append('<h4>%s</h4><ul>' % title)
-        for label, href, key, ext in items:
-            cur = ' aria-current="page"' if key and active == key else ''
-            h.append('<li><a href="%s"%s%s>%s%s</a></li>' % (href, ' rel="noopener"' if ext else '', cur, label, ' ↗' if ext else ''))
-        h.append('</ul>')
     ol = 'en' if p.lang == 'es' else 'es'
-    h.append('<h4>%s</h4><div class="mprefs"><a class="tool" href="%s" hreflang="%s" lang="%s" title="%s">%s</a><button type="button" class="tool" data-theme-toggle aria-label="%s">◐</button></div>' % (T['prefs'], p.href(p.route, ol), ol, ol, x['other_name'], x['other'], x['theme']))
-    h.append('</nav></div></details></header>')
+    (all_lbl, all_href, all_cnt), cat_entries = guide_menu_items(p)
+    proj_items = project_menu_items(p)
+
+    # Desktop submenus
+    guide_dd = ['<a class="dd-item dd-all%s" href="%s"><span><span class="dn-rh">◆</span> %s</span><span class="dd-cnt">%d</span></a><div class="dd-sep"></div>' % (
+        ' active' if active == 'docs' else '', all_href, all_lbl, all_cnt)]
+    for cname, chref, ccnt in cat_entries:
+        guide_dd.append('<a class="dd-item" href="%s"><span>%s</span><span class="dd-cnt">%d</span></a>' % (chref, cname, ccnt))
+
+    proj_dd = []
+    for idx, (lbl, href, key, ext) in enumerate(proj_items):
+        cur = ' aria-current="page"' if key and active == key else ''
+        proj_dd.append('<a class="dd-item" href="%s"%s%s><span>%s%s</span></a>' % (
+            href, ' rel="noopener"' if ext else '', cur, lbl, ' ↗' if ext else ''))
+        if idx == 0 and len(proj_items) > 1:
+            proj_dd.append('<div class="dd-sep"></div>')
+
+    # Mobile compact drawer (zero Legal section, accordion submenus instead of a long flat list)
+    m_guide_lis = '<li><a href="%s"%s><span><span class="dn-rh">◆</span> %s</span><span class="dd-cnt">%d</span></a></li>' % (all_href, ' aria-current="page"' if active == 'docs' else '', all_lbl, all_cnt)
+    m_guide_lis += ''.join('<li><a href="%s"><span>%s</span><span class="dd-cnt">%d</span></a></li>' % (chref, cname, ccnt) for cname, chref, ccnt in cat_entries)
+    m_proj_lis = ''.join('<li><a href="%s"%s%s>%s%s</a></li>' % (
+        href, ' rel="noopener"' if ext else '', ' aria-current="page"' if key and active == key else '', lbl, ' ↗' if ext else '') for lbl, href, key, ext in proj_items if key != 'nov')
+
+    h = ['<a class="skip" href="#main">%s</a>' % x['skip'],
+         '<header class="top-bar"><div class="top"><a class="brand" href="%s">%s<span>aether</span></a>' % (p.href(''), ico('i-cube'))]
+    h.append('<nav class="top-nav" aria-label="%s">' % T['main'])
+    h.append('<a class="nav-link nav-opt" href="%s"%s>%s</a>' % (p.href(ROUTES['showcase']), ' aria-current="page"' if active == 'showcase' else '', n['nav'][0]))
+    h.append('<details class="nav-dd nav-opt%s" data-dd><summary class="nav-link">%s <span class="dd-car" aria-hidden="true">▾</span></summary><div class="dd-panel">%s</div></details>' % (
+        ' active' if active == 'docs' else '', n['nav'][4], ''.join(guide_dd)))
+    h.append('<a class="nav-link nav-faq" href="%s" aria-label="%s"%s>%s</a>' % (
+        p.href(ROUTES['faq']), T['faq_aria'], ' aria-current="page"' if active == 'faq' else '', T['faq']))
+    h.append('<details class="nav-dd nav-opt%s" data-dd><summary class="nav-link">%s <span class="dd-car" aria-hidden="true">▾</span></summary><div class="dd-panel dd-panel-sm">%s</div></details>' % (
+        ' active' if active == 'nov' else '', T['project'], ''.join(proj_dd)))
+    h.append('</nav>')
+    h.append('<div class="top-act">')
+    h.append(p.dlbtn(n['dl'], n['dl'], url=None) if READY else '<a class="btn" href="%s">%s</a>' % (p.href(ROUTES['dl']), n['dl']))
+    h.append('<a class="tool nav-opt" href="%s" hreflang="%s" lang="%s" title="%s">%s</a>' % (p.href(p.route, ol), ol, ol, x['other_name'], x['other']))
+    h.append('<button type="button" class="tool nav-opt" data-theme-toggle aria-label="%s">◐</button>' % x['theme'])
+    h.append('<details class="menu" data-menu><summary class="tool" aria-label="%s">%s <span aria-hidden="true">▾</span></summary><div class="mpanel"><nav aria-label="%s">' % (T['menu'], T['menu'], T['main']))
+    h.append('<div class="mquick"><a class="mquick-a" href="%s"%s>%s</a><a class="mquick-a" href="%s"%s>%s</a></div>' % (
+        p.href(ROUTES['showcase']), ' aria-current="page"' if active == 'showcase' else '', n['nav'][0],
+        p.href(ROUTES['nov']), ' aria-current="page"' if active == 'nov' else '', n['nav'][3]))
+    h.append('<details class="msub"%s><summary><span>%s</span><span class="dd-car" aria-hidden="true">▸</span></summary><ul>%s</ul></details>' % (
+        ' open' if active == 'docs' else '', n['nav'][4], m_guide_lis))
+    h.append('<details class="msub"><summary><span>%s</span><span class="dd-car" aria-hidden="true">▸</span></summary><ul>%s</ul></details>' % (
+        T['proj_sub'], m_proj_lis))
+    h.append('<div class="mprefs"><span class="mprefs-lbl">%s</span><div><a class="tool" href="%s" hreflang="%s" lang="%s" title="%s">%s</a><button type="button" class="tool" data-theme-toggle aria-label="%s">◐</button></div></div>' % (
+        T['prefs'], p.href(p.route, ol), ol, ol, x['other_name'], x['other'], x['theme']))
+    h.append('</nav></div></details></div></div></header>')
     return ''.join(h)
 
 def foot(p):
@@ -179,7 +313,7 @@ def foot(p):
 
 def shell(p, title, desc, active, body, route_key=None):
     rk = p.route if route_key is None else route_key
-    return head(p, title, desc, rk) + '\n<body>\n' + SPRITE + '\n<div class="wrap">' + top(p, active) + '</div>\n' + body.replace('@@FOOT@@', '<div class="wrap">' + foot(p) + '</div>') + '\n<script src="%s" defer></script>\n</body>\n</html>\n' % p.asset('js/main.js')
+    return head(p, title, desc, rk) + '\n<body>\n' + SPRITE + '\n' + top(p, active) + '\n' + body.replace('@@FOOT@@', '<div class="wrap">' + foot(p) + '</div>') + '\n<script src="%s" defer></script>\n</body>\n</html>\n' % p.asset('js/main.js')
 
 def write(p, html):
     d = os.path.join(DIST, *p.parts) if p.parts else DIST
@@ -217,7 +351,6 @@ def page_dl(p):
     if READY:
         d = DL[p.lang]
         osrows = ''
-        # Linux leads with the full package: without .NET 9 the light one does nothing visible when opened (no dialog, unlike Windows).
         for rid, label, note, full_first in (('win-x64', d['win'], d['note_w'], False), ('linux-x64', d['lin'], d['note_l'], True)):
             first, second = ((True, d['light']), (False, d['light_l'])) if full_first else ((False, d['light']), (True, d['full']))
             osrows += '<div class="dlos"><strong>%s</strong><div class="dlrow"><a class="btn" href="%s" download>%s%s</a><a class="btn o" href="%s" download>%s%s</a></div><p>%s</p></div>' % (
@@ -248,27 +381,303 @@ def page_nov(p):
     b = '<main id="main"><div class="wrap"><div class="col"><section class="first"><h1>%s</h1>%s</section></div></div></main>@@FOOT@@' % (t['novh'], items)
     return shell(p, t['novh'] + ' · aether', x['desc_nov'], 'nov', b)
 
+# ───────────────────────── MINI FORO & GUÍA DE MODDING ─────────────────────────
+
 def doc_slugs(lang):
     g = D['DOCS'][lang]['g']
     return [(grp[0], [(k, label) for k, label in grp[1]]) for grp in g]
 
-def page_doc(p, key):
-    lang = p.lang; DOC = D['DOCS'][lang]; groups = doc_slugs(lang); flat = [k for _, items in groups for k, _ in items]
-    route = lambda k: 'docs' if k == 'intro' else 'docs/' + k
-    nav = ['<nav class="dn" aria-label="Docs">']
+def cat_map(lang):
+    return {c['id']: c for c in D['FORUM']['categories'][lang]}
+
+def thread_route(k):
+    return 'docs/' + k
+
+def comm_route(slug):
+    return 'docs/c/' + slug
+
+def page_forum_board(p, route_override=None):
+    """Tablero estático cerrado de la Guía de Modding: 5 categorías, buscador en vivo, 17 guías fijadas y casos resueltos."""
+    lang = p.lang
+    ft = FORUM_T[lang]
+    DOC = D['DOCS'][lang]
+    cats = D['FORUM']['categories'][lang]
+    cmap = cat_map(lang)
+    meta_map = D['FORUM']['meta']
+    comm_list = D['FORUM']['community'][lang]
+    groups = doc_slugs(lang)
+    flat = [(k, label) for _, items in groups for k, label in items]
+
+    counts = {c['id']: 0 for c in cats}
+    for k, _ in flat:
+        cid = meta_map.get(k, {}).get('cat', 'start')
+        counts[cid] = counts.get(cid, 0) + 1
+    for ct in comm_list:
+        cid = ct.get('cat', 'community')
+        counts[cid] = counts.get(cid, 0) + 1
+
+    cat_cards = []
+    for c in cats:
+        cid = c['id']
+        cat_cards.append(
+            '<button type="button" class="f-cat-card" data-filter-cat="%s">'
+            '<div class="f-cat-top">%s<span class="f-cat-cnt">%d</span></div>'
+            '<h3>%s</h3><p>%s</p></button>'
+            % (cid, ico(c['icon'], 'f-cat-ico'), counts.get(cid, 0), c['name'], c['desc'])
+        )
+
+    rows = []
+    for k, label in flat:
+        m = meta_map.get(k, {})
+        cid = m.get('cat', 'start')
+        cinfo = cmap.get(cid, cats[0])
+        tags = m.get('tags', [])
+        tags_html = ''.join('<span class="f-tag" data-tag="%s">#%s</span>' % (tg, tg) for tg in tags)
+        title, body_html, _src = DOC[k]
+        plain = re.sub(r'<[^>]+>', ' ', body_html)
+        plain = re.sub(r'\s+', ' ', plain).strip()[:420]
+        search_blob = html_mod.escape((title + ' ' + ' '.join(tags) + ' ' + plain + ' ' + m.get('ref', '')).lower())
+        code_n = m.get('code', 0)
+        act_txt = ('%d %s · %s' % (code_n, ft['snippets_lbl'], m.get('time', '5 min'))) if code_n else m.get('time', '4 min')
+        rows.append(
+            '<article class="f-row pinned" data-thread-row data-cat="%s" data-kind="pin" data-tags="%s" data-search="%s">'
+            '<div class="f-row-ico">%s</div>'
+            '<div class="f-row-main">'
+            '<div class="f-row-badges">'
+            '<span class="f-badge pin">◆ %s</span>'
+            '<span class="f-badge ver">%s</span>'
+            '<span class="f-cat-pill">%s</span>'
+            '</div>'
+            '<h3><a href="%s">%s</a></h3>'
+            '<div class="f-row-tags">%s<span class="f-ref">%s</span></div>'
+            '</div>'
+            '<div class="f-row-stat">'
+            '<span class="f-stat-main">%s</span>'
+            '<span class="f-stat-sub">%s</span>'
+            '</div>'
+            '</article>'
+            % (cid, ','.join(tags), search_blob, ico(cinfo['icon']),
+               ft['pin_badge'], m.get('ver', VER), cinfo['short'],
+               p.href(thread_route(k)), title, tags_html, m.get('ref', ''),
+               act_txt, ft['compiles_badge'])
+        )
+
+    for ct in comm_list:
+        slug = ct['slug']
+        cid = ct.get('cat', 'community')
+        cinfo = cmap.get(cid, cats[-1])
+        tags = ct.get('tags', [])
+        tags_html = ''.join('<span class="f-tag" data-tag="%s">#%s</span>' % (tg, tg) for tg in tags)
+        rep_n = len(ct.get('replies', []))
+        rep_txt = '%d %s' % (rep_n, ft['reply_1'] if rep_n == 1 else ft['replies_lbl'])
+        search_blob = html_mod.escape((ct['title'] + ' ' + ct['body'] + ' ' + ' '.join(tags)).lower())
+        solved_html = ('<span class="f-badge solved">%s</span>' % ft['solved_badge']) if ct.get('solved') else ''
+        rows.append(
+            '<article class="f-row comm" data-thread-row data-cat="%s" data-kind="comm" data-tags="%s" data-search="%s">'
+            '<div class="f-row-ico">%s</div>'
+            '<div class="f-row-main">'
+            '<div class="f-row-badges">'
+            '%s'
+            '<span class="f-badge ver">%s</span>'
+            '<span class="f-cat-pill">%s</span>'
+            '</div>'
+            '<h3><a href="%s">%s</a></h3>'
+            '<div class="f-row-tags">%s</div>'
+            '</div>'
+            '<div class="f-row-stat">'
+            '<span class="f-stat-main">%s</span>'
+            '<span class="f-stat-sub">%s</span>'
+            '</div>'
+            '</article>'
+            % (cid, ','.join(tags), search_blob, ico(cinfo['icon']),
+               solved_html, ct.get('ver', 'Nano 1.0.3'), cinfo['short'],
+               p.href(comm_route(slug)), ct['title'], tags_html,
+               rep_txt, ct.get('created', '2026-11-19'))
+        )
+
+    repo = (cfg.get('repo_url') or 'https://github.com/ultimaibrahim/aether-loader').rstrip('/')
+    total_n = len(flat) + len(comm_list)
+    b = [
+        '<main id="main"><div class="wrap">'
+        '<section class="first f-hero">'
+        '<div class="f-hero-top">'
+        '<div><h1>%s</h1><p class="lede">%s</p></div>'
+        '<div class="f-hero-actions">'
+        '<a class="tool" href="%s/issues" rel="noopener">%s</a>'
+        '</div>'
+        '</div>'
+        '<div class="f-cats" role="region" aria-label="Categories">%s</div>'
+        '<div class="f-toolbar">'
+        '<div class="f-search-wrap">'
+        '<input type="search" id="forum-search" class="f-search" placeholder="%s" aria-label="%s">'
+        '</div>'
+        '<div class="f-tabs" role="tablist">'
+        '<button type="button" class="f-tab on" data-filter-kind="all">%s <span class="f-tab-n">%d</span></button>'
+        '<button type="button" class="f-tab" data-filter-kind="pin">%s <span class="f-tab-n">%d</span></button>'
+        '<button type="button" class="f-tab" data-filter-kind="comm">%s <span class="f-tab-n">%d</span></button>'
+        '</div>'
+        '</div>'
+        '<div class="f-active-filter" id="forum-active-filter" hidden>'
+        '<span id="forum-filter-label"></span>'
+        '<button type="button" class="tool" id="forum-clear-filter">%s</button>'
+        '</div>'
+        '<div class="f-board" id="forum-board">'
+        '<div class="f-board-hd"><span>%s</span><span>%s</span></div>'
+        '%s'
+        '<div class="f-empty" id="forum-empty" hidden><p>%s</p></div>'
+        '</div>'
+        '</section></div>'
+        '</main>@@FOOT@@'
+        % (
+            ft['title'], ft['sub'],
+            repo, ft['issue_btn'],
+            ''.join(cat_cards),
+            ft['search_ph'], ft['search_ph'],
+            ft['all_tab'], total_n,
+            ft['pins_tab'], len(flat),
+            ft['comm_tab'], len(comm_list),
+            ft['clear_filter'],
+            ft['col_topic'], ft['col_act'],
+            ''.join(rows),
+            ft['no_matches']
+        )
+    ]
+    rk = route_override if route_override is not None else p.route
+    return shell(p, '%s · aether' % ft['title'], p.x['desc_docs'], 'docs', ''.join(b), rk)
+
+def render_solved_replies(p, seeded_replies):
+    lang = p.lang
+    ft = FORUM_T[lang]
+    items = []
+    for r in (seeded_replies or []):
+        sol = ('<span class="f-badge solved">%s</span>' % ft['solution_badge']) if r.get('is_solution') else ''
+        code_blk = ('<pre class="code" data-copy="%s">%s</pre>' % (p.x['copy'], html_mod.escape(r['code']))) if r.get('code') else ''
+        body_fmt = re.sub(r'`([^`]+)`', r'<code>\1</code>', html_mod.escape(r['body']))
+        items.append(
+            '<div class="f-reply%s">'
+            '<div class="f-reply-hd">%s<span class="f-reply-date">%s</span></div>'
+            '<p>%s</p>%s'
+            '</div>'
+            % (' solution' if r.get('is_solution') else '', sol,
+               html_mod.escape(r.get('created', '2026-11-19')), body_fmt, code_blk)
+        )
+    return '<section class="f-disc"><h2>%s</h2><div class="f-replies">%s</div></section>' % (ft['sol_h'], ''.join(items))
+
+def build_sidebar_nav(p, active_key):
+    lang = p.lang
+    ft = FORUM_T[lang]
+    T = MENU_T[lang]
+    groups = doc_slugs(lang)
+    total = sum(len(items) for _, items in groups)
+    nav = ['<nav class="dn" data-dn aria-label="Forum & Guide">']
+    nav.append('<div class="dn-top"><a class="dn-board" href="%s">%s</a><button type="button" class="dn-toggle tool" data-dn-toggle aria-expanded="false">%s (%d) <span class="dd-car" aria-hidden="true">▾</span></button></div><div class="dn-groups">' % (
+        p.href('docs'), ft['board_back'], T['idx'], total))
     for gname, items in groups:
         nav.append('<h4>%s</h4>' % gname)
-        for k, label in items: nav.append('<a href="%s"%s>%s</a>' % (p.href(route(k)), ' aria-current="page"' if k == key else '', label))
-    nav.append('</nav>')
-    title, html, _src = DOC[key]
-    html = re.sub(r'<table>', '<div class="tablewrap"><table>', html); html = re.sub(r'</table>', '</table></div>', html)
+        for k, label in items:
+            cur = k == active_key
+            mark = '<span class="dn-rh" aria-hidden="true">◆</span>' if cur else '<span class="dn-rh off" aria-hidden="true">◇</span>'
+            nav.append('<a href="%s"%s>%s<span>%s</span></a>' % (p.href(thread_route(k)), ' aria-current="page"' if cur else '', mark, label))
+    nav.append('</div></nav>')
+    return ''.join(nav)
+
+def page_doc(p, key, route_override=None):
+    lang = p.lang
+    ft = FORUM_T[lang]
+    DOC = D['DOCS'][lang]
+    groups = doc_slugs(lang)
+    flat = [k for _, items in groups for k, _ in items]
+    cmap = cat_map(lang)
+    m = D['FORUM']['meta'].get(key, {})
+    cid = m.get('cat', 'start')
+    cinfo = cmap.get(cid, D['FORUM']['categories'][lang][0])
+
+    nav_html = build_sidebar_nav(p, key)
+    title, html, src_note = DOC[key]
+    html = re.sub(r'<table>', '<div class="tablewrap"><table>', html)
+    html = re.sub(r'</table>', '</table></div>', html)
     html = html.replace('<pre class="code">', '<pre class="code" data-copy="%s">' % p.x['copy'])
-    i = flat.index(key); label = dict(kv for _, items in groups for kv in items)
+
+    # Extraer subtítulos h3 para "En este hilo"
+    h3s = re.findall(r'<h3>(.*?)</h3>', html)
+    toc_pills = []
+    for idx, h3_raw in enumerate(h3s):
+        hid = 'sec-%d' % (idx + 1)
+        html = html.replace('<h3>%s</h3>' % h3_raw, '<h3 id="%s">%s</h3>' % (hid, h3_raw), 1)
+        clean_h3 = re.sub(r'<[^>]+>', '', h3_raw)
+        toc_pills.append('<a class="f-toc-pill" href="#%s">%s</a>' % (hid, clean_h3))
+    toc_html = ('<div class="f-toc"><span>%s:</span>%s</div>' % (ft['toc_h'], ''.join(toc_pills))) if toc_pills else ''
+
+    tags = m.get('tags', [])
+    tags_html = ''.join('<a class="f-tag" href="%s?tag=%s">#%s</a>' % (p.href('docs'), tg, tg) for tg in tags)
+    repo = (cfg.get('repo_url') or 'https://github.com/ultimaibrahim/aether-loader').rstrip('/')
+    ref_path = m.get('ref', '')
+    ref_link = ('<a class="f-src-link" href="%s/tree/main/%s" rel="noopener">%s: <code>%s</code> ↗</a>' % (repo, ref_path, ft['src_link'], ref_path)) if ref_path else ''
+
+    header_card = (
+        '<header class="f-thread-hd">'
+        '<div class="f-thread-crumbs"><a href="%s">%s</a> <span>/</span> <span>%s</span></div>'
+        '<div class="f-thread-badges">'
+        '%s'
+        '<span class="f-badge pin">◆ %s</span>'
+        '<span class="f-badge ver">%s</span>'
+        '<span class="f-badge time">%s</span>'
+        '</div>'
+        '<h1>%s</h1>'
+        '<div class="f-thread-meta">%s %s</div>'
+        '%s'
+        '</header>'
+    ) % (
+        p.href('docs'), ft['title'], cinfo['name'],
+        ico(cinfo['icon'], 'f-thread-ico'), ft['pin_badge'], m.get('ver', VER), m.get('time', '5 min'),
+        title, tags_html, ref_link, toc_html
+    )
+
+    i = flat.index(key)
+    label = dict(kv for _, items in groups for kv in items)
     pn = '<div class="pn"><span>%s</span><span>%s</span></div>' % (
-        ('<a href="%s">← %s</a>' % (p.href(route(flat[i - 1])), label[flat[i - 1]])) if i else '',
-        ('<a href="%s">%s →</a>' % (p.href(route(flat[i + 1])), label[flat[i + 1]])) if i < len(flat) - 1 else '')
-    b = '<main id="main"><div class="wrap"><div class="docs">%s<article class="db"><h1>%s</h1>%s%s</article></div></div></main>@@FOOT@@' % (''.join(nav), title, html, pn)
-    return shell(p, '%s · Docs · aether' % title, p.x['desc_docs'], 'docs', b, route(key))
+        ('<a href="%s">← %s</a>' % (p.href(thread_route(flat[i - 1])), label[flat[i - 1]])) if i else ('<a href="%s">%s</a>' % (p.href('docs'), ft['board_back'])),
+        ('<a href="%s">%s →</a>' % (p.href(thread_route(flat[i + 1])), label[flat[i + 1]])) if i < len(flat) - 1 else '')
+
+    b = '<main id="main"><div class="wrap"><div class="docs">%s<article class="db">%s<div class="f-thread-body">%s</div><p class="src">%s: %s</p>%s</article></div></div></main>@@FOOT@@' % (
+        nav_html, header_card, html, DOC['srcl'], src_note, pn
+    )
+    rk = route_override if route_override is not None else thread_route(key)
+    return shell(p, '%s · %s · aether' % (title, ft['title']), p.x['desc_docs'], 'docs', b, rk)
+
+def page_comm_thread(p, ct):
+    lang = p.lang
+    ft = FORUM_T[lang]
+    cmap = cat_map(lang)
+    cinfo = cmap.get(ct.get('cat', 'community'), D['FORUM']['categories'][lang][-1])
+    nav_html = build_sidebar_nav(p, '')
+    tags_html = ''.join('<a class="f-tag" href="%s?tag=%s">#%s</a>' % (p.href('docs'), tg, tg) for tg in ct.get('tags', []))
+    solved_html = ('<span class="f-badge solved">%s</span>' % ft['solved_badge']) if ct.get('solved') else ''
+    body_fmt = re.sub(r'`([^`]+)`', r'<code>\1</code>', html_mod.escape(ct['body']))
+
+    header_card = (
+        '<header class="f-thread-hd">'
+        '<div class="f-thread-crumbs"><a href="%s">%s</a> <span>/</span> <span>%s</span></div>'
+        '<div class="f-thread-badges">'
+        '%s %s'
+        '<span class="f-badge ver">%s</span>'
+        '</div>'
+        '<h1>%s</h1>'
+        '<div class="f-thread-meta">%s</div>'
+        '</header>'
+    ) % (
+        p.href('docs'), ft['title'], cinfo['name'],
+        ico(cinfo['icon'], 'f-thread-ico'), solved_html,
+        html_mod.escape(ct.get('ver', 'Nano 1.0.3')),
+        html_mod.escape(ct['title']), tags_html
+    )
+
+    sol_html = render_solved_replies(p, ct.get('replies', []))
+    b = '<main id="main"><div class="wrap"><div class="docs">%s<article class="db">%s<div class="f-thread-body"><p>%s</p></div>%s</article></div></div></main>@@FOOT@@' % (
+        nav_html, header_card, body_fmt, sol_html
+    )
+    rk = comm_route(ct['slug'])
+    return shell(p, '%s · %s · aether' % (ct['title'], ft['title']), p.x['desc_docs'], 'docs', b, rk)
 
 def page_legal(p, key):
     table = legal.TERMS if key == 'terms' else legal.PRIVACY
@@ -278,10 +687,17 @@ def page_legal(p, key):
 
 def page_404(lang):
     p = Page(lang, ''); x = X[lang]
-    # 404: rutas absolutas (válido con dominio propio en la raíz)
     p.prefix = '/'; p.href = lambda route, l=None: '/' + (('en/' if (l or lang) == 'en' else '') + (route + '/' if route else '')) if (route or (l or lang) == 'en') else '/'
     body = '<main id="main"><div class="wrap"><div class="col"><section class="first"><h1>%s</h1><p class="lede">%s</p><p><a class="btn" href="/">%s</a></p></section></div></div></main>@@FOOT@@' % (x['nf_h'], x['nf_p'], x['nf_b'])
     return shell(p, x['nf_h'] + ' · aether', x['nf_h'], '', body, '')
+
+# Slugs del antiguo índice de 13 secciones redirigidos a su hilo equivalente para no romper enlaces existentes
+LEGACY_DOC_ALIASES = {
+    'anat': 'first',
+    'deps': 'harm',
+    'test': 'build',
+    'cli': 'traps',
+}
 
 def build():
     if os.path.exists(DIST): shutil.rmtree(DIST)
@@ -292,9 +708,29 @@ def build():
             p = Page(lang, key); write(p, builder(p)); urls.append((lang, key))
         for key in ('terms', 'privacy'):
             p = Page(lang, ROUTES[key]); write(p, page_legal(p, key)); urls.append((lang, ROUTES[key]))
+
+        # Tablero principal del Mini Foro en /docs/ y también en /foro/ (/en/forum/)
+        for board_route in ('docs', 'foro' if lang == 'es' else 'forum'):
+            p = Page(lang, board_route)
+            write(p, page_forum_board(p, route_override=board_route))
+            if board_route == 'docs':
+                urls.append((lang, board_route))
+
+        # 17 hilos fijados bajo /docs/<slug>/
         for k in [k for _, items in doc_slugs(lang) for k, _ in items]:
-            r = 'docs' if k == 'intro' else 'docs/' + k
-            p = Page(lang, r); write(p, page_doc(p, k)); urls.append((lang, r))
+            r = thread_route(k)
+            p = Page(lang, r); write(p, page_doc(p, k, route_override=r)); urls.append((lang, r))
+
+        # Aliases retrocompatibles de slugs antiguos
+        for old_slug, target_slug in LEGACY_DOC_ALIASES.items():
+            r = 'docs/' + old_slug
+            p = Page(lang, r); write(p, page_doc(p, target_slug, route_override=r))
+
+        # Hilos comunitarios semilla bajo /docs/c/<slug>/
+        for ct in D['FORUM']['community'][lang]:
+            r = comm_route(ct['slug'])
+            p = Page(lang, r); write(p, page_comm_thread(p, ct)); urls.append((lang, r))
+
     open(os.path.join(DIST, '404.html'), 'w', encoding='utf-8').write(page_404('es'))
     for d in ['css', 'js', 'fonts', 'img']:
         s = os.path.join(ROOT, d)
@@ -308,7 +744,6 @@ def build():
         loc = ''.join('<url><loc>%s/%s</loc></url>' % (base, '/'.join(([l] if l != 'es' else []) + ([r] if r else [])) + ('/' if (l != 'es' or r) else '')) for l, r in urls)
         open(os.path.join(DIST, 'sitemap.xml'), 'w').write('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">%s</urlset>' % loc)
     if cfg.get('domain'): open(os.path.join(DIST, 'CNAME'), 'w').write(cfg['domain'] + '\n')
-    # Cabeceras HTTP para Cloudflare Pages (otros servidores estáticos las ignoran; la política del <meta> sigue vigente).
     open(os.path.join(DIST, '_headers'), 'w').write(
         "/*\n  Content-Security-Policy: default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'\n"
         "  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n  Strict-Transport-Security: max-age=31536000\n"

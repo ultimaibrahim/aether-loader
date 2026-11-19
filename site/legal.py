@@ -19,7 +19,7 @@ TERMS = {
 <li>Puedes quitar Aether cuando quieras borrando las carpetas <code>BepInEx/plugins/Aether</code> y <code>Aether</code> del juego.</li>
 </ul>
 <h2>Mods de terceros</h2>
-<p>Los mods los crean terceros y se ejecutan con tus permisos dentro del juego. Los mods oficiales de Aether (Lens, Wayfinder, Blueprint y Dusk) y los del catálogo <a href="https://lattice.ultimaibrahim.dev" rel="noopener">Lattice</a> son información o comodidad, no una garantía de que sean seguros o libres de errores. Instala solo lo que confíes. Lattice tiene sus propios términos.</p>
+<p>Los mods los crean terceros y se ejecutan con tus permisos dentro del juego. Los mods de Aether (Lens, Wayfinder, Blueprint, Dusk y Canvas) y los del catálogo <a href="https://lattice.ultimaibrahim.dev" rel="noopener">Lattice</a> son información o comodidad, no una garantía de que sean seguros o libres de errores. Instala solo lo que confíes. Lattice tiene sus propios términos.</p>
 <h2>Juego limpio</h2>
 <p>Aether no incluye trampas. No uses Aether ni sus mods para obtener ventajas injustas, automatizar el juego, modificar la memoria en multijugador, ni para infringir las reglas de un servidor o la licencia del juego. Eres responsable de lo que instales y de cómo lo uses, incluidas las sanciones que un servidor pueda aplicar.</p>
 <h2>Licencia del código y uso del nombre</h2>
@@ -50,7 +50,7 @@ TERMS = {
 <li>You can remove Aether at any time by deleting the <code>BepInEx/plugins/Aether</code> and <code>Aether</code> folders in the game.</li>
 </ul>
 <h2>Third-party mods</h2>
-<p>Mods are made by third parties and run with your permissions inside the game. Aether’s official mods (Lens, Wayfinder, Blueprint and Dusk) and those in the <a href="https://lattice.ultimaibrahim.dev" rel="noopener">Lattice</a> catalog are information or convenience, not a guarantee that they are safe or error-free. Install only what you trust. Lattice has its own terms.</p>
+<p>Mods are made by third parties and run with your permissions inside the game. Aether’s own mods (Lens, Wayfinder, Blueprint, Dusk and Canvas) and those in the <a href="https://lattice.ultimaibrahim.dev" rel="noopener">Lattice</a> catalog are information or convenience, not a guarantee that they are safe or error-free. Install only what you trust. Lattice has its own terms.</p>
 <h2>Fair play</h2>
 <p>Aether includes no cheats. Do not use Aether or its mods to gain unfair advantages, automate the game, modify memory in multiplayer, or break a server’s rules or the game’s license. You are responsible for what you install and how you use it, including any penalty a server may apply.</p>
 <h2>Code license and use of the name</h2>

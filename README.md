@@ -47,12 +47,12 @@ On Linux set the Steam launch option to `./run_bepinex.sh %command%`. (Experimen
 `BepInEx/config/aether_conflicts.txt` lists duplicate ids, missing dependencies and Harmony patch overlaps.
 
 The installer puts **only the loader** in your game. Mods are your choice: Aether's own are separate downloads
-(`aether-lens-<version>.zip`, and so on), and any mod, official or not, is added from Aether Monitor (**Add mod…**) or, from a terminal, with `./aether add SomeMod.zip`.
+(`aether-lens-<version>.zip`, and so on), and any mod — by Aether or third-party — is added from Aether Monitor (**Add mod…**) or, from a terminal, with `./aether add SomeMod.zip`.
 It reads the DLL and puts it in `Aether/Mods` or `BepInEx/plugins` depending on what it is, warning about missing
 dependencies first.
 
-From a checkout you can install some of the official mods straight from the build: `./scripts/install.sh --mods lens,dusk`
-(or `--with-mods` for all four). Re-running the installer keeps an already-installed official mod in step with the loader. The UI package (`Aether.UI.dll`: F10 menu, HUD, widgets the official mods use) installs by default but is separate from the core; `--no-ui` skips it, and `aether doctor` reports it on its own.
+From a checkout you can install some of Aether's bundled mods straight from the build: `./scripts/install.sh --mods lens,dusk`
+(or `--with-mods` for all of them). Re-running the installer keeps an already-installed Aether mod in step with the loader. The UI package (`Aether.UI.dll`: F10 menu, HUD, widgets Aether's UI uses) installs by default but is separate from the core; `--no-ui` skips it, and `aether doctor` reports it on its own.
 
 ## Keys
 

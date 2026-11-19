@@ -12,7 +12,7 @@
 | **Settings page** | `NanoPages.Register`: inline in Aether's F10 menu, or Nano's own "Mods" button |
 | **Last reviewed** | 2026-11-12 |
 
-Since 1.1.0 Dusk is the first official mod on **Aether Nano**: it no longer needs Aether. It applies its own Harmony patches
+Since 1.1.0 Dusk is the first Aether mod on **Aether Nano**: it no longer needs Aether. It applies its own Harmony patches
 (`PlayerLight`, `DayTimeManager`; up to 1.0.x they were never applied, because only Aether.UI's assembly was patched), and
 reads "underground" from Nano, so caves darken without Wayfinder installed.
 

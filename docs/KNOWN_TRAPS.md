@@ -194,7 +194,7 @@ Real digger whitelist:
 
 ## Aether mod assemblies whose dependency is missing can break other plugins' type scans
 
-Seen 2026-11-06 with `Aether.UI.dll` removed while the four official mods stayed installed. Aether loads every DLL in
+Seen 2026-11-06 with `Aether.UI.dll` removed while the four Aether mods stayed installed. Aether loads every DLL in
 `Aether/Mods` to read its `[AetherMod]` attribute, and a .NET assembly cannot be unloaded. The mods that need the missing
 `aether_ui` stay in the AppDomain half-broken, and a third-party plugin that walks every loaded type throws `TypeLoadException: Invalid type Aether.Mods.Wayfinder.WayfinderModule`, so that one
 Harmony patch fails. Aether itself reports the excluded mods clearly (one warning each) and everything else loads.

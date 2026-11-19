@@ -227,6 +227,30 @@
           </Grid>
         </Grid>
 
+        <!-- Modding Forum & Guide -->
+        <Grid x:Name="ForumPanel" Grid.Row="1" Margin="26,22,26,18" RowDefinitions="Auto,Auto,*,Auto" IsVisible="False">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <StackPanel>
+              <TextBlock x:Name="ForumTitle" Classes="display" FontSize="36" />
+              <TextBlock x:Name="ForumSummary" FontSize="13" Foreground="#6B6157" Margin="0,6,0,0" TextWrapping="Wrap" MaxWidth="620" />
+            </StackPanel>
+            <Button x:Name="OpenForumWeb" Grid.Column="1" Classes="primary" Padding="16,11" VerticalAlignment="Bottom" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <TextBox x:Name="ForumSearchBox" Grid.Column="0" Height="38" VerticalContentAlignment="Center" MinWidth="200" />
+            <WrapPanel x:Name="ForumChipsPanel" Grid.Column="1" Margin="8,0,0,0" />
+          </Grid>
+          <Border Grid.Row="2" Background="#FBFAF8" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+            <ScrollViewer><StackPanel x:Name="ForumHost" Spacing="8" Margin="12" /></ScrollViewer>
+          </Border>
+          <Border Grid.Row="3" Background="#F6F2EC" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,10,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock x:Name="ForumCliHint" Grid.Column="0" Classes="mono" FontSize="11.5" Foreground="#1A1410" VerticalAlignment="Center" TextWrapping="Wrap" />
+              <Button x:Name="OpenForumAsk" Grid.Column="1" Classes="quiet" Padding="12,7" Margin="10,0,0,0" />
+            </Grid>
+          </Border>
+        </Grid>
+
         <!-- Problems and logs -->
         <Grid x:Name="LogsPanel" Grid.Row="1" Margin="26,22,26,18" RowDefinitions="Auto,*,Auto" IsVisible="False">
           <TextBlock x:Name="LogsTitle" Grid.Row="0" Classes="display" FontSize="36" Margin="0,0,0,14" />

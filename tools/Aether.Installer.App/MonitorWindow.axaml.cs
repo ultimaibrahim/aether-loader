@@ -36,6 +36,7 @@ public sealed partial class MonitorWindow : Window
     private AetherUpdate? _update;
     private string _section = "catalog";
     private string _category = "";
+    private string _forumCategory = "";
     private string? _selected;
     private string? _busy;
     private Action<int>? _buildCube;
@@ -65,6 +66,9 @@ public sealed partial class MonitorWindow : Window
         UpdateButton.Click += OnUpdateAether;
         UpdateAllButton.Click += async (_, _) => await UpdateAll();
         SearchBox.TextChanged += (_, _) => RenderCatalog();
+        ForumSearchBox.TextChanged += (_, _) => RenderForum();
+        OpenForumWeb.Click += (_, _) => Opener.Url(Es ? "https://aether.ultimaibrahim.dev/docs/" : "https://aether.ultimaibrahim.dev/en/docs/");
+        OpenForumAsk.Click += (_, _) => Opener.Url("https://github.com/ultimaibrahim/aether-loader/issues");
         ViewCards.Click += (_, _) => SetView("cards");
         ViewList.Click += (_, _) => SetView("list");
         AddHandler(DragDrop.DragOverEvent, (_, e) => { e.DragEffects = e.Data.Contains(DataFormats.Files) ? DragDropEffects.Copy : DragDropEffects.None; DropZone.BorderBrush = B(Ember); });
@@ -106,12 +110,21 @@ public sealed partial class MonitorWindow : Window
         LogsTitle.Text = T("Problems and logs", "Fallos y logs");
         OpenLogs.Content = T("Open logs folder", "Abrir carpeta de logs");
         OpenMods.Content = T("Open mods folder", "Abrir carpeta de mods");
+        ForumTitle.Text = T("Modding Guide", "Guía de modding");
+        ForumSummary.Text = T(
+            "17 pinned guides (pure BepInEx & Aether Nano 1.0.3) and 3 solved reference cases. Click any thread to open it in your browser.",
+            "17 guías fijadas (BepInEx puro y Aether Nano 1.0.3) y 3 casos resueltos de referencia. Haz clic en cualquier hilo para abrirlo.");
+        OpenForumWeb.Content = T("Open guide on web ↗", "Abrir guía en la web ↗");
+        ForumSearchBox.Watermark = T("Filter threads by topic, class (NanoSurface, UIWidget, Digger) or #tag…", "Filtrar hilos por tema, clase (NanoSurface, UIWidget, Digger) o #etiqueta…");
+        ForumCliHint.Text = T("New mod:  dotnet new classlib -f netstandard2.1  or  aether new MyFirstMod", "Nuevo mod:  dotnet new classlib -f netstandard2.1  o  aether new MiPrimerMod");
+        OpenForumAsk.Content = T("Suggest an edit on GitHub ↗", "Sugerir mejora en GitHub ↗");
         UpdateButton.Content = _update?.ZipUrl != null || _update == null ? T("Update Aether", "Actualizar Aether") : T("Open download page", "Abrir la descarga");
         if (_update != null) UpdateText.Text = T($"Aether {_update.Version} is available.", $"Aether {_update.Version} está disponible.");
         BuildModsHeader();
         ShowSection(_section);
         if (reload) Reload();
         RenderCatalog();
+        RenderForum();
     }
 
     private Control ViewLabel(string text, bool cards)
@@ -135,6 +148,7 @@ public sealed partial class MonitorWindow : Window
         StatusPanel.IsVisible = name == "status";
         ModsPanel.IsVisible = name == "mods";
         CatalogPanel.IsVisible = name == "catalog";
+        ForumPanel.IsVisible = name == "forum";
         LogsPanel.IsVisible = name == "logs";
         BuildNav();
     }
@@ -147,6 +161,7 @@ public sealed partial class MonitorWindow : Window
             ("status", T("Status", "Estado"), _issueCount > 0 ? _issueCount.ToString() : null, _issueCount > 0),
             ("mods", T("My mods", "Mis mods"), _modCount > 0 ? _modCount.ToString() : null, false),
             ("catalog", T("Catalog", "Catálogo"), _outdated.Count > 0 ? _outdated.Count.ToString() : null, _outdated.Count > 0),
+            ("forum", T("Modding Guide", "Guía de modding"), "20", false),
             ("logs", T("Problems and logs", "Fallos y logs"), null, false),
         };
         foreach (var it in items)
@@ -842,5 +857,105 @@ public sealed partial class MonitorWindow : Window
             LogText.CaretIndex = LogText.Text.Length;
         }
         catch (IOException ex) { LogText.Text = T("Could not read the file: ", "No se pudo leer el archivo: ") + ex.Message; }
+    }
+
+    // ───────────────────────── modding forum & guide ─────────────────────────
+
+    private sealed record ForumEntry(string Slug, string Cat, int Gem, bool Pinned, string TitleEn, string TitleEs, string Tags, string Meta);
+
+    private static readonly ForumEntry[] ForumThreads =
+    {
+        new("rules",       "start",   1, true,  "Rules of the game & Big Cube modding license", "Reglas del juego y licencia de Big Cube Interactive", "#licencia #4c #fair-play", "Licencia V2 · 2026"),
+        new("intro",       "start",   1, true,  "Your first mod in 60 seconds: with BepInEx alone or with Aether", "Tu primer mod en 60 segundos: solo con BepInEx o con Aether", "#bepinex #nano #aether-new", "BepInEx 5 · Nano 1.0.3"),
+        new("inst",        "start",   1, true,  "Where files live & why early-boot Awake crashes", "Dónde vive cada archivo y por qué Awake crashea el arranque", "#carpetas #awake #frame-0", "Unity 6000.5 · Frame 0"),
+        new("lifecycle",   "engine",  2, true,  "Session lifecycle: scenes, Frame 0 & world transitions", "Ciclo de una partida: escenas, Frame 0 y transición al mundo", "#escenas #ciclo #in-game", "Unity 6000.5 · Escenas"),
+        new("voxels",      "engine",  2, true,  "World & Voxels: reading blocks and 32×32 chunks safely", "Mundo y Voxels: leer bloques y chunks (32×32) sin congelar", "#voxels #chunks #nanoworld", "Chunks 32×32"),
+        new("items",       "engine",  2, true,  "Blocks, Items, Inventory & the held tool (Digger) trap", "Bloques, Ítems, Inventario y la trampa de Digger", "#inventario #digger #items", "Inventario · Digger"),
+        new("entities",    "engine",  2, true,  "Entities, Mobs, Health & the native POI Radar", "Entidades, Mobs, Salud (Health) y el Radar nativo", "#mobs #health #mobmanagement", "Health · Radar"),
+        new("ngui",        "engine",  2, true,  "Native UI (NGUI) vs. IMGUI: fonts, atlases & UIWidget", "Interfaz nativa (NGUI) vs. IMGUI: fuentes, atlas y UIWidget", "#ngui #imgui #zantroke #uiwidget", "NGUI · IMGUI"),
+        new("persistence", "engine",  2, true,  "Per-world saves vs. .cfg & keeping PlayerPrefs clean", "Guardado por mundo vs. .cfg y cómo no ensuciar PlayerPrefs", "#guardado #config #playerprefs", "FSWorldPersistence"),
+        new("first",       "recipes", 3, true,  "Recipe 1: Project (.csproj) & code anatomy (pure BepInEx vs. Nano)", "Receta 1: Anatomía del .csproj y código (BepInEx puro vs. Nano)", "#csproj #bepinplugin #nanomod", "BepInEx · Nano"),
+        new("conf",        "recipes", 3, true,  "Recipe 2: Configuration (.cfg in pure BepInEx & NanoPages UI)", "Receta 2: Configuración (.cfg en BepInEx puro y página con NanoPages)", "#config #nanopages #nanoicons", "Config.Bind · NanoPages"),
+        new("keys",        "recipes", 3, true,  "Recipe 3: Keybinds (pure BepInEx Input & NanoKeys registration)", "Receta 3: Teclas de atajo (Input puro en BepInEx y registro con NanoKeys)", "#teclas #input #nanokeys", "KeyCode · NanoKeys"),
+        new("assets",      "recipes", 3, true,  "Recipe 4: 60 FPS OnGUI HUD drawing (pure IMGUI & NanoSurface)", "Receta 4: Dibujar HUD en OnGUI a 60 FPS (IMGUI puro y NanoSurface)", "#imgui #nanosurface #hud", "IMGUI · NanoSurface"),
+        new("harm",        "recipes", 3, true,  "Recipe 5: Clean Harmony patches & mod coexistence", "Receta 5: Parches de Harmony limpios y convivencia entre mods", "#harmony #prefix #postfix", "Harmony 2.x"),
+        new("build",       "publish", 2, true,  "Build, install to BepInEx/plugins or Aether/Mods & test", "Compilar, instalar en BepInEx/plugins o Aether/Mods y probar", "#dotnet-build #plugins #qa", ".NET Standard 2.1"),
+        new("pub",         "publish", 2, true,  "Publish on GitHub, Lattice verification tiers & §4c notice", "Publicar en GitHub, niveles de Lattice y aviso §4c", "#lattice #github #4c", "GitHub · Lattice"),
+        new("traps",       "publish", 2, true,  "Conflict diagnostics, CLI & Known Traps", "Diagnóstico de conflictos, CLI y Trampas Conocidas", "#doctor #cli #trampas", "Diagnóstico · Trampas"),
+        new("c/barra-progreso-borde-inferior-nanosurface", "comm", 4, false, "How to draw a bottom-edge progress bar on a Squircle card with NanoSurface?", "¿Cómo dibujo una barra de progreso en el borde inferior con NanoSurface?", "#nanosurface #hud #lens", "✓ Solved · Nano 1.0.3"),
+        new("c/proyectar-posicion-3d-faro-pantalla-detras-camara", "comm", 4, false, "Projecting a 3D world marker with WorldToScreenPoint behind the camera", "Al proyectar un marcador 3D con WorldToScreenPoint aparece invertido detrás de la cámara", "#camera #3d #wayfinder", "✓ Solved · Unity 6000.5"),
+        new("c/diferencia-nanopages-setting-comunicacion-mods", "comm", 4, false, "How can I read another Nano mod's setting without referencing its DLL?", "¿Cómo leo la opción de otro mod Nano sin referenciar su DLL?", "#nanopages #config", "✓ Solved · Nano 1.0.3"),
+    };
+
+    private void RenderForum()
+    {
+        if (ForumHost == null || ForumChipsPanel == null) return;
+        ForumChipsPanel.Children.Clear();
+        var cats = new (string Key, string Label)[]
+        {
+            ("", T("All", "Todos")),
+            ("start", T("Start", "Empezar")),
+            ("engine", T("Engine", "Motor")),
+            ("recipes", T("Recipes", "Recetas")),
+            ("publish", T("Publish", "Publicar")),
+            ("comm", T("Cases", "Casos")),
+        };
+        foreach (var (key, label) in cats)
+        {
+            var chip = new Button { Content = label, Margin = new Thickness(4, 0, 0, 0) };
+            chip.Classes.Add("chip");
+            if (_forumCategory == key) chip.Classes.Add("on");
+            string k = key;
+            chip.Click += (_, _) => { _forumCategory = _forumCategory == k ? "" : k; RenderForum(); };
+            ForumChipsPanel.Children.Add(chip);
+        }
+
+        ForumHost.Children.Clear();
+        string q = (ForumSearchBox?.Text ?? "").Trim();
+        foreach (var t in ForumThreads)
+        {
+            if (_forumCategory.Length > 0 && t.Cat != _forumCategory) continue;
+            string title = Es ? t.TitleEs : t.TitleEn;
+            if (q.Length > 0 &&
+                !title.Contains(q, StringComparison.OrdinalIgnoreCase) &&
+                !t.Tags.Contains(q, StringComparison.OrdinalIgnoreCase) &&
+                !t.Meta.Contains(q, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            badges.Children.Add(Tag(t.Pinned ? T("◆ BY AETHER · PINNED", "◆ POR AETHER · FIJADO") : T("✓ SOLVED · CASE", "✓ RESUELTO · CASO"), strong: t.Pinned));
+            badges.Children.Add(Tag(t.Meta));
+            badges.Children.Add(new TextBlock { Text = t.Tags, FontSize = 11, Classes = { "mono" }, Foreground = B(Mute), VerticalAlignment = VerticalAlignment.Center });
+
+            var openBtn = new Button
+            {
+                Content = T("Read thread ↗", "Leer hilo ↗"),
+                Padding = new Thickness(12, 7),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            openBtn.Classes.Add("quiet");
+            string url = (Es ? "https://aether.ultimaibrahim.dev/docs/" : "https://aether.ultimaibrahim.dev/en/docs/") + t.Slug + "/";
+            openBtn.Click += (_, _) => Opener.Url(url);
+
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("40,*,Auto") };
+            var sign = Cube(32, t.Gem);
+            sign.VerticalAlignment = VerticalAlignment.Center;
+            row.Children.Add(sign);
+
+            var mid = new StackPanel { Spacing = 4, Margin = new Thickness(10, 0, 12, 0) };
+            mid.Children.Add(badges);
+            mid.Children.Add(new TextBlock { Text = title, FontSize = 14.5, FontWeight = FontWeight.SemiBold, Foreground = B(Ink), TextWrapping = TextWrapping.Wrap });
+            Grid.SetColumn(mid, 1);
+            row.Children.Add(mid);
+
+            Grid.SetColumn(openBtn, 2);
+            row.Children.Add(openBtn);
+
+            var card = new Border { Padding = new Thickness(14, 11), Child = row };
+            card.Classes.Add("card");
+            ForumHost.Children.Add(card);
+        }
     }
 }

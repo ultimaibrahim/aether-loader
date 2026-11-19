@@ -16,8 +16,8 @@
        # Windows: <game>\BlockStory_Data\Managed (folder name = the *_Data folder next to the .exe)
 3. **Install into the game:** `./scripts/install.sh` (Linux/macOS) or `scripts/install.ps1` (Windows); add
    `--game-dir <path>` when the game is not in the default Steam location, `--dry-run` to preview. It installs the
-   loader only; add `--mods lens,dusk` or `--with-mods` to also install official mods from your build.
-   Release zips (the loader plus one zip per official mod): `./scripts/package.sh` (export `GameManagedPath` and
+   loader only; add `--mods lens,dusk` or `--with-mods` to also install Aether's mods from your build.
+   Release zips (the loader plus one zip per Aether mod): `./scripts/package.sh` (export `GameManagedPath` and
    `BepInExCorePath` first if the game is not in the default folder; `RIDS=linux-x64` builds a single platform).
 4. **Third-party mods:** drop BepInEx plugins and Aether mods into `<game>/Aether/Mods` (hosting is on by
    default) or use `./scripts/aether-cli.sh add <file>`.

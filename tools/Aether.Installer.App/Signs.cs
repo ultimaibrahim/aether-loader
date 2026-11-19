@@ -104,11 +104,25 @@ internal static class Signs
         },
     };
 
-    /// <summary>Section signs for the side bar: Status ◇, My mods (cube), Catalog ⬡, Problems △. Active = filled with ember.</summary>
+    /// <summary>Section signs for the side bar: Status ◇, My mods (cube), Catalog ⬡, Forum ◆◇, Problems △. Active = filled with ember.</summary>
     public static Control NavSign(string section, bool active)
     {
         if (section == "mods") return active ? AetherCube(16) : OutlineCube(16);
         Color c = active ? Ember : Mute;
+        if (section == "forum")
+        {
+            var r1 = new Polygon
+            {
+                Points = new List<Point> { new(5.5, 3), new(10.5, 8), new(5.5, 13), new(0.5, 8) },
+                Fill = active ? B(c) : Brushes.Transparent, Stroke = B(c), StrokeThickness = 1.4, StrokeJoin = PenLineJoin.Round,
+            };
+            var r2 = new Polygon
+            {
+                Points = new List<Point> { new(10.5, 3), new(15.5, 8), new(10.5, 13), new(5.5, 8) },
+                Fill = Brushes.Transparent, Stroke = B(c), StrokeThickness = 1.4, StrokeJoin = PenLineJoin.Round,
+            };
+            return new Viewbox { Width = 16, Height = 16, Child = new Canvas { Width = 16, Height = 16, Children = { r1, r2 } } };
+        }
         double[] pts = section switch
         {
             "status" => new double[] { 8, 1.5, 14.5, 8, 8, 14.5, 1.5, 8 },
