@@ -82,6 +82,11 @@ public sealed partial class InstallerWindow : Window
             if (total is > 0) { Busy.IsIndeterminate = false; Busy.Maximum = total.Value; Busy.Value = done; State.Text = $"Downloading BepInEx {BepInExSetup.Version}… {done / 1024} / {total / 1024} KB"; }
         });
 
+        bool canOfferMonitor = File.Exists(Environment.ProcessPath ?? string.Empty);
+        bool monitorAlreadyInstalled = canOfferMonitor && File.Exists(MonitorInstaller.InstalledExe(game));
+        string? autoUpdatedMonitor = null;
+        string? autoUpdateError = null;
+
         bool ok = await Task.Run(() =>
         {
             Line("INFO", $"Game folder: {game}");
@@ -93,7 +98,23 @@ public sealed partial class InstallerWindow : Window
             }
             else Line("INFO", "BepInEx is already installed.");
             Dispatcher.UIThread.Post(() => { Busy.IsIndeterminate = true; State.Text = "Installing Aether…"; });
-            return InstallRunner.Run(new InstallOptions { GameDir = game, SourceDir = source }, Note).Success;
+            if (!InstallRunner.Run(new InstallOptions { GameDir = game, SourceDir = source }, Note).Success)
+                return false;
+
+            if (monitorAlreadyInstalled)
+            {
+                Dispatcher.UIThread.Post(() => State.Text = "Updating Aether Monitor…");
+                try
+                {
+                    autoUpdatedMonitor = MonitorInstaller.Install(game, Environment.ProcessPath, AppContext.BaseDirectory, dryRun: false, Note);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    autoUpdateError = $"Aether Monitor could not be updated automatically ({ex.Message}). Close it and try again.";
+                    Line("WARN", autoUpdateError);
+                }
+            }
+            return true;
         });
 
         Busy.IsVisible = false;
@@ -110,9 +131,29 @@ public sealed partial class InstallerWindow : Window
         DoneText.Text = $"To add mods, drop them into  {Path.Combine(game, "Aether", "Mods")}  — then start Block Story.";
         SteamOption.Text = SteamLaunchOption.Value;
         SteamHint.IsVisible = OperatingSystem.IsLinux() && !SteamLaunchOption.IsSet(game, null);
-        bool canOfferMonitor = File.Exists(Environment.ProcessPath ?? string.Empty);
-        MonitorOffer.IsVisible = SkipButton.IsVisible = MonitorButton.IsVisible = ShortcutCheck.IsVisible = canOfferMonitor;
-        CloseButton.IsVisible = !canOfferMonitor;
+
+        if (autoUpdatedMonitor != null)
+        {
+            _monitorDir = Path.GetDirectoryName(autoUpdatedMonitor);
+            DoneTitle.Text = "Aether & Monitor updated.";
+            MonitorOffer.Text = $"Aether Monitor was updated automatically in:\n{_monitorDir}";
+            MonitorOffer.IsVisible = true;
+            OpenFolderButton.IsVisible = true;
+            ShortcutCheck.IsVisible = MonitorButton.IsVisible = SkipButton.IsVisible = false;
+            CloseButton.IsVisible = true;
+        }
+        else if (autoUpdateError != null)
+        {
+            MonitorOffer.Text = autoUpdateError;
+            MonitorOffer.IsVisible = SkipButton.IsVisible = MonitorButton.IsVisible = true;
+            ShortcutCheck.IsVisible = false;
+            CloseButton.IsVisible = false;
+        }
+        else
+        {
+            MonitorOffer.IsVisible = SkipButton.IsVisible = MonitorButton.IsVisible = ShortcutCheck.IsVisible = canOfferMonitor;
+            CloseButton.IsVisible = !canOfferMonitor;
+        }
     }
 
     private async void OnInstallMonitor(object? sender, RoutedEventArgs e)

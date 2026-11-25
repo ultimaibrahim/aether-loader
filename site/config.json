@@ -1,14 +1,14 @@
 {
-  "version": "1.2.5-beta",
+  "version": "1.2.6-beta",
   "base_url": "https://aether.ultimaibrahim.dev",
   "repo_url": "https://github.com/ultimaibrahim/aether-loader",
   "lattice_url": "https://lattice.ultimaibrahim.dev",
-  "release_url": "https://github.com/ultimaibrahim/aether-loader/releases/tag/v1.2.5-beta",
+  "release_url": "https://github.com/ultimaibrahim/aether-loader/releases/tag/v1.2.6-beta",
   "indexable": true,
   "releases_ready": true,
   "domain": "aether.ultimaibrahim.dev",
   "mod_urls": {},
-  "download_base": "https://github.com/ultimaibrahim/aether-loader/releases/download/v1.2.5-beta",
+  "download_base": "https://github.com/ultimaibrahim/aether-loader/releases/download/v1.2.6-beta",
   "mod_version": "1.1.3",
   "sizes": {
     "win-x64-light": "13 MB",

@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Aether.Installer.App.MonitorWindow"
-        Title="Aether Monitor" Icon="/Assets/aether.png" Width="1120" Height="740" MinWidth="880" MinHeight="560"
+        Title="Aether Monitor" Icon="/Assets/aether.png" Width="1120" Height="740" MinWidth="680" MinHeight="520"
         WindowStartupLocation="CenterScreen" DragDrop.AllowDrop="True">
   <Window.Styles>
     <!-- Buttons drawn in Aether's language: ember for the one main action, ink for "do all", outline ember for an update, paper for done. -->
@@ -130,18 +130,18 @@
   <Grid RowDefinitions="Auto,*">
     <!-- title bar -->
     <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#E4DDD3" BorderThickness="0,0,0,1" Padding="18,0" Height="56">
-      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" VerticalAlignment="Center">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" VerticalAlignment="Center">
         <ContentControl x:Name="LogoHost" Grid.Column="0" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Classes="display" FontSize="22" Margin="12,0,0,0" VerticalAlignment="Center">
           <Run Text="aether " /><Run Text="monitor" Foreground="#6B6157" />
         </TextBlock>
-        <TextBlock x:Name="GameLabel" Grid.Column="2" Classes="mono" FontSize="11" Foreground="#6B6157" Margin="14,4,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="420" />
-        <Button x:Name="LangButton" Grid.Column="4" Classes="quiet" Padding="10,6" Margin="0,0,8,0" FontWeight="Normal" />
-        <Button x:Name="RefreshButton" Grid.Column="5" Classes="quiet" Padding="12,6" FontWeight="Normal" />
+        <TextBlock x:Name="GameLabel" Grid.Column="2" Classes="mono" FontSize="11" Foreground="#6B6157" Margin="14,4,12,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        <Button x:Name="LangButton" Grid.Column="3" Classes="quiet" Padding="10,6" Margin="0,0,8,0" FontWeight="Normal" />
+        <Button x:Name="RefreshButton" Grid.Column="4" Classes="quiet" Padding="12,6" FontWeight="Normal" />
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="208,*">
+    <Grid x:Name="ShellGrid" Grid.Row="1" ColumnDefinitions="208,*">
       <!-- sections -->
       <Border Grid.Column="0" BorderBrush="#E4DDD3" BorderThickness="0,0,1,0" Padding="10,16">
         <Grid RowDefinitions="Auto,*,Auto">
@@ -155,7 +155,7 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+      <Grid Grid.Column="1" RowDefinitions="Auto,*" ClipToBounds="True">
         <Border x:Name="UpdateBanner" Grid.Row="0" IsVisible="False" Margin="26,18,26,0" Padding="14,10" CornerRadius="10"
                 Background="#FBE9DD" BorderBrush="#E7A27A" BorderThickness="1">
           <Grid ColumnDefinitions="Auto,*,Auto">
@@ -179,45 +179,47 @@
         <!-- My mods -->
         <Grid x:Name="ModsPanel" Grid.Row="1" Margin="26,22,26,18" RowDefinitions="Auto,*,Auto" IsVisible="False">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
-            <StackPanel>
+            <StackPanel Margin="0,0,14,0">
               <TextBlock x:Name="ModsTitle" Classes="display" FontSize="36" />
-              <TextBlock x:Name="ModsSummary" FontSize="13" Foreground="#6B6157" Margin="0,6,0,0" />
+              <TextBlock x:Name="ModsSummary" FontSize="13" Foreground="#6B6157" Margin="0,6,0,0" TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock x:Name="ModsHint" Grid.Column="1" FontSize="12" Foreground="#6B6157" MaxWidth="300" TextAlignment="Right" TextWrapping="Wrap" VerticalAlignment="Bottom" />
+            <TextBlock x:Name="ModsHint" Grid.Column="1" FontSize="12" Foreground="#6B6157" MaxWidth="260" TextAlignment="Right" TextWrapping="Wrap" VerticalAlignment="Bottom" />
           </Grid>
           <Border Grid.Row="1" Background="#FBFAF8" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
             <Grid RowDefinitions="Auto,*">
               <Border Grid.Row="0" Background="#F6F2EC" BorderBrush="#E4DDD3" BorderThickness="0,0,0,1" Padding="16,9">
-                <Grid x:Name="ModsHeader" ColumnDefinitions="56,*,170,110,76" />
+                <Grid x:Name="ModsHeader" ColumnDefinitions="56,*,144,96,68" />
               </Border>
               <ScrollViewer Grid.Row="1"><StackPanel x:Name="ModsHost" /></ScrollViewer>
             </Grid>
           </Border>
-          <StackPanel x:Name="ModsFoot" Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0" />
+          <Grid x:Name="ModsFoot" Grid.Row="2" ColumnDefinitions="Auto,*" Margin="0,10,0,0" />
         </Grid>
 
         <!-- Catalog -->
         <Grid x:Name="CatalogPanel" Grid.Row="1" Margin="26,22,26,18" RowDefinitions="Auto,Auto,*" IsVisible="False">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <StackPanel>
+            <StackPanel Margin="0,0,14,0">
               <TextBlock x:Name="CatalogTitle" Classes="display" FontSize="36" />
-              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
-                <ContentControl x:Name="CatalogSign" VerticalAlignment="Center" />
-                <TextBlock x:Name="CatalogStatus" FontSize="13" Foreground="#6B6157" VerticalAlignment="Center" TextWrapping="Wrap" />
-              </StackPanel>
+              <Grid ColumnDefinitions="Auto,*" Margin="0,6,0,0">
+                <ContentControl x:Name="CatalogSign" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock x:Name="CatalogStatus" Grid.Column="1" FontSize="13" Foreground="#6B6157" VerticalAlignment="Center" TextWrapping="Wrap" />
+              </Grid>
             </StackPanel>
             <Button x:Name="UpdateAllButton" Grid.Column="1" Classes="ink" Padding="16,11" VerticalAlignment="Bottom" />
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
-            <TextBox x:Name="SearchBox" Grid.Column="0" Height="38" VerticalContentAlignment="Center" MinWidth="200" />
-            <WrapPanel x:Name="ChipsPanel" Grid.Column="1" Margin="8,0,0,0" />
-            <Border Grid.Column="2" Margin="8,0,0,0" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="8" Background="#FFFFFF" Padding="2">
-              <StackPanel Orientation="Horizontal">
-                <Button x:Name="ViewCards" Classes="chip" Height="32" Padding="10,0" BorderThickness="0" />
-                <Button x:Name="ViewList" Classes="chip" Height="32" Padding="10,0" BorderThickness="0" />
-              </StackPanel>
-            </Border>
-          </Grid>
+          <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox x:Name="SearchBox" Grid.Column="0" Height="38" VerticalContentAlignment="Center" MinWidth="120" />
+              <Border Grid.Column="1" Margin="8,0,0,0" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="8" Background="#FFFFFF" Padding="2">
+                <StackPanel Orientation="Horizontal">
+                  <Button x:Name="ViewCards" Classes="chip" Height="32" Padding="10,0" BorderThickness="0" />
+                  <Button x:Name="ViewList" Classes="chip" Height="32" Padding="10,0" BorderThickness="0" />
+                </StackPanel>
+              </Border>
+            </Grid>
+            <WrapPanel x:Name="ChipsPanel" Orientation="Horizontal" />
+          </StackPanel>
           <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
             <ScrollViewer Grid.Column="0"><ContentControl x:Name="CatalogHost" /></ScrollViewer>
             <Border x:Name="Aside" Grid.Column="1" Width="340" Margin="12,0,0,0" IsVisible="False" Background="#F6F2EC"
@@ -230,16 +232,16 @@
         <!-- Modding Forum & Guide -->
         <Grid x:Name="ForumPanel" Grid.Row="1" Margin="26,22,26,18" RowDefinitions="Auto,Auto,*,Auto" IsVisible="False">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <StackPanel>
+            <StackPanel Margin="0,0,14,0">
               <TextBlock x:Name="ForumTitle" Classes="display" FontSize="36" />
               <TextBlock x:Name="ForumSummary" FontSize="13" Foreground="#6B6157" Margin="0,6,0,0" TextWrapping="Wrap" MaxWidth="620" />
             </StackPanel>
             <Button x:Name="OpenForumWeb" Grid.Column="1" Classes="primary" Padding="16,11" VerticalAlignment="Bottom" />
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <TextBox x:Name="ForumSearchBox" Grid.Column="0" Height="38" VerticalContentAlignment="Center" MinWidth="200" />
-            <WrapPanel x:Name="ForumChipsPanel" Grid.Column="1" Margin="8,0,0,0" />
-          </Grid>
+          <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,12">
+            <TextBox x:Name="ForumSearchBox" Height="38" VerticalContentAlignment="Center" MinWidth="120" />
+            <WrapPanel x:Name="ForumChipsPanel" Orientation="Horizontal" />
+          </StackPanel>
           <Border Grid.Row="2" Background="#FBFAF8" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
             <ScrollViewer><StackPanel x:Name="ForumHost" Spacing="8" Margin="12" /></ScrollViewer>
           </Border>
@@ -254,7 +256,7 @@
         <!-- Problems and logs -->
         <Grid x:Name="LogsPanel" Grid.Row="1" Margin="26,22,26,18" RowDefinitions="Auto,*,Auto" IsVisible="False">
           <TextBlock x:Name="LogsTitle" Grid.Row="0" Classes="display" FontSize="36" Margin="0,0,0,14" />
-          <Grid Grid.Row="1" ColumnDefinitions="280,*">
+          <Grid x:Name="LogsGrid" Grid.Row="1" ColumnDefinitions="280,*">
             <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E4DDD3" BorderThickness="1" CornerRadius="12">
               <ListBox x:Name="LogFiles" Background="Transparent" />
             </Border>

@@ -4,6 +4,12 @@ All notable changes are listed here, newest first. The project follows [Semantic
 
 ## Unreleased
 
+## 1.2.6-beta
+
+- **Responsive Monitor layout.** Narrower windows (from `680px` wide) no longer overlap controls: the Catalog search bar and view toggle sit above a full-width wrapping category chip row, cards switch cleanly to 1 column with word-ellipsis, the My mods table compacts its columns with badge wrapping, and the title bar path trims cleanly.
+- **Neutral mod origin labels.** In My mods, external mods show `External` (`Externo`) instead of `By hand`, without the `NOT FROM LATTICE` badge.
+- **Automatic Monitor update.** Running the Aether installer when Aether Monitor is already installed updates `Aether/Monitor` in place automatically.
+
 ## 1.2.5-beta
 
 - **Existing config migration to Aether Ink & Squircle.** Installations upgrading from older releases that still had `NativeWood` saved in `com.ultimaibrahim.blockstory.suite.cfg`, `dev.ultimaibrahim.aether.wayfinder.cfg`, or `dev.ultimaibrahim.aether.lens.cfg` automatically migrate to the **Aether** theme once (`AetherInkThemeMigrated`), and the `F10` Mod Menu, `F7` Keybind Manager, and Wayfinder surfaces always use squircle `NanoSurface` cards instead of falling back to legacy wooden panels.

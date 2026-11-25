@@ -44,6 +44,9 @@ public sealed partial class MonitorWindow : Window
     private int _modCount, _issueCount;
     private Border? _busyBar;
     private Control? _busyCard;
+    private bool _compactShell;
+    private bool _compactMods;
+    private bool _singleCatalogCol;
 
     private bool Es => _settings.Language == "es";
     private string T(string en, string es) => Es ? es : en;
@@ -81,8 +84,10 @@ public sealed partial class MonitorWindow : Window
         });
 
         ApplyTexts(reload: false);
+        SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
         Opened += async (_, _) =>
         {
+            ApplyResponsiveLayout(Bounds.Width);
             Reload();
             // The one place Aether goes online, and only from this window (never from the game). Off if Aether/no-update-check exists.
             if (_game != null && !File.Exists(Path.Combine(_game, "Aether", "no-update-check"))) await CheckOnline();
@@ -230,15 +235,58 @@ public sealed partial class MonitorWindow : Window
         return row;
     }
 
+    // ───────────────────────── responsive layout ─────────────────────────
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        if (width <= 0) return;
+
+        bool compactShell = width < 860;
+        if (compactShell != _compactShell)
+        {
+            _compactShell = compactShell;
+            ShellGrid.ColumnDefinitions[0].Width = new GridLength(compactShell ? 176 : 208);
+            var panelMargin = compactShell ? new Thickness(16, 16, 16, 14) : new Thickness(26, 22, 26, 18);
+            StatusPanel.Margin = panelMargin;
+            ModsPanel.Margin = panelMargin;
+            CatalogPanel.Margin = panelMargin;
+            ForumPanel.Margin = panelMargin;
+            LogsPanel.Margin = panelMargin;
+            UpdateBanner.Margin = compactShell ? new Thickness(16, 12, 16, 0) : new Thickness(26, 18, 26, 0);
+            LogsGrid.ColumnDefinitions[0].Width = new GridLength(compactShell ? 200 : 280);
+            ModsHint.MaxWidth = compactShell ? 200 : 260;
+        }
+
+        Aside.Width = width < 980 ? 276 : 340;
+
+        bool compactMods = width < 920;
+        if (compactMods != _compactMods)
+        {
+            _compactMods = compactMods;
+            BuildModsHeader();
+            if (_game != null && Directory.Exists(_game)) RenderMods();
+        }
+
+        bool singleCol = width < 1040;
+        if (singleCol != _singleCatalogCol)
+        {
+            _singleCatalogCol = singleCol;
+            if (_snap != null) RenderCatalog();
+        }
+    }
+
     // ───────────────────────── my mods ─────────────────────────
+
+    private string ModsColumnSpec() => _compactMods ? "48,*,112,72,58" : "56,*,144,96,68";
 
     private void BuildModsHeader()
     {
+        ModsHeader.ColumnDefinitions = new ColumnDefinitions(ModsColumnSpec());
         ModsHeader.Children.Clear();
         string[] heads = { "", T("MOD", "MOD"), T("FROM", "DE DÓNDE VIENE"), T("VERSION", "VERSIÓN"), T("ON", "ACTIVO") };
         for (int i = 0; i < heads.Length; i++)
         {
-            var tb = new TextBlock { Text = heads[i], FontSize = 10.5, Classes = { "mono" }, Foreground = B(Mute), LetterSpacing = 0.8 };
+            var tb = new TextBlock { Text = heads[i], FontSize = 10.5, Classes = { "mono" }, Foreground = B(Mute), LetterSpacing = 0.8, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 8, 0) };
             Grid.SetColumn(tb, i); ModsHeader.Children.Add(tb);
         }
     }
@@ -269,10 +317,13 @@ public sealed partial class MonitorWindow : Window
         }
         foreach (var a in mods) ModsHost.Children.Add(ModRow(a));
 
+        var footSign = Rhombus(Ember, filled: false);
+        footSign.VerticalAlignment = VerticalAlignment.Top;
+        footSign.Margin = new Thickness(0, 3, 8, 0);
         var foot = new TextBlock { FontSize = 12, Foreground = B(Mute), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center,
-            Text = T("Mods from the Catalog update from there. Mods installed by hand keep their file as it is.", "Los mods del Catálogo se actualizan desde ahí. Los instalados a mano se quedan como están.") };
-        ModsFoot.Children.Add(Rhombus(Ember, filled: false));
-        ModsFoot.Children.Add(foot);
+            Text = T("Mods from the Catalog update from there. External mods keep their file as it is.", "Los mods del Catálogo se actualizan desde ahí. Los mods externos mantienen su archivo intacto.") };
+        Grid.SetColumn(footSign, 0); ModsFoot.Children.Add(footSign);
+        Grid.SetColumn(foot, 1); ModsFoot.Children.Add(foot);
     }
 
     private Control ModRow(InstalledAssembly a)
@@ -282,26 +333,39 @@ public sealed partial class MonitorWindow : Window
         string name = cat != null ? (_listing.TryGetValue(cat.Value.Slug, out var li) ? li.Name : cat.Value.Mod.Name) : Path.GetFileNameWithoutExtension(a.Name);
         string version = cat != null && _installed.TryGetValue(cat.Value.Slug, out var inst) ? inst.Version : (ModInspector.Inspect(a.Path).Version ?? "?");
         string dir = Path.GetRelativePath(_game!, Path.GetDirectoryName(a.Path)!).Replace('\\', '/');
-        string source = cat != null ? "Lattice" : dir.StartsWith("BepInEx/plugins", StringComparison.OrdinalIgnoreCase) ? "BepInEx/plugins" : T("By hand", "A mano");
+        string source = cat != null ? "Lattice" : dir.StartsWith("BepInEx/plugins", StringComparison.OrdinalIgnoreCase) ? "BepInEx/plugins" : T("External", "Externo");
         bool update = cat != null && _outdated.ContainsKey(cat.Value.Slug);
 
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("56,*,170,110,76"), Opacity = a.Enabled ? 1 : 0.6 };
-        var icon = IconFor(slug, 40, a.Enabled);
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions(ModsColumnSpec()), Opacity = a.Enabled ? 1 : 0.6 };
+        var icon = IconFor(slug, _compactMods ? 36 : 40, a.Enabled);
         row.Children.Add(icon);
 
-        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        title.Children.Add(new TextBlock { Text = name, Classes = { "display" }, FontSize = 18, VerticalAlignment = VerticalAlignment.Center });
-        if (update) title.Children.Add(Tag(T("UPDATE", "ACTUALIZAR"), strong: true));
-        else if (a.Role == AssemblyRole.External && cat == null) title.Children.Add(Tag(T("NOT FROM LATTICE", "FUERA DE LATTICE")));
+        var title = new WrapPanel { Orientation = Orientation.Horizontal };
+        title.Children.Add(new TextBlock
+        {
+            Text = name, Classes = { "display" }, FontSize = _compactMods ? 16.5 : 18,
+            VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = new Thickness(0, 0, 8, 2),
+        });
+        if (update)
+        {
+            var tag = Tag(T("UPDATE", "ACTUALIZAR"), strong: true);
+            tag.Margin = new Thickness(0, 1, 0, 2);
+            title.Children.Add(tag);
+        }
         string note = !a.Enabled ? T("Off: the file is still there, back with one click.", "Apagado: el archivo sigue ahí, vuelve con un clic.")
             : update ? T($"{_outdated[cat!.Value.Slug].Latest} is in the Catalog.", $"Hay {_outdated[cat!.Value.Slug].Latest} en el Catálogo.")
             : _listing.TryGetValue(slug, out var l2) && l2.Tagline != null ? l2.Tagline : a.Name;
-        var middle = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { title, new TextBlock { Text = note, FontSize = 12, Foreground = B(Mute), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 0) } } };
+        var middle = new StackPanel
+        {
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), ClipToBounds = true,
+            Children = { title, new TextBlock { Text = note, FontSize = 12, Foreground = B(Mute), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 1, 0, 0) } },
+        };
         Grid.SetColumn(middle, 1); row.Children.Add(middle);
 
-        var src = new TextBlock { Text = source, Classes = { "mono" }, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Foreground = B(Color.Parse("#3D342C")) };
+        var src = new TextBlock { Text = source, Classes = { "mono" }, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Foreground = B(Color.Parse("#3D342C")), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 8, 0) };
         Grid.SetColumn(src, 2); row.Children.Add(src);
-        var ver = new TextBlock { Text = version, Classes = { "mono" }, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        var ver = new TextBlock { Text = version, Classes = { "mono" }, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 0, 8, 0) };
         Grid.SetColumn(ver, 3); row.Children.Add(ver);
 
         var sw = Switch(a.Enabled, (a.Enabled ? T("Switch off ", "Apagar ") : T("Switch on ", "Encender ")) + name, () => _ = ToggleMod(a, cat?.Slug, name));
@@ -429,7 +493,7 @@ public sealed partial class MonitorWindow : Window
         if (_category != "" && !present.Contains(_category)) _category = "";
         foreach (var (key, label) in new[] { ("", T("All", "Todos")) }.Concat(present.Select(c => (c, CategoryName(c)))))
         {
-            var chip = new Button { Content = label, Margin = new Thickness(0, 0, 6, 0) };
+            var chip = new Button { Content = label, Margin = new Thickness(0, 0, 6, 6) };
             chip.Classes.Add("chip"); chip.Classes.Set("on", key == _category);
             chip.Click += (_, _) => { _category = key; RenderCatalog(); };
             ChipsPanel.Children.Add(chip);
@@ -449,8 +513,9 @@ public sealed partial class MonitorWindow : Window
         if (mods.Count == 0) { CatalogHost.Content = new TextBlock { Text = T("Nothing matches.", "Nada coincide."), Foreground = B(Mute), Margin = new Thickness(4) }; return; }
         if (cards)
         {
-            var grid = new UniformGrid { Columns = Bounds.Width > 0 && Bounds.Width < 1000 || Aside.IsVisible ? 1 : 2 };
-            foreach (var m in mods) grid.Children.Add(Card(m));
+            bool singleCol = _singleCatalogCol || (Bounds.Width > 0 && Bounds.Width < 1040) || Aside.IsVisible;
+            var grid = new UniformGrid { Columns = singleCol ? 1 : 2 };
+            foreach (var m in mods) grid.Children.Add(Card(m, singleCol));
             CatalogHost.Content = grid;
         }
         else
@@ -480,17 +545,17 @@ public sealed partial class MonitorWindow : Window
         return b;
     }
 
-    private Control Card(LatticeMod m)
+    private Control Card(LatticeMod m, bool singleCol)
     {
         var newest = Newest(m);
         _listing.TryGetValue(m.Slug, out var l);
         var body = new StackPanel { Spacing = 6 };
-        var head = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        head.Children.Add(new TextBlock { Text = l?.Name ?? m.Name, Classes = { "display" }, FontSize = 21, VerticalAlignment = VerticalAlignment.Bottom });
+        var head = new WrapPanel { Orientation = Orientation.Horizontal };
+        head.Children.Add(new TextBlock { Text = l?.Name ?? m.Name, Classes = { "display" }, FontSize = 21, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 8, 0) });
         head.Children.Add(new TextBlock { Text = newest?.Label ?? "—", Classes = { "mono" }, FontSize = 11, Foreground = B(Mute), VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 3) });
         body.Children.Add(head);
         if (l?.Owner is { Length: > 0 } owner) body.Children.Add(new TextBlock { Text = "@" + owner, Classes = { "mono" }, FontSize = 11, Foreground = B(Mute) });
-        body.Children.Add(new TextBlock { Text = l?.Tagline ?? T("No description yet.", "Todavía sin descripción."), FontSize = 13, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = B(Color.Parse("#3D342C")) });
+        body.Children.Add(new TextBlock { Text = l?.Tagline ?? T("No description yet.", "Todavía sin descripción."), FontSize = 13, TextWrapping = TextWrapping.Wrap, MaxLines = singleCol ? 3 : 2, TextTrimming = TextTrimming.WordEllipsis, Foreground = B(Color.Parse("#3D342C")) });
         var chips = new WrapPanel();
         foreach (string t in Chips(l)) { var tag = Tag(t); tag.Margin = new Thickness(0, 0, 6, 4); chips.Children.Add(tag); }
         body.Children.Add(chips);
@@ -502,7 +567,7 @@ public sealed partial class MonitorWindow : Window
         Grid.SetColumn(lvlText, 1); foot.Children.Add(lvlText);
         var dl = new TextBlock { Text = l != null ? $"↓ {l.Downloads}" : "", Classes = { "mono" }, FontSize = 11, Foreground = B(Mute), VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(dl, 2); foot.Children.Add(dl);
-        var act = ActionButton(m, newest); Grid.SetColumn(act, 4); foot.Children.Add(act);
+        var act = ActionButton(m, newest); act.Margin = new Thickness(8, 0, 0, 0); Grid.SetColumn(act, 4); foot.Children.Add(act);
         body.Children.Add(foot);
 
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
@@ -902,7 +967,7 @@ public sealed partial class MonitorWindow : Window
         };
         foreach (var (key, label) in cats)
         {
-            var chip = new Button { Content = label, Margin = new Thickness(4, 0, 0, 0) };
+            var chip = new Button { Content = label, Margin = new Thickness(0, 0, 6, 6) };
             chip.Classes.Add("chip");
             if (_forumCategory == key) chip.Classes.Add("on");
             string k = key;
@@ -924,10 +989,14 @@ public sealed partial class MonitorWindow : Window
                 continue;
             }
 
-            var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-            badges.Children.Add(Tag(t.Pinned ? T("◆ BY AETHER · PINNED", "◆ POR AETHER · FIJADO") : T("✓ SOLVED · CASE", "✓ RESUELTO · CASO"), strong: t.Pinned));
-            badges.Children.Add(Tag(t.Meta));
-            badges.Children.Add(new TextBlock { Text = t.Tags, FontSize = 11, Classes = { "mono" }, Foreground = B(Mute), VerticalAlignment = VerticalAlignment.Center });
+            var badges = new WrapPanel { Orientation = Orientation.Horizontal };
+            var pinTag = Tag(t.Pinned ? T("◆ BY AETHER · PINNED", "◆ POR AETHER · FIJADO") : T("✓ SOLVED · CASE", "✓ RESUELTO · CASO"), strong: t.Pinned);
+            pinTag.Margin = new Thickness(0, 0, 6, 4);
+            var metaTag = Tag(t.Meta);
+            metaTag.Margin = new Thickness(0, 0, 6, 4);
+            badges.Children.Add(pinTag);
+            badges.Children.Add(metaTag);
+            badges.Children.Add(new TextBlock { Text = t.Tags, FontSize = 11, Classes = { "mono" }, Foreground = B(Mute), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 4) });
 
             var openBtn = new Button
             {
